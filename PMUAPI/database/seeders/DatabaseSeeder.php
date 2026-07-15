@@ -4,12 +4,13 @@ namespace Database\Seeders;
 
 use App\Models\FeeType;
 use App\Models\InventoryItem;
-use App\Models\Role;
 use App\Models\Stakeholder;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
@@ -17,17 +18,25 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $adminRole = Role::create(['name' => 'Administrator', 'description' => 'Full access']);
-        Role::create(['name' => 'Cashier', 'description' => 'Records transactions']);
-        Role::create(['name' => 'Staff', 'description' => 'Limited access']);
+        $adminRole = Role::create(['name' => 'Administrator', 'guard_name' => 'web']);
+        $cashierRole = Role::create(['name' => 'Cashier', 'guard_name' => 'web']);
+        $staffRole = Role::create(['name' => 'Staff', 'guard_name' => 'web']);
 
-        User::create([
+        Permission::create(['name' => 'manage users', 'guard_name' => 'web'])->syncRoles([$adminRole]);
+        Permission::create(['name' => 'manage roles', 'guard_name' => 'web'])->syncRoles([$adminRole]);
+        Permission::create(['name' => 'manage stakeholders', 'guard_name' => 'web'])->syncRoles([$adminRole, $cashierRole]);
+        Permission::create(['name' => 'manage transactions', 'guard_name' => 'web'])->syncRoles([$adminRole, $cashierRole]);
+        Permission::create(['name' => 'manage inventory', 'guard_name' => 'web'])->syncRoles([$adminRole, $staffRole]);
+        Permission::create(['name' => 'view reports', 'guard_name' => 'web'])->syncRoles([$adminRole, $cashierRole, $staffRole]);
+        Permission::create(['name' => 'manage settings', 'guard_name' => 'web'])->syncRoles([$adminRole]);
+
+        $user = User::create([
             'name' => 'Port Manager',
             'email' => 'admin@pmu.gov.ph',
             'password' => Hash::make('password'),
-            'role_id' => $adminRole->id,
             'status' => 'active',
         ]);
+        $user->assignRole('Administrator');
 
         $feeTypes = [
             ['fee_name' => 'Fish Landing', 'base_rate' => 30.00, 'unit' => 'kg'],

@@ -2,10 +2,13 @@
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from '~/composables/useApiFetch'
 import { onMounted } from "vue";
+import { usePermissions } from "~/composables/usePermissions";
 
 definePageMeta({
   layout: "dashboard",
 });
+
+const { can } = usePermissions();
 
 const transactions = ref<any[]>([])
 
@@ -77,7 +80,7 @@ const columns: TableColumn<Transactions>[] = [
     <div class="flex justify-between mb-5">
       <h1 class="text-2xl font-bold">Transactions</h1>
 
-      <UButton to="/transactions/create"> Add Transaction </UButton>
+      <UButton v-if="can('manage transactions')" to="/transactions/create"> Add Transaction </UButton>
     </div>
 
     <UTable :data="transactions" :columns="columns">

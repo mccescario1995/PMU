@@ -12,7 +12,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        return UserResource::collection(User::with('role')->get());
+        return UserResource::collection(User::with('roles', 'permissions')->get());
     }
 
     public function store(Request $request)
@@ -21,18 +21,25 @@ class UserController extends Controller
             'name' => 'required|string',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role_id' => 'nullable|exists:roles,id',
             'status' => 'nullable|in:active,inactive',
+            'roles' => 'nullable|array',
+            'roles.*' => 'string|exists:roles,name',
         ]);
 
         $data['password'] = Hash::make($data['password']);
 
-        return new UserResource(User::create($data)->load('role'));
+        $user = User::create($data);
+
+        if (!empty($data['roles'])) {
+            $user->syncRoles($data['roles']);
+        }
+
+        return new UserResource($user->load('roles', 'permissions'));
     }
 
     public function show(User $user)
     {
-        return new UserResource($user->load('role'));
+        return new UserResource($user->load('roles', 'permissions'));
     }
 
     public function update(Request $request, User $user)
@@ -41,8 +48,9 @@ class UserController extends Controller
             'name' => 'sometimes|required|string',
             'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8',
-            'role_id' => 'nullable|exists:roles,id',
             'status' => 'nullable|in:active,inactive',
+            'roles' => 'nullable|array',
+            'roles.*' => 'string|exists:roles,name',
         ]);
 
         if (!empty($data['password'])) {
@@ -53,7 +61,11 @@ class UserController extends Controller
 
         $user->update($data);
 
-        return new UserResource($user->load('role'));
+        if (isset($data['roles'])) {
+            $user->syncRoles($data['roles']);
+        }
+
+        return new UserResource($user->load('roles', 'permissions'));
     }
 
     public function destroy(User $user)

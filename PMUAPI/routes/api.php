@@ -113,8 +113,13 @@ Route::prefix('v1')->group(function () {
             );
 
             Route::post(
-                'items/{item}/deduct-stock',
+                '/items/{item}/deduct-stock',
                 [InventoryItemController::class, 'deductStock']
+            );
+
+            Route::get(
+                '/logs',
+                [InventoryItemController::class, 'allLogs']
             );
         });
 

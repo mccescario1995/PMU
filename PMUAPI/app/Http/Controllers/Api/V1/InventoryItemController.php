@@ -69,6 +69,13 @@ class InventoryItemController extends Controller
         );
     }
 
+    public function allLogs()
+    {
+        return response()->json(
+            \App\Models\InventoryLog::with(['item', 'user'])->latest()->get()
+        );
+    }
+
     public function addStock(Request $request, InventoryItem $item)
     {
         $data = $request->validate([

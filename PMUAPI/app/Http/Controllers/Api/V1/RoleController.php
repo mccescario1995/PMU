@@ -3,42 +3,55 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\RoleResource;
-use App\Models\Role;
 use Illuminate\Http\Request;
+use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
     public function index()
     {
-        return RoleResource::collection(Role::all());
+        return response()->json(Role::all(['id', 'name', 'guard_name', 'created_at']));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:50|unique:roles,name',
-            'description' => 'nullable|string',
+            'name' => 'required|string|max:255|unique:roles,name',
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'string|exists:permissions,name',
         ]);
 
-        return new RoleResource(Role::create($data));
+        $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
+
+        if (!empty($data['permissions'])) {
+            $role->syncPermissions($data['permissions']);
+        }
+
+        return response()->json($role, 201);
     }
 
     public function show(Role $role)
     {
-        return new RoleResource($role);
+        $role->load('permissions');
+
+        return response()->json($role);
     }
 
     public function update(Request $request, Role $role)
     {
         $data = $request->validate([
-            'name' => 'sometimes|required|string|max:50|unique:roles,name,' . $role->id,
-            'description' => 'nullable|string',
+            'name' => 'sometimes|required|string|max:255|unique:roles,name,' . $role->id,
+            'permissions' => 'nullable|array',
+            'permissions.*' => 'string|exists:permissions,name',
         ]);
 
-        $role->update($data);
+        $role->update(['name' => $data['name'] ?? $role->name]);
 
-        return new RoleResource($role);
+        if (isset($data['permissions'])) {
+            $role->syncPermissions($data['permissions']);
+        }
+
+        return response()->json($role->load('permissions'));
     }
 
     public function destroy(Role $role)

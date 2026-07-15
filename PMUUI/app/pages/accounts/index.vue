@@ -2,10 +2,13 @@
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
 import { onMounted } from 'vue'
+import { usePermissions } from "~/composables/usePermissions";
 
 definePageMeta({
   layout: "dashboard",
 });
+
+const { can } = usePermissions();
 
 const UBadge = resolveComponent('UBadge')
 
@@ -25,8 +28,8 @@ type Account = {
   id: number;
   name: string;
   email: string;
-  role: { id: number; name: string } | null;
   status: keyof typeof statusColor;
+  roles: string[];
 }
 
 const columns: TableColumn<Account>[] = [
@@ -44,16 +47,16 @@ const columns: TableColumn<Account>[] = [
     header: 'Email'
   },
   {
-    accessorKey: 'role',
-    header: 'Role',
-    cell: ({ row }) => row.getValue('role')?.name ?? '-'
+    accessorKey: 'roles',
+    header: 'Roles',
+    cell: ({ row }) => (row.getValue('roles') as string[])?.join(', ') ?? '-'
   },
   {
     accessorKey: 'status',
     header: 'Status',
     cell: ({ row }) => {
       const status = row.getValue('status') as keyof typeof statusColor
-      const color = statusColor[status]
+      const color = statusColor[status] ?? 'neutral'
 
       return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () =>
         status
@@ -72,7 +75,7 @@ const columns: TableColumn<Account>[] = [
     <div class="flex justify-between">
       <h1 class="text-2xl font-bold">Accounts</h1>
 
-      <UButton to="/accounts/create" icon="i-lucide-plus">
+      <UButton v-if="can('manage users')" to="/accounts/create" icon="i-lucide-plus">
         Add Account
       </UButton>
     </div>
@@ -82,7 +85,7 @@ const columns: TableColumn<Account>[] = [
       :columns="columns"
     >
       <template #action-data="{ row }">
-        <UButton size="xs" :to="`/accounts/edit/${row.id}`"> Edit </UButton>
+        <UButton v-if="can('manage users')" size="xs" :to="`/accounts/edit/${row.id}`"> Edit </UButton>
       </template>
     </UTable>
   </div>

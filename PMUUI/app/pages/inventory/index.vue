@@ -2,11 +2,13 @@
 import type { TableColumn } from '@nuxt/ui';
 import { apiFetch } from '~/composables/useApiFetch'
 import { onMounted } from 'vue';
+import { usePermissions } from "~/composables/usePermissions";
 
 definePageMeta({
   layout: "dashboard",
 });
 
+const { can } = usePermissions();
 
 const UBadge = resolveComponent('UBadge')
 
@@ -63,7 +65,7 @@ const columns: TableColumn<Inventory>[] = [
     <div class="flex justify-between mb-5">
       <h1 class="text-2xl font-bold">Inventory</h1>
 
-      <UButton to="/inventory/create"> Add Item </UButton>
+      <UButton v-if="can('manage inventory')" to="/inventory/create"> Add Item </UButton>
     </div>
 
     <UTable

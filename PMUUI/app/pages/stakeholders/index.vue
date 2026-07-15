@@ -2,10 +2,13 @@
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
 import { onMounted } from 'vue'
+import { usePermissions } from "~/composables/usePermissions";
 
 definePageMeta({
   layout: "dashboard",
 });
+
+const { can } = usePermissions();
 
 const UBadge = resolveComponent('UBadge')
 
@@ -66,7 +69,7 @@ const columns: TableColumn<Stakeholder>[] = [
     <div class="flex justify-between">
       <h1 class="text-2xl font-bold">Stakeholders</h1>
 
-      <UButton to="/stakeholders/create" icon="i-lucide-plus">
+      <UButton v-if="can('manage stakeholders')" to="/stakeholders/create" icon="i-lucide-plus">
         Add Stakeholder
       </UButton>
     </div>

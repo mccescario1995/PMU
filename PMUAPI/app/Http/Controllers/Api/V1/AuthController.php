@@ -7,6 +7,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Exceptions\UnauthorizedException;
 
 class AuthController extends Controller
 {
@@ -25,7 +26,7 @@ class AuthController extends Controller
         $token = $user->createToken('pmu-token')->plainTextToken;
 
         return response()->json([
-            'user' => new UserResource($user->load('role')),
+            'user' => new UserResource($user->load('roles', 'permissions')),
             'token' => $token,
         ]);
     }
@@ -39,6 +40,6 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return new UserResource($request->user()->load('role'));
+        return new UserResource($request->user()->load('roles', 'permissions'));
     }
 }

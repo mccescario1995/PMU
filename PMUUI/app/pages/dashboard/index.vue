@@ -1,22 +1,60 @@
 <script setup lang="ts">
+import { apiFetch } from "~/composables/useApiFetch";
+import { onMounted } from "vue";
+
 definePageMeta({
   layout: "dashboard",
 });
 
-const period = ref("Today");
+const stats = ref({
+  total_revenue: 0,
+  transactions_today: 0,
+  active_stakeholders: 0,
+  low_stock_items: 0,
+});
+
+onMounted(async () => {
+  stats.value = (await apiFetch("/v1/dashboard", { parseJson: true })) as any;
+});
+
+const currency = (v: number) =>
+  new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(v);
 </script>
 
 <template>
   <div class="space-y-8 w-full">
     <!-- Statistics -->
     <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-      <DashboardStatCard />
+      <DashboardStatCard
+        icon="i-lucide-philippine-peso"
+        label="Total Revenue"
+        :value="currency(stats.total_revenue)"
+        color="text-success"
+      />
+      <DashboardStatCard
+        icon="i-lucide-receipt"
+        label="Transactions Today"
+        :value="String(stats.transactions_today)"
+        color="text-primary"
+      />
+      <DashboardStatCard
+        icon="i-lucide-users"
+        label="Active Stakeholders"
+        :value="String(stats.active_stakeholders)"
+        color="text-info"
+      />
+      <DashboardStatCard
+        icon="i-lucide-package-alert"
+        label="Low Stock Items"
+        :value="String(stats.low_stock_items)"
+        color="text-warning"
+      />
     </div>
 
     <!-- Charts -->
     <div class="grid gap-6 xl:grid-cols-3 mt-6">
       <UCard class="xl:col-span-2">
-        <template #header>...</template>
+        <template #header>Revenue Trend</template>
         <DashboardRevenueChart />
       </UCard>
       <DashboardForecastCard />
