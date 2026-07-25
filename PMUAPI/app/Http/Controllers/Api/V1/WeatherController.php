@@ -8,10 +8,16 @@ use Illuminate\Http\Request;
 
 class WeatherController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = WeatherData::query()->orderBy('weather_date');
+
+        if ($request->filled('date')) {
+            $query->whereDate('weather_date', $request->input('date'));
+        }
+
         return response()->json(
-            WeatherData::orderBy('weather_date')->get()
+            $query->get()
         );
     }
 

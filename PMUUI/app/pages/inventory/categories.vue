@@ -13,15 +13,25 @@ const categories = ref<any[]>([])
 
 onMounted(async () => {
   const items = (await apiFetch('/v1/inventory/items', { parseJson: true })) as any[]
-  const counts: Record<string, number> = {}
+  const counts: Record<string, { count: number; quantity: number; low_stock: number }> = {}
   for (const it of items) {
-    counts[it.category] = (counts[it.category] ?? 0) + 1
+    const type = it.category_type ?? 'unknown'
+    if (!counts[type]) {
+      counts[type] = { count: 0, quantity: 0, low_stock: 0 }
+    }
+    counts[type].count++
+    counts[type].quantity += it.quantity
+    if (it.status === 'low_stock' || it.status === 'damaged') {
+      counts[type].low_stock++
+    }
   }
-  categories.value = Object.entries(counts).map(([name, count], i) => ({
+  categories.value = Object.entries(counts).map(([name, data], i) => ({
     id: i + 1,
     name,
-    description: "",
-    items: count,
+    description: '',
+    items: data.count,
+    quantity: data.quantity,
+    low_stock: data.low_stock,
   }))
 })
 
@@ -30,6 +40,8 @@ type Category = {
   name: string
   description: string
   items: number
+  quantity: number
+  low_stock: number
 }
 
 const columns: TableColumn<Category>[] = [
@@ -38,11 +50,20 @@ const columns: TableColumn<Category>[] = [
     header: '#',
     cell: ({ row }) => `#${row.getValue('id')}`,
   },
-  { accessorKey: 'name', header: 'Name' },
-  { accessorKey: 'description', header: 'Description' },
+  { accessorKey: 'name', header: 'Category Type' },
   {
     accessorKey: 'items',
     header: 'Items',
+    meta: { class: { th: "text-right", td: "text-right font-mono" } },
+  },
+  {
+    accessorKey: 'quantity',
+    header: 'Total Qty',
+    meta: { class: { th: "text-right", td: "text-right font-mono" } },
+  },
+  {
+    accessorKey: 'low_stock',
+    header: 'Low Stock',
     meta: { class: { th: "text-right", td: "text-right font-mono" } },
   },
   { accessorKey: 'action', header: 'Action' },
@@ -51,10 +72,7 @@ const columns: TableColumn<Category>[] = [
 
 <template>
   <div class="p-6 space-y-5">
-    <div class="flex justify-between">
-      <h1 class="text-2xl font-bold">Inventory Categories</h1>
-      <UButton icon="i-lucide-plus"> Add Category </UButton>
-    </div>
+    <h1 class="text-2xl font-bold">Inventory Categories</h1>
 
     <UTable :data="categories" :columns="columns">
       <template #action-data="{ row }">

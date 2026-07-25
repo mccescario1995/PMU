@@ -16,18 +16,32 @@ const transactions = ref<any[]>([])
 const total = ref(0)
 const count = ref(0)
 
+function formatFeeTypes(items: any[]): string {
+  if (!items || items.length === 0) return "-";
+  if (items.length === 1) return items[0].fee_type?.fee_name ?? "-";
+  return items.map((i: any) => i.fee_type?.fee_name).filter(Boolean).join(", ");
+}
+
 onMounted(async () => {
   const report = (await apiFetch('/v1/reports/daily?date=' + today, { parseJson: true })) as any
   total.value = report.total ?? 0
   count.value = report.count ?? 0
   transactions.value = (report.transactions ?? []).map((t: any) => ({
     id: t.id,
-    type: t.items?.[0]?.fee_type?.fee_name ?? t.stakeholder?.name ?? "-",
+    type: formatFeeTypes(t.items ?? []),
     stakeholder: t.stakeholder?.name ?? "-",
     amount: t.total_amount,
     time: (t.transaction_date ?? "").toString().slice(11, 16) || "-",
   }))
 })
+
+function exportCsv() {
+  window.open('/v1/reports/daily/excel?date=' + today, '_blank')
+}
+
+function exportPdf() {
+  window.open('/v1/reports/daily/pdf?date=' + today, '_blank')
+}
 
 type Transaction = {
   id: number
@@ -43,7 +57,7 @@ const columns: TableColumn<Transaction>[] = [
     header: '#',
     cell: ({ row }) => `#${row.getValue('id')}`,
   },
-  { accessorKey: 'type', header: 'Type' },
+  { accessorKey: 'type', header: 'Type(s)' },
   { accessorKey: 'stakeholder', header: 'Stakeholder' },
   { accessorKey: 'time', header: 'Time' },
   {
@@ -62,7 +76,8 @@ const columns: TableColumn<Transaction>[] = [
         <h1 class="text-2xl font-bold">Daily Report</h1>
         <p class="text-slate-500">{{ new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
       </div>
-      <UButton icon="i-lucide-download"> Export </UButton>
+      <UButton icon="i-lucide-download" @click="exportCsv"> Export CSV </UButton>
+      <UButton icon="i-lucide-file-text" variant="outline" @click="exportPdf"> Export PDF </UButton>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2">

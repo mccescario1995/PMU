@@ -8,8 +8,9 @@ const roles = ref([])
 const form = reactive({
   name: "",
   email: "",
-  role_id: null,
+  roles: [] as string[],
   status: "active",
+  password: "",
 });
 
 onMounted(async () => {
@@ -21,7 +22,8 @@ function save() {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(form),
-    parseJson: true
+    parseJson: true,
+    throwOnError: true,
   }).then(() => useRouter().push('/accounts'))
 };
 </script>
@@ -39,11 +41,16 @@ function save() {
         <UInput type="email" v-model="form.email" placeholder="email@pmu.gov.ph" />
       </UFormField>
 
-      <UFormField label="Role">
+      <UFormField label="Password">
+        <UInput v-model="form.password" type="password" />
+      </UFormField>
+
+      <UFormField label="Roles">
         <USelect
-          v-model="form.role_id"
-          :items="roles.map(r => ({ label: r.name, value: r.id }))"
-          placeholder="Select role"
+          v-model="form.roles"
+          multiple
+          :items="roles.map(r => ({ label: r.name, value: r.name }))"
+          placeholder="Select roles"
         />
       </UFormField>
 

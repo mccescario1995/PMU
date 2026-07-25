@@ -16,9 +16,9 @@ export function usePermissions() {
     return roles.value.has(role);
   }
 
-  function isAdmin(): boolean {
-    return roles.value.has("Administrator");
+  function isPortManager(): boolean {
+    return roles.value.has("Port Manager");
   }
 
-  return { can, hasRole, isAdmin, permissions, roles };
+  return { can, hasRole, isPortManager, permissions, roles };
 }

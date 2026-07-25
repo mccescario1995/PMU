@@ -20,23 +20,21 @@ const form = reactive({
   id: Number(id),
   name: "",
   email: "",
-  role_id: null as number | string | null,
+  roles: [] as string[],
   status: "active",
 });
 
 onMounted(async () => {
-  // 1. Cleaned up the 'as any[]' cast
   const rolesResponse = await apiFetch("/v1/roles", { parseJson: true });
   roles.value = rolesResponse as Role[];
 
-  // 2. Cleaned up the 'as any' cast by typing the variable instead of casting inline
   const user: any = await apiFetch("/v1/users/" + id, { parseJson: true });
 
   Object.assign(form, {
     id: user.id,
     name: user.name,
     email: user.email,
-    role_id: user.role_id,
+    roles: user.roles ?? [],
     status: user.status,
   });
 });
@@ -47,6 +45,41 @@ function save() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(form),
     parseJson: true,
+    throwOnError: true,
   }).then(() => useRouter().push("/accounts"));
 }
 </script>
+
+<template>
+  <div class="p-6 max-w-xl">
+    <h1 class="text-2xl font-bold mb-5">Edit Account #{{ form.id }}</h1>
+
+    <UForm :state="form" @submit="save">
+      <UFormField label="Name">
+        <UInput v-model="form.name" placeholder="Full name" />
+      </UFormField>
+
+      <UFormField label="Email">
+        <UInput type="email" v-model="form.email" placeholder="email@pmu.gov.ph" />
+      </UFormField>
+
+      <UFormField label="Roles">
+        <USelect
+          v-model="form.roles"
+          multiple
+          :items="roles.map(r => ({ label: r.name, value: r.name }))"
+          placeholder="Select roles"
+        />
+      </UFormField>
+
+      <UFormField label="Status">
+        <USelect
+          v-model="form.status"
+          :items="['active', 'inactive', 'suspended']"
+        />
+      </UFormField>
+
+      <UButton type="submit"> Save </UButton>
+    </UForm>
+  </div>
+</template>

@@ -27,6 +27,14 @@ onMounted(async () => {
   }))
 })
 
+function exportCsv() {
+  window.open('/v1/reports/monthly/excel?month=' + month, '_blank')
+}
+
+function exportPdf() {
+  window.open('/v1/reports/monthly/pdf?month=' + month, '_blank')
+}
+
 type Month = {
   revenue_date: string
   revenue: number
@@ -60,7 +68,8 @@ const columns: TableColumn<Month>[] = [
         <h1 class="text-2xl font-bold">Monthly Report</h1>
         <p class="text-slate-500">Operations summary for {{ month }}.</p>
       </div>
-      <UButton icon="i-lucide-download"> Export </UButton>
+      <UButton icon="i-lucide-file-text" @click="exportCsv"> Export CSV </UButton>
+      <UButton icon="i-lucide-file-text" variant="outline" @click="exportPdf"> Export PDF </UButton>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2">

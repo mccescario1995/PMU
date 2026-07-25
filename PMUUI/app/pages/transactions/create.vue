@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
+import { onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+
 definePageMeta({
   layout: "dashboard",
 });
@@ -9,34 +12,79 @@ const feeTypes = ref([]);
 
 const form = reactive({
   stakeholder_id: null,
-  fee_type_id: null,
-  amount: 0,
+  items: [
+    {
+      fee_type_id: null,
+      quantity: 1,
+      unit_price: 0,
+    }
+  ],
   transaction_date: "",
   status: "pending",
 });
+
+const selectedFeeType = ref(null);
 
 onMounted(async () => {
   stakeholders.value = (await apiFetch('/v1/stakeholders', { parseJson: true })) as any[];
   feeTypes.value = (await apiFetch('/v1/fee-types', { parseJson: true })) as any[];
 })
 
+function addItem() {
+  form.items.push({
+    fee_type_id: null,
+    quantity: 1,
+    unit_price: 0,
+  });
+}
+
+function removeItem(index: number) {
+  if (form.items.length > 1) {
+    form.items.splice(index, 1);
+  }
+}
+
+watch(() => form.items, (newItems) => {
+  newItems.forEach((item) => {
+    const feeType = feeTypes.value.find(f => f.id === item.fee_type_id);
+    if (feeType && item.unit_price === 0) {
+      item.unit_price = feeType.base_rate;
+    }
+  });
+}, { deep: true });
+
+function calculateSubtotal(item: any) {
+  return Number(item.quantity || 0) * Number(item.unit_price || 0);
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "PHP",
+  }).format(value);
+}
+
+function calculateTotal() {
+  return form.items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
+}
+
 function save() {
-  const amount = Number(form.amount) || 0
+  const items = form.items.map(item => ({
+    fee_type_id: item.fee_type_id,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    subtotal: calculateSubtotal(item),
+  }));
+
   const payload = {
     stakeholder_id: form.stakeholder_id,
     transaction_date: form.transaction_date,
     status: form.status,
     remarks: "",
-    total_amount: amount,
-    items: [
-      {
-        fee_type_id: form.fee_type_id,
-        quantity: 1,
-        unit_price: amount,
-        subtotal: amount,
-      },
-    ],
+    total_amount: calculateTotal(),
+    items: items,
   }
+
   apiFetch('/v1/transactions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -47,10 +95,10 @@ function save() {
 </script>
 
 <template>
-  <div class="p-6 max-w-xl">
+  <div class="p-6 max-w-3xl">
     <h1 class="text-2xl font-bold mb-5">Create Transaction</h1>
 
-    <UForm :state="form" @submit="save">
+    <UForm @submit="save">
       <UFormField label="Stakeholder">
         <USelect
           v-model="form.stakeholder_id"
@@ -59,16 +107,54 @@ function save() {
         />
       </UFormField>
 
-      <UFormField label="Fee Type">
-        <USelect
-          v-model="form.fee_type_id"
-          :items="feeTypes.map(f => ({ label: f.fee_name, value: f.id }))"
-          placeholder="Select fee type"
-        />
+      <UFormField label="Transaction Items" class="mb-4">
+        <div v-for="(item, index) in form.items" :key="index" class="flex gap-2 mb-2 items-end">
+          <USelect
+            v-model="item.fee_type_id"
+            :items="feeTypes.map(f => ({ label: f.fee_name, value: f.id }))"
+            placeholder="Fee Type"
+            class="w-48"
+          />
+          <UInputNumber
+            v-model="item.quantity"
+            :min="1"
+            placeholder="Qty"
+            class="w-24"
+          />
+          <UInputNumber
+            v-model="item.unit_price"
+            :step="0.01"
+            :min="0"
+            placeholder="Unit Price"
+            class="w-36"
+          />
+          <span class="w-24 font-mono text-right text-primary">
+            {{ formatCurrency(calculateSubtotal(item)) }}
+          </span>
+          <UButton
+            v-if="form.items.length > 1"
+            size="xs"
+            color="error"
+            variant="outline"
+            icon="i-lucide-trash-2"
+            @click="removeItem(index)"
+          />
+        </div>
+        <UButton
+          type="button"
+          variant="outline"
+          icon="i-lucide-plus"
+          class="w-fit"
+          @click="addItem"
+        >
+          Add Item
+        </UButton>
       </UFormField>
 
-      <UFormField label="Amount">
-        <UInput type="number" v-model="form.amount" />
+      <UFormField label="Total Amount">
+        <span class="text-2xl font-bold text-success">
+          {{ formatCurrency(calculateTotal()) }}
+        </span>
       </UFormField>
 
       <UFormField label="Date">

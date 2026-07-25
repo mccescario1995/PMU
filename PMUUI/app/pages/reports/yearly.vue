@@ -25,6 +25,10 @@ onMounted(async () => {
   }))
 })
 
+function exportCsv() {
+  window.open('/v1/reports/annual/excel?year=' + year, '_blank')
+}
+
 type Year = {
   revenue_date: string
   revenue: number
@@ -58,7 +62,7 @@ const columns: TableColumn<Year>[] = [
         <h1 class="text-2xl font-bold">Yearly Report</h1>
         <p class="text-slate-500">Performance and trends for {{ year }}.</p>
       </div>
-      <UButton icon="i-lucide-download"> Export </UButton>
+      <UButton icon="i-lucide-download" @click="exportCsv"> Export CSV </UButton>
     </div>
 
     <UCard>

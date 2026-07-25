@@ -3,7 +3,7 @@ import { apiFetch } from "~/composables/useApiFetch";
 import { onMounted } from "vue";
 
 const items = ref<
-  { id: number; item_name: string; category: string; quantity: number; status: string }[]
+  { id: number; item_name: string; category: string; category_type: string; quantity: number; status: string }[]
 >([]);
 
 onMounted(async () => {
@@ -20,12 +20,12 @@ const lowStock = computed(() => items.value.filter((i) => i.status === "low_stoc
       <NuxtLink
         v-for="item in lowStock"
         :key="item.id"
-        :to="`/inventory`"
+        :to="`/inventory/planning`"
         class="flex items-center justify-between py-2 hover:bg-gray-50 transition rounded-lg px-2"
       >
         <div>
           <p class="text-sm font-medium">{{ item.item_name }}</p>
-          <p class="text-xs text-gray-500">{{ item.category }}</p>
+          <p class="text-xs text-gray-500">{{ item.category_type }} • {{ item.category }}</p>
         </div>
         <UBadge :color="item.quantity <= 0 ? 'error' : 'warning'" variant="subtle">
           {{ item.quantity <= 0 ? 'Out of stock' : `${item.quantity} left` }}

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
 import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 
 definePageMeta({
   layout: "dashboard",
@@ -12,17 +13,24 @@ const currency = (value: number) =>
 const route = useRoute();
 const id = route.params.id;
 
-const transaction = ref<any>({ id: Number(id), type: "-", stakeholder: "-", amount: 0, date: "-", status: "-" });
+const transaction = ref<any>({ id: Number(id), type: "-", stakeholder: "-", amount: 0, date: "-", status: "-", items: [] });
+
+function formatFeeTypes(items: any[]): string {
+  if (!items || items.length === 0) return "-";
+  if (items.length === 1) return items[0].fee_type?.fee_name ?? "-";
+  return items.map((i: any) => i.fee_type?.fee_name).filter(Boolean).join(", ");
+}
 
 onMounted(async () => {
   const t = (await apiFetch('/v1/transactions/' + id, { parseJson: true })) as any
   transaction.value = {
     id: t.id,
-    type: t.items?.[0]?.fee_type?.fee_name ?? "Transaction",
+    type: formatFeeTypes(t.items ?? []),
     stakeholder: t.stakeholder?.name ?? "-",
     amount: t.total_amount,
     date: t.transaction_date,
     status: t.status,
+    items: t.items ?? [],
   }
 });
 </script>
@@ -43,7 +51,7 @@ onMounted(async () => {
       <template #header> Details </template>
       <dl class="divide-y divide-slate-100">
         <div class="flex justify-between py-2">
-          <dt class="text-slate-500">Type</dt>
+          <dt class="text-slate-500">Type(s)</dt>
           <dd class="font-medium">{{ transaction.type }}</dd>
         </div>
         <div class="flex justify-between py-2">
@@ -61,6 +69,14 @@ onMounted(async () => {
         <div class="flex justify-between py-2">
           <dt class="text-slate-500">Status</dt>
           <dd class="font-medium">{{ transaction.status }}</dd>
+        </div>
+        <div v-if="transaction.items && transaction.items.length > 1" class="flex justify-between py-2">
+          <dt class="text-slate-500">Items</dt>
+          <dd class="font-medium text-right">
+            <div v-for="(item, index) in transaction.items" :key="index" class="text-sm">
+              {{ item.fee_type?.fee_name }} × {{ item.quantity }} @ {{ currency(item.unit_price) }} = {{ currency(item.subtotal) }}
+            </div>
+          </dd>
         </div>
       </dl>
     </UCard>

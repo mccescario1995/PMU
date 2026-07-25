@@ -18,17 +18,16 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $adminRole = Role::create(['name' => 'Administrator', 'guard_name' => 'web']);
-        $cashierRole = Role::create(['name' => 'Cashier', 'guard_name' => 'web']);
-        $staffRole = Role::create(['name' => 'Staff', 'guard_name' => 'web']);
+        $portManagerRole = Role::create(['name' => 'Port Manager', 'guard_name' => 'web']);
+        $statisticianRole = Role::create(['name' => 'Statistician', 'guard_name' => 'web']);
 
-        Permission::create(['name' => 'manage users', 'guard_name' => 'web'])->syncRoles([$adminRole]);
-        Permission::create(['name' => 'manage roles', 'guard_name' => 'web'])->syncRoles([$adminRole]);
-        Permission::create(['name' => 'manage stakeholders', 'guard_name' => 'web'])->syncRoles([$adminRole, $cashierRole]);
-        Permission::create(['name' => 'manage transactions', 'guard_name' => 'web'])->syncRoles([$adminRole, $cashierRole]);
-        Permission::create(['name' => 'manage inventory', 'guard_name' => 'web'])->syncRoles([$adminRole, $staffRole]);
-        Permission::create(['name' => 'view reports', 'guard_name' => 'web'])->syncRoles([$adminRole, $cashierRole, $staffRole]);
-        Permission::create(['name' => 'manage settings', 'guard_name' => 'web'])->syncRoles([$adminRole]);
+        Permission::create(['name' => 'manage users', 'guard_name' => 'web'])->syncRoles([$portManagerRole]);
+        Permission::create(['name' => 'manage roles', 'guard_name' => 'web'])->syncRoles([$portManagerRole]);
+        Permission::create(['name' => 'manage stakeholders', 'guard_name' => 'web'])->syncRoles([$statisticianRole]);
+        Permission::create(['name' => 'manage transactions', 'guard_name' => 'web'])->syncRoles([$statisticianRole]);
+        Permission::create(['name' => 'manage inventory', 'guard_name' => 'web'])->syncRoles([$portManagerRole, $statisticianRole]);
+        Permission::create(['name' => 'view reports', 'guard_name' => 'web'])->syncRoles([$portManagerRole, $statisticianRole]);
+        Permission::create(['name' => 'manage settings', 'guard_name' => 'web'])->syncRoles([$portManagerRole]);
 
         $user = User::create([
             'name' => 'Port Manager',
@@ -36,7 +35,7 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('password'),
             'status' => 'active',
         ]);
-        $user->assignRole('Administrator');
+        $user->assignRole('Port Manager');
 
         $feeTypes = [
             ['fee_name' => 'Fish Landing', 'base_rate' => 30.00, 'unit' => 'kg'],
@@ -47,6 +46,8 @@ class DatabaseSeeder extends Seeder
             ['fee_name' => 'Rental', 'base_rate' => 100.00, 'unit' => 'month'],
             ['fee_name' => 'Accreditation', 'base_rate' => 250.00, 'unit' => 'head'],
             ['fee_name' => 'Auxiliary Invoice', 'base_rate' => 40.00, 'unit' => 'item'],
+            ['fee_name' => 'Entrance', 'base_rate' => 10.00, 'unit' => 'head'],
+            ['fee_name' => 'Usage', 'base_rate' => 15.00, 'unit' => 'hour'],
         ];
         foreach ($feeTypes as $fee) {
             FeeType::create($fee);

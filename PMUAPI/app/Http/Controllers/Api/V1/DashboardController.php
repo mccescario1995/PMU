@@ -50,6 +50,9 @@ class DashboardController extends Controller
             'by_status' => InventoryItem::selectRaw('status, COUNT(*) as count')
                 ->groupBy('status')
                 ->get(),
+            'by_category_type' => InventoryItem::selectRaw('category_type, COUNT(*) as count')
+                ->groupBy('category_type')
+                ->get(),
         ]);
     }
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\V1\StakeholderController;
 use App\Http\Controllers\Api\V1\FeeTypeController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\InventoryItemController;
+use App\Http\Controllers\Api\V1\InventoryPlanningController;
 use App\Http\Controllers\Api\V1\WeatherController;
 use App\Http\Controllers\Api\V1\ForecastController;
 use App\Http\Controllers\Api\V1\DashboardController;
@@ -58,7 +59,9 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::apiResource('roles', RoleController::class);
+        Route::middleware('can:manage roles')->group(function () {
+            Route::apiResource('roles', RoleController::class);
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -66,7 +69,9 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::apiResource('users', UserController::class);
+        Route::middleware('can:manage users')->group(function () {
+            Route::apiResource('users', UserController::class);
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -74,7 +79,9 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::apiResource('stakeholders', StakeholderController::class);
+        Route::middleware('can:manage stakeholders')->group(function () {
+            Route::apiResource('stakeholders', StakeholderController::class);
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -82,7 +89,9 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::apiResource('fee-types', FeeTypeController::class);
+        Route::middleware('can:manage settings')->group(function () {
+            Route::apiResource('fee-types', FeeTypeController::class);
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -90,7 +99,9 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::apiResource('transactions', TransactionController::class);
+        Route::middleware('can:manage transactions')->group(function () {
+            Route::apiResource('transactions', TransactionController::class);
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -98,7 +109,7 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::prefix('inventory')->group(function () {
+        Route::prefix('inventory')->middleware('can:manage inventory')->group(function () {
 
             Route::apiResource('items', InventoryItemController::class);
 
@@ -121,6 +132,22 @@ Route::prefix('v1')->group(function () {
                 '/logs',
                 [InventoryItemController::class, 'allLogs']
             );
+
+            /*
+            |--------------------------------------------------------------------------
+            | Inventory Planning
+            |--------------------------------------------------------------------------
+            */
+
+            Route::prefix('planning')->group(function () {
+
+                Route::get('/', [InventoryPlanningController::class, 'index']);
+
+                Route::get(
+                    '/view',
+                    [InventoryPlanningController::class, 'planningView']
+                );
+            });
         });
 
         /*
@@ -129,7 +156,9 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::apiResource('weather', WeatherController::class);
+        Route::middleware('can:manage settings')->group(function () {
+            Route::apiResource('weather', WeatherController::class);
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -137,7 +166,7 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::prefix('forecasts')->group(function () {
+        Route::prefix('forecasts')->middleware('can:view reports')->group(function () {
 
             Route::get('/', [ForecastController::class, 'index']);
 
@@ -163,7 +192,7 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::prefix('dashboard')->group(function () {
+        Route::prefix('dashboard')->middleware('can:view reports')->group(function () {
 
             Route::get('/', [DashboardController::class, 'index']);
 
@@ -189,11 +218,21 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::prefix('reports')->group(function () {
+        Route::prefix('reports')->middleware('can:view reports')->group(function () {
 
             Route::get(
                 '/daily',
                 [ReportController::class, 'daily']
+            );
+
+            Route::get(
+                '/daily/excel',
+                [ReportController::class, 'dailyExcel']
+            );
+
+            Route::get(
+                '/daily/pdf',
+                [ReportController::class, 'dailyPdf']
             );
 
             Route::get(
@@ -215,6 +254,16 @@ Route::prefix('v1')->group(function () {
                 '/monthly/excel',
                 [ReportController::class, 'monthlyExcel']
             );
+
+            Route::get(
+                '/annual/excel',
+                [ReportController::class, 'annualExcel']
+            );
+
+            Route::get(
+                '/annual/pdf',
+                [ReportController::class, 'annualPdf']
+            );
         });
 
         /*
@@ -223,14 +272,16 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::get(
-            '/audit-logs',
-            [AuditLogController::class, 'index']
-        );
+        Route::middleware('can:manage users')->group(function () {
+            Route::get(
+                '/audit-logs',
+                [AuditLogController::class, 'index']
+            );
 
-        Route::get(
-            '/audit-logs/{auditLog}',
-            [AuditLogController::class, 'show']
-        );
+            Route::get(
+                '/audit-logs/{auditLog}',
+                [AuditLogController::class, 'show']
+            );
+        });
     });
 });

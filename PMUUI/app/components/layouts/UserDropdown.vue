@@ -21,7 +21,7 @@
       <div class="ml-3 text-left">
         <p class="font-semibold">Port Manager</p>
 
-        <p class="text-xs text-gray-500">Administrator</p>
+        <p class="text-xs text-gray-500">Port Manager</p>
       </div>
     </UButton>
   </UDropdownMenu>

@@ -27,6 +27,7 @@ class InventoryItemController extends Controller
         $data = $request->validate([
             'item_name' => 'required|string',
             'category' => 'required|string',
+            'category_type' => 'required|in:equipment,materials,supplies',
             'quantity' => 'nullable|integer|min:0',
             'unit' => 'nullable|string',
             'status' => 'nullable|in:available,low_stock,damaged',
@@ -45,6 +46,7 @@ class InventoryItemController extends Controller
         $data = $request->validate([
             'item_name' => 'sometimes|required|string',
             'category' => 'sometimes|required|string',
+            'category_type' => 'sometimes|required|in:equipment,materials,supplies',
             'quantity' => 'nullable|integer|min:0',
             'unit' => 'nullable|string',
             'status' => 'nullable|in:available,low_stock,damaged',

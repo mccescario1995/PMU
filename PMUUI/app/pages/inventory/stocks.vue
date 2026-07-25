@@ -25,6 +25,7 @@ type Stock = {
   id: number
   item_name: string
   category: string
+  category_type: string
   quantity: number
   status: keyof typeof statusColor
 }
@@ -36,6 +37,11 @@ const columns: TableColumn<Stock>[] = [
     cell: ({ row }) => `#${row.getValue('id')}`,
   },
   { accessorKey: 'item_name', header: 'Item' },
+  { accessorKey: 'category_type', header: 'Type', cell: ({ row }) => {
+    const type = row.getValue('category_type')
+    const color = type === 'equipment' ? 'primary' : type === 'materials' ? 'success' : 'warning'
+    return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () => type)
+  }},
   { accessorKey: 'category', header: 'Category' },
   {
     accessorKey: 'quantity',
@@ -52,6 +58,12 @@ const columns: TableColumn<Stock>[] = [
   },
   { accessorKey: 'action', header: 'Action' },
 ]
+
+async function remove(row: any) {
+  if (!confirm('Delete this item?')) return
+  await apiFetch(`/v1/inventory/items/${row.id}`, { method: 'DELETE' })
+  stocks.value = stocks.value.filter(i => i.id !== row.id)
+}
 </script>
 
 <template>
@@ -64,6 +76,8 @@ const columns: TableColumn<Stock>[] = [
     <UTable :data="stocks" :columns="columns">
       <template #action-data="{ row }">
         <UButton size="xs" :to="`/inventory/${row.id}`"> View </UButton>
+        <UButton size="xs" :to="`/inventory/edit/${row.id}`"> Edit </UButton>
+        <UButton size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
       </template>
     </UTable>
   </div>

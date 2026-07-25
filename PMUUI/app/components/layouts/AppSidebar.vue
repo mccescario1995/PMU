@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const route = useRoute();
 const { can } = usePermissions();
+const { logout } = useAuth();
 
 const menus = [
   {
@@ -25,6 +26,12 @@ const menus = [
     title: "Inventory",
     icon: "i-lucide-package",
     to: "/inventory",
+    permission: "manage inventory",
+  },
+  {
+    title: "Planning",
+    icon: "i-lucide-calendar-check",
+    to: "/inventory/planning",
     permission: "manage inventory",
   },
   {
@@ -97,7 +104,7 @@ const menus = [
 
     <!-- Logout -->
     <div class="border-t border-white/20 p-4">
-      <UButton block icon="i-lucide-log-out" color="neutral" variant="soft">
+      <UButton block icon="i-lucide-log-out" color="neutral" variant="soft" @click="logout()">
         Logout
       </UButton>
     </div>
