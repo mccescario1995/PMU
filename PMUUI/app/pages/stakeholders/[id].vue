@@ -12,7 +12,7 @@ const id = route.params.id;
 const stakeholder = ref<any>({ id: Number(id), name: "Loading...", type: "-", contact_no: "-", email: "-", address: "-" })
 
 onMounted(async () => {
-  stakeholder.value = (await apiFetch('/v1/stakeholders/' + id, { parseJson: true })) as any
+  stakeholder.value = ((await apiFetch('/v1/stakeholders/' + id, { parseJson: true })) as any).data
 });
 </script>
 

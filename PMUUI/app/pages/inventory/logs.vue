@@ -34,7 +34,7 @@ const columns: TableColumn<any>[] = [
     </div>
 
     <UTable :data="logs" :columns="columns" :loading="loading">
-      <template #action-data="{ row }">
+      <template #action-cell="{ row }">
         <UBadge :color="row.original.action === 'add' ? 'success' : row.original.action === 'deduct' ? 'error' : 'warning'" variant="subtle">
           {{ row.original.action }}
         </UBadge>

@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
         }
         $portManagerRole->syncPermissions($portManagerPermissions);
 
-        $statisticianPermissions = ['manage stakeholders', 'manage transactions', 'manage inventory', 'view reports'];
+        $statisticianPermissions = ['manage stakeholders', 'manage transactions', 'manage inventory', 'manage settings', 'view reports'];
         foreach ($statisticianPermissions as $permission) {
             Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }

@@ -8,7 +8,7 @@ onMounted(async () => {
   trend.value = (await apiFetch("/v1/dashboard/revenue-trend", { parseJson: true })) as any[];
 });
 
-const maxRevenue = computed(() => Math.max(...trend.value.map((t) => t.total_revenue), 1));
+const maxRevenue = computed(() => Math.max(...trend.value.map((t) => Number(t.total_revenue)), 1));
 </script>
 
 <template>

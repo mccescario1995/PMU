@@ -31,11 +31,11 @@ onMounted(async () => {
   const user: any = await apiFetch("/v1/users/" + id, { parseJson: true });
 
   Object.assign(form, {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    roles: user.roles ?? [],
-    status: user.status,
+    id: user.data.id,
+    name: user.data.name,
+    email: user.data.email,
+    roles: user.data.roles ?? [],
+    status: user.data.status,
   });
 });
 

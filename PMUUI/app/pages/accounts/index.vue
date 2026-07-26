@@ -95,9 +95,9 @@ const columns: TableColumn<Account>[] = [
       :columns="columns"
       :loading="loading"
     >
-      <template #action-data="{ row }">
-        <UButton size="xs" :to="`/accounts/edit/${row.id}`"> View </UButton>
-        <UButton v-if="can('manage users')" size="xs" :to="`/accounts/edit/${row.id}`"> Edit </UButton>
+      <template #action-cell="{ row }">
+        <UButton size="xs" :to="`/accounts/edit/${row.original.id}`"> View </UButton>
+        <UButton v-if="can('manage users')" size="xs" :to="`/accounts/edit/${row.original.id}`"> Edit </UButton>
         <UButton v-if="can('manage users')" size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
       </template>
     </UTable>

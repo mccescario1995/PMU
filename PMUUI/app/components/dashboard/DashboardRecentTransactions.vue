@@ -14,7 +14,7 @@ const transactions = ref<
 >([]);
 
 onMounted(async () => {
-  transactions.value = (await apiFetch("/v1/transactions", { parseJson: true })) as any[];
+  transactions.value = ((await apiFetch("/v1/transactions", { parseJson: true })) as any).data
 });
 
 const currency = (v: number) =>
@@ -40,7 +40,7 @@ const currency = (v: number) =>
           </p>
         </div>
         <div class="text-right">
-          <p class="text-sm font-semibold">{{ currency(tx.total_amount) }}</p>
+          <p class="text-sm font-semibold">{{ currency(Number(tx.total_amount)) }}</p>
           <p class="text-xs" :class="tx.status === 'completed' ? 'text-green-600' : tx.status === 'pending' ? 'text-yellow-600' : 'text-red-600'">
             {{ tx.status }}
           </p>

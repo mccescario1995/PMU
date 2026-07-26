@@ -20,7 +20,7 @@ const form = reactive({
 const types = ref<any[]>([])
 
 onMounted(async () => {
-  types.value = (await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any[]
+  types.value = ((await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any).data
 })
 
 function save() {
@@ -46,9 +46,9 @@ function save() {
         <USelect v-model="form.type" :items="['buyer', 'broker', 'renter']" />
       </UFormField>
 
-      <UFormField label="Stakeholder Type">
+      <!-- <UFormField label="Stakeholder Type">
         <USelect v-model="form.stakeholder_type_id" :items="types" value-attribute="id" option-attribute="name" />
-      </UFormField>
+      </UFormField> -->
 
       <UFormField label="Contact">
         <UInput v-model="form.contact_no" />

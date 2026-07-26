@@ -80,7 +80,7 @@ const columns: TableColumn<Inventory>[] = [
 
 async function remove(row: any) {
   if (!confirm('Delete this item?')) return
-  await apiFetch(`/v1/inventory/items/${row.id}`, { method: 'DELETE' })
+  await apiFetch(`/v1/inventory/items/${row.original.id}`, { method: 'DELETE' })
   items.value = items.value.filter(i => i.id !== row.id)
 }
 </script>
@@ -97,9 +97,9 @@ async function remove(row: any) {
       :data="items"
       :columns="columns"
     >
-      <template #action-data="{ row }">
-        <UButton size="xs" :to="`/inventory/${row.id}`"> View </UButton>
-        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/edit/${row.id}`"> Edit </UButton>
+      <template #action-cell="{ row }">
+        <UButton size="xs" :to="`/inventory/${row.original.id}`"> View </UButton>
+        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/edit/${row.original.id}`"> Edit </UButton>
         <UButton v-if="can('manage inventory')" size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
       </template>
     </UTable>

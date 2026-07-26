@@ -24,7 +24,7 @@ const form = reactive({
 const types = ref<any[]>([])
 
 onMounted(async () => {
-  const s = ((await apiFetch('/v1/stakeholders/' + id, { parseJson: true }))) as any;
+  const s = (((await apiFetch('/v1/stakeholders/' + id, { parseJson: true }))) as any).data;
   Object.assign(form, {
     id: s.id,
     name: s.name,
@@ -36,7 +36,7 @@ onMounted(async () => {
     status: s.status,
   });
 
-  types.value = (await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any[]
+  types.value = ((await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any).data
 })
 
 function save() {

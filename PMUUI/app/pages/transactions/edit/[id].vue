@@ -23,8 +23,8 @@ const form = reactive({
 });
 
 onMounted(async () => {
-  stakeholders.value = (await apiFetch('/v1/stakeholders', { parseJson: true })) as any[];
-  feeTypes.value = (await apiFetch('/v1/fee-types', { parseJson: true })) as any[];
+  stakeholders.value = ((await apiFetch('/v1/stakeholders', { parseJson: true })) as any).data
+  feeTypes.value = ((await apiFetch('/v1/fee-types', { parseJson: true })) as any).data
   const t = (await apiFetch('/v1/transactions/' + id, { parseJson: true })) as any;
   
   form.items = (t.items ?? []).map((item: any) => ({

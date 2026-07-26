@@ -105,7 +105,7 @@ onMounted(load)
       { accessorKey: 'unit', header: 'Unit' },
       { accessorKey: 'action', header: 'Action' },
     ]" :loading="loading">
-      <template #action-data="{ row }">
+      <template #action-cell="{ row }">
         <div class="flex gap-1">
           <UButton size="xs" variant="outline" @click="startEdit(row.original)"> Edit </UButton>
           <UButton size="xs" color="error" variant="ghost" @click="remove(row.original)"> Delete </UButton>

@@ -20,12 +20,12 @@ const form = reactive({
 onMounted(async () => {
   const item = await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })
   Object.assign(form, {
-    item_name: item.item_name,
-    category: item.category,
-    category_type: item.category_type ?? "supplies",
-    quantity: item.quantity,
-    unit: item.unit ?? "pcs",
-    status: item.status,
+    item_name: item.data.item_name,
+    category: item.data.category,
+    category_type: item.data.category_type ?? "supplies",
+    quantity: item.data.quantity,
+    unit: item.data.unit ?? "pcs",
+    status: item.data.status,
   })
 })
 

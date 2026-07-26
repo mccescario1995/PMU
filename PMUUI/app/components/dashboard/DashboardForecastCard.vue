@@ -40,7 +40,7 @@ const currency = (v: number) =>
           <p class="text-xs text-gray-500">v{{ f.model_version || "—" }} {{ f.season ? `• ${f.season}` : "" }}</p>
           <p class="text-xs text-info">🌤 {{ weatherLabel(f.weather) }}</p>
         </div>
-        <span class="text-sm font-semibold text-success">{{ currency(f.predicted_revenue) }}</span>
+          <span class="text-sm font-semibold text-success">{{ currency(Number(f.predicted_revenue)) }}</span>
       </div>
     </div>
     <p v-else class="text-sm text-gray-400">No forecast data yet.</p>

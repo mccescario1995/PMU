@@ -83,7 +83,7 @@ const weatherLabel = (w: any) => {
   return parts.length ? parts.join(', ') : "No weather data"
 }
 
-const totalRevenue = computed(() => forecasts.value.reduce((sum, f) => sum + (f.predicted_revenue ?? 0), 0))
+const totalRevenue = computed(() => forecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0))
 const periods = computed(() => forecasts.value.length)
 const latestModel = computed(() => forecasts.value[0]?.model_version ?? "-")
 

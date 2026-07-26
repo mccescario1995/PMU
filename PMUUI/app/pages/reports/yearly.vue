@@ -17,7 +17,7 @@ const totalRevenue = ref(0)
 
 onMounted(async () => {
   const report = (await apiFetch('/v1/reports/annual?year=' + year, { parseJson: true })) as any
-  totalRevenue.value = report.total_revenue ?? 0
+  totalRevenue.value = Number(report.total_revenue ?? 0)
   years.value = (report.rows ?? []).map((r: any) => ({
     revenue_date: r.revenue_date,
     revenue: r.total_revenue,

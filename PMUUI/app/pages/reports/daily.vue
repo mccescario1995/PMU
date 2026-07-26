@@ -24,8 +24,8 @@ function formatFeeTypes(items: any[]): string {
 
 onMounted(async () => {
   const report = (await apiFetch('/v1/reports/daily?date=' + today, { parseJson: true })) as any
-  total.value = report.total ?? 0
-  count.value = report.count ?? 0
+  total.value = Number(report.total ?? 0)
+  count.value = Number(report.count ?? 0)
   transactions.value = (report.transactions ?? []).map((t: any) => ({
     id: t.id,
     type: formatFeeTypes(t.items ?? []),

@@ -119,7 +119,7 @@ onMounted(load)
       { accessorKey: 'temperature', header: 'Temp (°C)', meta: { class: { td: 'text-right font-mono' } } },
       { accessorKey: 'action', header: 'Action' },
     ]" :loading="loading">
-      <template #action-data="{ row }">
+      <template #action-cell="{ row }">
         <div class="flex gap-1">
           <UButton size="xs" variant="outline" @click="startEdit(row.original)"> Edit </UButton>
           <UButton size="xs" color="error" variant="ghost" @click="remove(row.original)"> Delete </UButton>

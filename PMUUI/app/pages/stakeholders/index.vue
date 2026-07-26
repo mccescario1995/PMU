@@ -21,7 +21,7 @@ const typeColor = {
 const stakeholders = ref<any[]>([])
 
 onMounted(async () => {
-  stakeholders.value = (await apiFetch('/v1/stakeholders', { parseJson: true })) as any[]
+  stakeholders.value = ((await apiFetch('/v1/stakeholders', { parseJson: true })) as any).data
 })
 
 type Stakeholder = {
@@ -80,8 +80,8 @@ const columns: TableColumn<Stakeholder>[] = [
       :data="stakeholders"
       :columns="columns"
     >
-      <template #action-data="{ row }">
-        <UButton size="xs" :to="`/stakeholders/${row.id}`"> View </UButton>
+      <template #action-cell="{ row }">
+        <UButton size="xs" :to="`/stakeholders/${row.original.id}`"> View </UButton>
       </template>
     </UTable>
   </div>

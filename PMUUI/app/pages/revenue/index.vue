@@ -24,8 +24,8 @@ type Revenue = {
   count: number
 }
 
-const total = computed(() => revenue.value.reduce((sum, r) => sum + (r.amount ?? 0), 0))
-const totalCount = computed(() => revenue.value.reduce((sum, r) => sum + (r.count ?? 0), 0))
+const total = computed(() => revenue.value.reduce((sum, r) => sum + Number(r.amount ?? 0), 0))
+const totalCount = computed(() => revenue.value.reduce((sum, r) => sum + Number(r.count ?? 0), 0))
 const sources = computed(() => revenue.value.length)
 
 const columns: TableColumn<Revenue>[] = [

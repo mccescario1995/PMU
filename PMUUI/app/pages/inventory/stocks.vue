@@ -16,10 +16,14 @@ const statusColor = {
 }
 
 const stocks = ref<any[]>([])
+const loading = ref(true)
 
 onMounted(async () => {
+  loading.value = true
   stocks.value = ((await apiFetch('/v1/inventory/items', { parseJson: true })) as any).data
+  loading.value = false
 })
+
 
 type Stock = {
   id: number
@@ -61,7 +65,7 @@ const columns: TableColumn<Stock>[] = [
 
 async function remove(row: any) {
   if (!confirm('Delete this item?')) return
-  await apiFetch(`/v1/inventory/items/${row.id}`, { method: 'DELETE' })
+  await apiFetch(`/v1/inventory/items/${row.original.id}`, { method: 'DELETE' })
   stocks.value = stocks.value.filter(i => i.id !== row.id)
 }
 </script>
@@ -73,11 +77,11 @@ async function remove(row: any) {
       <UButton to="/inventory/create" icon="i-lucide-plus"> Add Item </UButton>
     </div>
 
-    <UTable :data="stocks" :columns="columns">
-      <template #action-data="{ row }">
-        <UButton size="xs" :to="`/inventory/${row.id}`"> View </UButton>
-        <UButton size="xs" :to="`/inventory/edit/${row.id}`"> Edit </UButton>
-        <UButton size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
+    <UTable :data="stocks" :columns="columns" :loading="loading">
+      <template #action-cell="{ row }">
+        <UButton size="xs" :to="`/inventory/${row.original.id}`"> View </UButton>
+        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/edit/${row.original.id}`"> Edit </UButton>
+        <UButton v-if="can('manage inventory')" size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
       </template>
     </UTable>
   </div>

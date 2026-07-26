@@ -14,7 +14,7 @@ const { can } = usePermissions();
 const transactions = ref<any[]>([])
 
 onMounted(async () => {
-  const list = (await apiFetch('/v1/transactions', { parseJson: true })) as any[]
+  const list = ((await apiFetch('/v1/transactions', { parseJson: true })) as any[]).data
   transactions.value = list
 })
 
@@ -46,7 +46,7 @@ const columns: TableColumn<Transactions>[] = [
     },
   },
   {
-    accessorKey: "amount",
+    accessorKey: "total_amount",
     header: "Amount",
     meta: {
       class: {
@@ -55,7 +55,7 @@ const columns: TableColumn<Transactions>[] = [
       },
     },
     cell: ({ row }) => {
-      const amount = Number.parseFloat(row.getValue("amount"));
+      const amount = Number.parseFloat(row.getValue("total_amount"));
       const formatted = new Intl.NumberFormat("en-US", {
         style: "currency",
         currency: "PHP",
@@ -64,12 +64,13 @@ const columns: TableColumn<Transactions>[] = [
     },
   },
   {
-    accessorKey: "date",
+    accessorKey: "transaction_date",
     header: "Date",
     cell: ({ row }) => {
-      return new Date(row.getValue('date')).toLocaleString('en-US', {
+      return new Date(row.getValue('transaction_date')).toLocaleString('en-US', {
         day: 'numeric',
         month: 'short',
+        year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
@@ -88,8 +89,8 @@ const columns: TableColumn<Transactions>[] = [
     </div>
 
     <UTable :data="transactions" :columns="columns">
-      <template #action-data="{ row }">
-        <UButton size="xs" :to="`/transactions/${row.id}`"> View </UButton>
+      <template #action-cell="{ row }">
+        <UButton size="xs" :to="`/transactions/${row.original.id}`"> View </UButton>
       </template>
     </UTable>
   </div>
