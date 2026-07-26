@@ -14,8 +14,12 @@ const UBadge = resolveComponent('UBadge')
 
 const items = ref<any[]>([])
 
+const loading = ref(true)
+
 onMounted(async () => {
-  items.value = (await apiFetch('/v1/inventory/items', { parseJson: true })) as any[]
+  loading.value = true
+  items.value = ((await apiFetch('/v1/inventory/items', { parseJson: true })) as any).data
+  loading.value = false
 })
 
 type Inventory = {

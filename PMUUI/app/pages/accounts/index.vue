@@ -20,9 +20,19 @@ const statusColor = {
 
 const accounts = ref<any[]>([])
 
+const loading = ref(true)
+
 onMounted(async () => {
-  accounts.value = (await apiFetch('/v1/users', { parseJson: true })) as any[]
+  loading.value = true
+  accounts.value = ((await apiFetch('/v1/users', { parseJson: true })) as any).data
+  loading.value = false
 })
+
+async function remove(row: any) {
+  if (!confirm('Delete this account?')) return
+  await apiFetch(`/v1/users/${row.id}`, { method: 'DELETE' })
+  accounts.value = accounts.value.filter((a: any) => a.id !== row.id)
+}
 
 type Account = {
   id: number;
@@ -83,9 +93,12 @@ const columns: TableColumn<Account>[] = [
     <UTable
       :data="accounts"
       :columns="columns"
+      :loading="loading"
     >
       <template #action-data="{ row }">
+        <UButton size="xs" :to="`/accounts/edit/${row.id}`"> View </UButton>
         <UButton v-if="can('manage users')" size="xs" :to="`/accounts/edit/${row.id}`"> Edit </UButton>
+        <UButton v-if="can('manage users')" size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
       </template>
     </UTable>
   </div>

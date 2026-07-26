@@ -7,7 +7,7 @@ const items = ref<
 >([]);
 
 onMounted(async () => {
-  items.value = (await apiFetch("/v1/inventory/items", { parseJson: true })) as any[];
+  items.value = ((await apiFetch("/v1/inventory/items", { parseJson: true })) as any).data;
 });
 
 const lowStock = computed(() => items.value.filter((i) => i.status === "low_stock" || i.quantity <= 0));

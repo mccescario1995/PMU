@@ -47,7 +47,7 @@ const currency = (v: number) =>
         color="text-info"
       />
       <DashboardStatCard
-        icon="i-lucide-package-alert"
+        icon="i-lucide-package-x"
         label="Low Stock Items"
         :value="String(stats.low_stock_items)"
         color="text-warning"

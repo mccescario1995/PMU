@@ -12,7 +12,7 @@ const UBadge = resolveComponent('UBadge')
 const categories = ref<any[]>([])
 
 onMounted(async () => {
-  const items = (await apiFetch('/v1/inventory/items', { parseJson: true })) as any[]
+  const items = ((await apiFetch('/v1/inventory/items', { parseJson: true })) as any).data
   const counts: Record<string, { count: number; quantity: number; low_stock: number }> = {}
   for (const it of items) {
     const type = it.category_type ?? 'unknown'

@@ -22,13 +22,17 @@ class DatabaseSeeder extends Seeder
         $portManagerRole = Role::create(['name' => 'Port Manager', 'guard_name' => 'web']);
         $statisticianRole = Role::create(['name' => 'Statistician', 'guard_name' => 'web']);
 
-        Permission::create(['name' => 'manage users', 'guard_name' => 'web'])->syncRoles([$portManagerRole]);
-        Permission::create(['name' => 'manage roles', 'guard_name' => 'web'])->syncRoles([$portManagerRole]);
-        Permission::create(['name' => 'manage stakeholders', 'guard_name' => 'web'])->syncRoles([$statisticianRole]);
-        Permission::create(['name' => 'manage transactions', 'guard_name' => 'web'])->syncRoles([$statisticianRole]);
-        Permission::create(['name' => 'manage inventory', 'guard_name' => 'web'])->syncRoles([$portManagerRole, $statisticianRole]);
-        Permission::create(['name' => 'view reports', 'guard_name' => 'web'])->syncRoles([$portManagerRole, $statisticianRole]);
-        Permission::create(['name' => 'manage settings', 'guard_name' => 'web'])->syncRoles([$portManagerRole]);
+        $portManagerPermissions = ['manage users', 'manage roles', 'manage inventory', 'manage settings', 'view reports'];
+        foreach ($portManagerPermissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+        $portManagerRole->syncPermissions($portManagerPermissions);
+
+        $statisticianPermissions = ['manage stakeholders', 'manage transactions', 'manage inventory', 'view reports'];
+        foreach ($statisticianPermissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
+        $statisticianRole->syncPermissions($statisticianPermissions);
 
         $user = User::create([
             'name' => 'Port Manager',

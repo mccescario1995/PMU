@@ -18,7 +18,7 @@ const statusColor = {
 const stocks = ref<any[]>([])
 
 onMounted(async () => {
-  stocks.value = (await apiFetch('/v1/inventory/items', { parseJson: true })) as any[]
+  stocks.value = ((await apiFetch('/v1/inventory/items', { parseJson: true })) as any).data
 })
 
 type Stock = {
