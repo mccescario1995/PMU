@@ -34,7 +34,12 @@ export function useAuth() {
 
     accessToken.value = null;
     user.value = null;
-    router.push("/login");
+
+    try {
+      router.push("/login");
+    } catch {
+      // ignore navigation errors
+    }
   }
 
   function refresh() {

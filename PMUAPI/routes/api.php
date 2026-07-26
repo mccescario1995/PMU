@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\StakeholderController;
+use App\Http\Controllers\Api\V1\StakeholderTypeController;
 use App\Http\Controllers\Api\V1\FeeTypeController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\InventoryItemController;
@@ -18,6 +19,7 @@ use App\Http\Controllers\Api\V1\ForecastController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\AuditLogController;
+use App\Http\Controllers\Api\V1\ImportController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -81,6 +83,7 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('can:manage stakeholders')->group(function () {
             Route::apiResource('stakeholders', StakeholderController::class);
+            Route::apiResource('stakeholder-types', StakeholderTypeController::class);
         });
 
         /*
@@ -158,6 +161,7 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('can:manage settings')->group(function () {
             Route::apiResource('weather', WeatherController::class);
+            Route::apiResource('imports', ImportController::class);
         });
 
         /*
@@ -210,6 +214,11 @@ Route::prefix('v1')->group(function () {
                 '/inventory-summary',
                 [DashboardController::class, 'inventorySummary']
             );
+
+            Route::get(
+                '/weather-revenue-correlation',
+                [DashboardController::class, 'weatherRevenueCorrelation']
+            );
         });
 
         /*
@@ -236,6 +245,11 @@ Route::prefix('v1')->group(function () {
             );
 
             Route::get(
+                '/daily/xlsx',
+                [ReportController::class, 'dailyXlsx']
+            );
+
+            Route::get(
                 '/monthly',
                 [ReportController::class, 'monthly']
             );
@@ -256,8 +270,18 @@ Route::prefix('v1')->group(function () {
             );
 
             Route::get(
+                '/monthly/xlsx',
+                [ReportController::class, 'monthlyXlsx']
+            );
+
+            Route::get(
                 '/annual/excel',
                 [ReportController::class, 'annualExcel']
+            );
+
+            Route::get(
+                '/annual/xlsx',
+                [ReportController::class, 'annualXlsx']
             );
 
             Route::get(

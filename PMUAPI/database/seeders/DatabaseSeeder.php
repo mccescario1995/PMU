@@ -6,6 +6,7 @@ use App\Models\FeeType;
 use App\Models\InventoryItem;
 use App\Models\Stakeholder;
 use App\Models\User;
+use Database\Seeders\StakeholderTypeSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -48,6 +49,8 @@ class DatabaseSeeder extends Seeder
             ['fee_name' => 'Auxiliary Invoice', 'base_rate' => 40.00, 'unit' => 'item'],
             ['fee_name' => 'Entrance', 'base_rate' => 10.00, 'unit' => 'head'],
             ['fee_name' => 'Usage', 'base_rate' => 15.00, 'unit' => 'hour'],
+            ['fee_name' => 'Inspection', 'base_rate' => 150.00, 'unit' => 'unit'],
+            ['fee_name' => 'Regulatory', 'base_rate' => 200.00, 'unit' => 'transaction'],
         ];
         foreach ($feeTypes as $fee) {
             FeeType::create($fee);
@@ -58,9 +61,13 @@ class DatabaseSeeder extends Seeder
         Stakeholder::create(['name' => 'Maria Reyes', 'type' => 'buyer', 'contact_no' => '09176543210', 'email' => 'maria@example.com', 'address' => 'Pasacao, Camarines Sur', 'status' => 'active']);
         Stakeholder::create(['name' => 'Ana Cruz', 'type' => 'broker', 'contact_no' => '09811223344', 'email' => 'ana@example.com', 'address' => 'Pasacao, Camarines Sur', 'status' => 'inactive']);
 
+        $this->call(StakeholderTypeSeeder::class);
+
         InventoryItem::create(['item_name' => 'Plastic Crates', 'category' => 'Containers', 'quantity' => 100, 'unit' => 'pcs', 'status' => 'available']);
         InventoryItem::create(['item_name' => 'Fishing Net', 'category' => 'Gear', 'quantity' => 8, 'unit' => 'pcs', 'status' => 'low_stock']);
         InventoryItem::create(['item_name' => 'Life Vest', 'category' => 'Safety', 'quantity' => 0, 'unit' => 'pcs', 'status' => 'damaged']);
         InventoryItem::create(['item_name' => 'Cold Storage Pump', 'category' => 'Machinery', 'quantity' => 5, 'unit' => 'pcs', 'status' => 'available']);
+
+        $this->call(RevenueHistorySeeder::class);
     }
 }

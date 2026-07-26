@@ -45,10 +45,12 @@ const columns: TableColumn<Stakeholder>[] = [
     accessorKey: 'type',
     header: 'Type',
     cell: ({ row }) => {
-      const color = typeColor[row.getValue('type') as keyof typeof typeColor]
+      const rawType = row.getValue('type')
+      const typeName = row.original.stakeholder_type?.name ?? rawType
+      const color = typeColor[rawType as keyof typeof typeColor]
 
       return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () =>
-        row.getValue('type')
+        typeName
       )
     }
 

@@ -154,7 +154,7 @@ const planColumns: TableColumn<any>[] = [
         <!-- Recommended Stock Levels -->
         <UCard>
           <template #header>Recommended Stock Levels</template>
-          <UTable :data="planning.recommended_stock" :columns="columns" />
+          <UTable :data="Array.isArray(planning.recommended_stock) ? planning.recommended_stock : []" :columns="columns" />
         </UCard>
 
         <!-- Inventory by Category Type -->

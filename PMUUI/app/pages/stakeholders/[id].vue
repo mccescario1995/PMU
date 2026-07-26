@@ -33,7 +33,7 @@ onMounted(async () => {
       <dl class="divide-y divide-slate-100">
         <div class="flex justify-between py-2">
           <dt class="text-slate-500">Type</dt>
-          <dd class="font-medium">{{ stakeholder.type }}</dd>
+          <dd class="font-medium">{{ stakeholder.stakeholder_type?.name ?? stakeholder.type }}</dd>
         </div>
         <div class="flex justify-between py-2">
           <dt class="text-slate-500">Contact</dt>

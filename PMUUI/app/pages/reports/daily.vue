@@ -43,6 +43,10 @@ function exportPdf() {
   window.open('/v1/reports/daily/pdf?date=' + today, '_blank')
 }
 
+function exportXlsx() {
+  window.open('/v1/reports/daily/xlsx?date=' + today, '_blank')
+}
+
 type Transaction = {
   id: number
   type: string
@@ -77,6 +81,7 @@ const columns: TableColumn<Transaction>[] = [
         <p class="text-slate-500">{{ new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
       </div>
       <UButton icon="i-lucide-download" @click="exportCsv"> Export CSV </UButton>
+      <UButton icon="i-lucide-file-spreadsheet" variant="outline" @click="exportXlsx"> Export Excel </UButton>
       <UButton icon="i-lucide-file-text" variant="outline" @click="exportPdf"> Export PDF </UButton>
     </div>
 

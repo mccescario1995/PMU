@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import UserDropdown from '~/components/layouts/UserDropdown.vue'
+
 const today = new Date()
 
 const formatted = computed(() =>
@@ -34,8 +36,6 @@ const formatted = computed(() =>
         color="neutral"
         variant="ghost"
       />
-
-      <ThemeToggle />
 
       <UserDropdown />
 

@@ -3,8 +3,15 @@ import { apiFetch } from "~/composables/useApiFetch";
 import { onMounted } from "vue";
 
 const forecasts = ref<
-  { id: number; forecast_date: string; predicted_revenue: number; season: string | null; model_version: string | null; weather: any }
-[]>([]);
+  {
+    id: number;
+    forecast_date: string;
+    predicted_revenue: number;
+    season: string | null;
+    model_version: string | null;
+    weather: any;
+  }[]
+>([]);
 
 onMounted(async () => {
   forecasts.value = (await apiFetch("/v1/forecasts", { parseJson: true })) as any[];

@@ -13,8 +13,11 @@ const stats = ref({
   low_stock_items: 0,
 });
 
+const correlations = ref<{ rainfall: number; temperature: number; wind_speed: number } | null>(null)
+
 onMounted(async () => {
   stats.value = (await apiFetch("/v1/dashboard", { parseJson: true })) as any;
+  correlations.value = (await apiFetch("/v1/dashboard/weather-revenue-correlation", { parseJson: true })) as any;
 });
 
 const currency = (v: number) =>
@@ -59,6 +62,25 @@ const currency = (v: number) =>
       </UCard>
       <DashboardForecastCard />
     </div>
+
+    <!-- Weather-Revenue Correlation -->
+    <UCard v-if="correlations">
+      <template #header>Weather-Revenue Correlation</template>
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div>
+          <p class="text-sm text-slate-500">Rainfall vs Revenue</p>
+          <p class="text-xl font-bold">{{ correlations.rainfall }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-slate-500">Temperature vs Revenue</p>
+          <p class="text-xl font-bold">{{ correlations.temperature }}</p>
+        </div>
+        <div>
+          <p class="text-sm text-slate-500">Wind Speed vs Revenue</p>
+          <p class="text-xl font-bold">{{ correlations.wind_speed }}</p>
+        </div>
+      </div>
+    </UCard>
 
     <!-- Bottom -->
     <div class="grid gap-6 lg:grid-cols-2 mt-6">

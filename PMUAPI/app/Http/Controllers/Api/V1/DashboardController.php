@@ -55,4 +55,57 @@ class DashboardController extends Controller
                 ->get(),
         ]);
     }
+
+    public function weatherRevenueCorrelation()
+    {
+        $correlations = DB::table('revenue_histories')
+            ->leftJoin('weather_data', 'weather_data.weather_date', '=', 'revenue_histories.revenue_date')
+            ->selectRaw('revenue_histories.revenue_date, revenue_histories.total_revenue, weather_data.rainfall_mm, weather_data.wind_speed, weather_data.temperature')
+            ->orderBy('revenue_histories.revenue_date')
+            ->get();
+
+        $pairs = $correlations->filter(fn($r) => $r->rainfall_mm !== null && $r->total_revenue > 0)->values();
+
+        $rainCorr = $this->pearsonCorrelation(
+            $pairs->pluck('rainfall_mm')->map(fn($v) => (float) $v),
+            $pairs->pluck('total_revenue')->map(fn($v) => (float) $v)
+        );
+
+        $tempCorr = $this->pearsonCorrelation(
+            $pairs->pluck('temperature')->map(fn($v) => (float) $v),
+            $pairs->pluck('total_revenue')->map(fn($v) => (float) $v)
+        );
+
+        $windCorr = $this->pearsonCorrelation(
+            $pairs->pluck('wind_speed')->map(fn($v) => (float) $v),
+            $pairs->pluck('total_revenue')->map(fn($v) => (float) $v)
+        );
+
+        return response()->json([
+            'data' => $correlations,
+            'correlations' => [
+                'rainfall' => round($rainCorr, 4),
+                'temperature' => round($tempCorr, 4),
+                'wind_speed' => round($windCorr, 4),
+            ],
+        ]);
+    }
+
+    private function pearsonCorrelation($x, $y)
+    {
+        $n = $x->count();
+        if ($n < 2) return 0;
+
+        $meanX = $x->avg();
+        $meanY = $y->avg();
+
+        $sumXY = $x->zip($y)->sum(fn($pair) => ($pair[0] - $meanX) * ($pair[1] - $meanY));
+        $sumX2 = $x->sum(fn($v) => ($v - $meanX) ** 2);
+        $sumY2 = $y->sum(fn($v) => ($v - $meanY) ** 2);
+
+        $denominator = sqrt($sumX2 * $sumY2);
+        if ($denominator == 0) return 0;
+
+        return $sumXY / $denominator;
+    }
 }

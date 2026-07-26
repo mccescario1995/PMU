@@ -29,6 +29,14 @@ function exportCsv() {
   window.open('/v1/reports/annual/excel?year=' + year, '_blank')
 }
 
+function exportPdf() {
+  window.open('/v1/reports/annual/pdf?year=' + year, '_blank')
+}
+
+function exportXlsx() {
+  window.open('/v1/reports/annual/xlsx?year=' + year, '_blank')
+}
+
 type Year = {
   revenue_date: string
   revenue: number
@@ -63,6 +71,8 @@ const columns: TableColumn<Year>[] = [
         <p class="text-slate-500">Performance and trends for {{ year }}.</p>
       </div>
       <UButton icon="i-lucide-download" @click="exportCsv"> Export CSV </UButton>
+      <UButton icon="i-lucide-file-spreadsheet" variant="outline" @click="exportXlsx"> Export Excel </UButton>
+      <UButton icon="i-lucide-file-text" variant="outline" @click="exportPdf"> Export PDF </UButton>
     </div>
 
     <UCard>

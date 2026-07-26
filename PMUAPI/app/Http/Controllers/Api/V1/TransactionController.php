@@ -28,12 +28,9 @@ class TransactionController extends Controller
             'transaction_date' => 'required|date',
             'status' => 'nullable|in:pending,completed,cancelled',
             'remarks' => 'nullable|string',
-            'total_amount' => 'nullable|numeric|min:0',
             'items' => 'nullable|array',
             'items.*.fee_type_id' => 'required_with:items|exists:fee_types,id',
             'items.*.quantity' => 'nullable|integer|min:1',
-            'items.*.unit_price' => 'nullable|numeric|min:0',
-            'items.*.subtotal' => 'nullable|numeric|min:0',
         ]);
 
         $items = $data['items'] ?? [];
@@ -51,9 +48,9 @@ class TransactionController extends Controller
         foreach ($items as $item) {
             $feeType = FeeType::find($item['fee_type_id']);
             $baseRate = $feeType->base_rate ?? 0;
-            $quantity = $item['quantity'] ?? 1;
-            $unitPrice = $item['unit_price'] ?? $baseRate;
-            $subtotal = $item['subtotal'] ?? ($unitPrice * $quantity);
+            $quantity = max(1, (int) ($item['quantity'] ?? 1));
+            $unitPrice = (float) $baseRate;
+            $subtotal = $unitPrice * $quantity;
 
             $transaction->items()->create([
                 'fee_type_id' => $item['fee_type_id'],
@@ -103,7 +100,7 @@ class TransactionController extends Controller
 
     public function update(Request $request, Transaction $transaction)
     {
-        $oldTotal = $transaction->total_amount;
+        $oldTotal = (float) $transaction->total_amount;
         $oldDate = $transaction->transaction_date->toDateString();
 
         $data = $request->validate([
@@ -111,19 +108,49 @@ class TransactionController extends Controller
             'transaction_date' => 'sometimes|required|date',
             'status' => 'nullable|in:pending,completed,cancelled',
             'remarks' => 'nullable|string',
-            'total_amount' => 'nullable|numeric|min:0',
+            'items' => 'nullable|array',
+            'items.*.fee_type_id' => 'required_with:items|exists:fee_types,id',
+            'items.*.quantity' => 'nullable|integer|min:1',
         ]);
 
-        $transaction->update($data);
+        $transaction->update([
+            'stakeholder_id' => $data['stakeholder_id'] ?? $transaction->stakeholder_id,
+            'transaction_date' => $data['transaction_date'] ?? $transaction->transaction_date,
+            'status' => $data['status'] ?? $transaction->status,
+            'remarks' => $data['remarks'] ?? $transaction->remarks,
+        ]);
 
-        // Update revenue history if date or amount changed
-        $newTotal = $transaction->total_amount;
+        if (array_key_exists('items', $data)) {
+            $transaction->items()->delete();
+
+            $items = $data['items'] ?? [];
+            $total = 0;
+
+            foreach ($items as $item) {
+                $feeType = FeeType::find($item['fee_type_id']);
+                $baseRate = $feeType->base_rate ?? 0;
+                $quantity = max(1, (int) ($item['quantity'] ?? 1));
+                $unitPrice = (float) $baseRate;
+                $subtotal = $unitPrice * $quantity;
+
+                $transaction->items()->create([
+                    'fee_type_id' => $item['fee_type_id'],
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'subtotal' => $subtotal,
+                ]);
+
+                $total += $subtotal;
+            }
+
+            $transaction->update(['total_amount' => $total]);
+        }
+
+        $newTotal = (float) $transaction->total_amount;
         $newDate = $transaction->transaction_date->toDateString();
 
         if ($oldDate !== $newDate) {
-            // Remove from old date
             $this->adjustRevenueHistory($oldDate, -$oldTotal);
-            // Add to new date
             $this->adjustRevenueHistory($newDate, $newTotal);
         } elseif ($oldTotal != $newTotal) {
             $this->adjustRevenueHistory($newDate, $newTotal - $oldTotal);

@@ -42,8 +42,12 @@ export async function apiFetch<T = any>(
   const response = await execute(accessToken.value);
 
   if (response.status === 401) {
-    const auth = useAuth();
-    auth.logout();
+    try {
+      const auth = useAuth();
+      auth.logout();
+    } catch {
+      // ignore errors during logout redirect
+    }
     throw new Error("Unauthorized");
   }
 

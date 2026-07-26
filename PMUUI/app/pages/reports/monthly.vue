@@ -35,6 +35,10 @@ function exportPdf() {
   window.open('/v1/reports/monthly/pdf?month=' + month, '_blank')
 }
 
+function exportXlsx() {
+  window.open('/v1/reports/monthly/xlsx?month=' + month, '_blank')
+}
+
 type Month = {
   revenue_date: string
   revenue: number
@@ -68,7 +72,8 @@ const columns: TableColumn<Month>[] = [
         <h1 class="text-2xl font-bold">Monthly Report</h1>
         <p class="text-slate-500">Operations summary for {{ month }}.</p>
       </div>
-      <UButton icon="i-lucide-file-text" @click="exportCsv"> Export CSV </UButton>
+      <UButton icon="i-lucide-download" @click="exportCsv"> Export CSV </UButton>
+      <UButton icon="i-lucide-file-spreadsheet" variant="outline" @click="exportXlsx"> Export Excel </UButton>
       <UButton icon="i-lucide-file-text" variant="outline" @click="exportPdf"> Export PDF </UButton>
     </div>
 

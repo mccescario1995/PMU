@@ -1,5 +1,8 @@
-<script setup>
+<script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
+import { onMounted } from 'vue'
+import { ref } from 'vue'
+
 definePageMeta({
   layout: "dashboard",
 });
@@ -7,11 +10,18 @@ definePageMeta({
 const form = reactive({
   name: "",
   type: "",
+  stakeholder_type_id: null,
   contact_no: "",
   email: "",
   address: "",
   status: "active",
 });
+
+const types = ref<any[]>([])
+
+onMounted(async () => {
+  types.value = (await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any[]
+})
 
 function save() {
   apiFetch('/v1/stakeholders', {
@@ -34,6 +44,10 @@ function save() {
 
       <UFormField label="Type">
         <USelect v-model="form.type" :items="['buyer', 'broker', 'renter']" />
+      </UFormField>
+
+      <UFormField label="Stakeholder Type">
+        <USelect v-model="form.stakeholder_type_id" :items="types" value-attribute="id" option-attribute="name" />
       </UFormField>
 
       <UFormField label="Contact">

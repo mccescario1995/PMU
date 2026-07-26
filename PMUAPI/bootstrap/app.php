@@ -17,7 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         SyncRevenueHistories::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->append(Illuminate\Http\Middleware\HandleCors::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
