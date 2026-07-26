@@ -22,7 +22,7 @@ const stockQty = ref(1)
 
 onMounted(async () => {
   loading.value = true
-  item.value = await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })
+  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
   itemLogs.value = (await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]
   loading.value = false
 })
@@ -43,8 +43,8 @@ async function submitAddStock() {
   })
   showAddStock.value = false
   stockQty.value = 1
-  item.value = await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })
-  itemLogs.value = (await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]
+  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
+  itemLogs.value = ((await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]).data
 }
 
 async function submitDeductStock() {
@@ -57,7 +57,7 @@ async function submitDeductStock() {
   })
   showDeductStock.value = false
   stockQty.value = 1
-  item.value = await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })
+  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
   itemLogs.value = (await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]
 }
 </script>
