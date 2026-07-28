@@ -20,6 +20,8 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\ImportController;
+use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Controllers\Api\V1\StatusesController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -94,6 +96,8 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('can:manage settings')->group(function () {
             Route::apiResource('fee-types', FeeTypeController::class);
+            Route::apiResource('settings', SettingsController::class);
+            Route::apiResource('statuses', StatusesController::class);
         });
 
         /*

@@ -4,7 +4,9 @@ namespace Database\Seeders;
 
 use App\Models\FeeType;
 use App\Models\InventoryItem;
+use App\Models\Setting;
 use App\Models\Stakeholder;
+use App\Models\Status;
 use App\Models\User;
 use Database\Seeders\StakeholderTypeSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -71,6 +73,29 @@ class DatabaseSeeder extends Seeder
         InventoryItem::create(['item_name' => 'Fishing Net', 'category' => 'Gear', 'quantity' => 8, 'unit' => 'pcs', 'status' => 'low_stock']);
         InventoryItem::create(['item_name' => 'Life Vest', 'category' => 'Safety', 'quantity' => 0, 'unit' => 'pcs', 'status' => 'damaged']);
         InventoryItem::create(['item_name' => 'Cold Storage Pump', 'category' => 'Machinery', 'quantity' => 5, 'unit' => 'pcs', 'status' => 'available']);
+
+        $settings = [
+            ['key' => 'low_stock_threshold', 'value' => '10', 'type' => 'number', 'description' => 'Minimum quantity before item is marked low stock'],
+            ['key' => 'port_name', 'value' => 'Pasacao Port', 'type' => 'string', 'description' => 'Official port name'],
+            ['key' => 'currency', 'value' => 'PHP', 'type' => 'string', 'description' => 'Default currency for transactions'],
+        ];
+        foreach ($settings as $setting) {
+            Setting::firstOrCreate(['key' => $setting['key']], $setting);
+        }
+
+        $statuses = [
+            ['name' => 'available', 'type' => 'inventory', 'color' => 'green'],
+            ['name' => 'low_stock', 'type' => 'inventory', 'color' => 'yellow'],
+            ['name' => 'damaged', 'type' => 'inventory', 'color' => 'red'],
+            ['name' => 'pending', 'type' => 'transaction', 'color' => 'yellow'],
+            ['name' => 'completed', 'type' => 'transaction', 'color' => 'green'],
+            ['name' => 'cancelled', 'type' => 'transaction', 'color' => 'red'],
+            ['name' => 'active', 'type' => 'stakeholder', 'color' => 'green'],
+            ['name' => 'inactive', 'type' => 'stakeholder', 'color' => 'red'],
+        ];
+        foreach ($statuses as $status) {
+            Status::firstOrCreate(['name' => $status['name'], 'type' => $status['type']], $status);
+        }
 
         $this->call(RevenueHistorySeeder::class);
     }
