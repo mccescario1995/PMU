@@ -15,6 +15,8 @@ const currency = (value: number) =>
 const forecasts = ref<any[]>([])
 const loading = ref(true)
 const showForm = ref(false)
+const modelLoading = ref(false)
+const modelError = ref("")
 
 const form = reactive({
   forecast_date: new Date().toISOString().slice(0, 10),
@@ -23,6 +25,25 @@ const form = reactive({
   model_version: "",
   weather: null as any,
 })
+
+async function runModel(model: string) {
+  modelLoading.value = true
+  modelError.value = ""
+  try {
+    await apiFetch(`/v1/forecasts/run-model`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, days: 30 }),
+      parseJson: true,
+      throwOnError: true,
+    })
+    await load()
+  } catch (e: any) {
+    modelError.value = e?.message || "Failed to run model"
+  } finally {
+    modelLoading.value = false
+  }
+}
 
 async function loadWeather(date: string) {
   try {
@@ -118,8 +139,33 @@ const columns: TableColumn<any>[] = [
         <h1 class="text-2xl font-bold">Forecasting</h1>
         <p class="text-slate-500">Projected revenue and volume based on historical operations.</p>
       </div>
-      <UButton icon="i-lucide-plus" @click="showForm = true; reset()"> Add Forecast </UButton>
+      <div class="flex gap-2">
+        <UButton
+          icon="i-lucide-chart-line"
+          :loading="modelLoading"
+          @click="runModel('linear_regression')"
+        >
+          Run Linear
+        </UButton>
+        <UButton
+          icon="i-lucide-chart-line"
+          :loading="modelLoading"
+          @click="runModel('amira')"
+        >
+          Run AMIRA
+        </UButton>
+        <UButton
+          icon="i-lucide-chart-line"
+          :loading="modelLoading"
+          @click="runModel('samira')"
+        >
+          Run SAMIRA
+        </UButton>
+        <UButton icon="i-lucide-plus" @click="showForm = true; reset()"> Add Forecast </UButton>
+      </div>
     </div>
+
+    <UAlert v-if="modelError" type="error" :title="modelError" class="mb-4" />
 
     <UCard v-if="showForm">
       <template #header> New Forecast </template>
