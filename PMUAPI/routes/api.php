@@ -192,6 +192,11 @@ Route::prefix('v1')->group(function () {
                 '/generate',
                 [ForecastController::class, 'generate']
             );
+
+            Route::post(
+                '/run-model',
+                [ForecastController::class, 'runModel']
+            );
         });
 
         /*
