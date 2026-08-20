@@ -11,7 +11,7 @@ import yaml
 
 load_dotenv()
 
-from pmu_client import PMUClient
+from .pmu_client import PMUClient
 from evaluation import run_linear, run_amira, run_samira
 
 app = Flask(__name__)

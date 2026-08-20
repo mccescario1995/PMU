@@ -105,8 +105,8 @@ const columns: TableColumn<FeeType>[] = [
 
     <UTable :data="feeTypes" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton v-if="can('manage settings')" size="xs" @click="openEdit(row.original)"> Edit </UButton>
-        <UButton v-if="can('manage settings')" size="xs" color="error" variant="ghost" @click="remove(row.original)"> Delete </UButton>
+        <UButton v-if="can('manage settings')" size="xs" @click="openEdit(row.original)" icon="i-lucide-edit" ></UButton>
+        <UButton v-if="can('manage settings')" size="xs" color="error" variant="ghost" @click="remove(row.original)" icon="i-lucide-trash" ></UButton>
       </template>
     </UTable>
 

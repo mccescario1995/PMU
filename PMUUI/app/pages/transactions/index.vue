@@ -90,7 +90,7 @@ const columns: TableColumn<Transactions>[] = [
 
     <UTable :data="transactions" :columns="columns">
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/transactions/${row.original.id}`"> View </UButton>
+        <UButton size="xs" :to="`/transactions/${row.original.id}`" icon="i-lucide-eye" ></UButton>
       </template>
     </UTable>
   </div>

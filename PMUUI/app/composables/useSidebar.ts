@@ -44,6 +44,23 @@ export const useSidebar = () => {
           title: "Forecasting",
           icon: "i-lucide-chart-line",
           to: "/forecast",
+          children: [
+            {
+              title: "Linear Regression",
+              icon: "i-lucide-trending-up",
+              to: "/forecast/linear-regression",
+            },
+            {
+              title: "AMIRA",
+              icon: "i-lucide-brain",
+              to: "/forecast/amira",
+            },
+            {
+              title: "SAMIRA",
+              icon: "i-lucide-wand-2",
+              to: "/forecast/samira",
+            },
+          ],
         },
         {
           title: "Reports",

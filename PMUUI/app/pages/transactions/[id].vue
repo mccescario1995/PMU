@@ -44,7 +44,7 @@ onMounted(async () => {
         <h1 class="text-2xl font-bold">{{ transaction.type }}</h1>
         <p class="text-slate-500">Transaction #{{ transaction.id }}</p>
       </div>
-      <UButton :to="`/transactions/edit/${transaction.id}`" icon="i-lucide-pencil"> Edit </UButton>
+      <UButton :to="`/transactions/edit/${transaction.id}`" icon="i-lucide-pencil" > Edit </UButton>
     </div>
 
     <UCard>

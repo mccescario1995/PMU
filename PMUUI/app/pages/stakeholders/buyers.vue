@@ -42,7 +42,7 @@ const columns: TableColumn<Buyer>[] = [
 
     <UTable :data="buyers" :columns="columns">
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/stakeholders/${row.original.id}`"> View </UButton>
+        <UButton size="xs" :to="`/stakeholders/${row.original.id}`" icon="i-lucide-eye" > View </UButton>
       </template>
     </UTable>
   </div>

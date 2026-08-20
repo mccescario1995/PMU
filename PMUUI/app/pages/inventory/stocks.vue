@@ -79,9 +79,9 @@ async function remove(row: any) {
 
     <UTable :data="stocks" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/inventory/${row.original.id}`"> View </UButton>
-        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/edit/${row.original.id}`"> Edit </UButton>
-        <UButton v-if="can('manage inventory')" size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
+        <UButton size="xs" :to="`/inventory/${row.original.id}`" icon="i-lucide-eye" ></UButton>
+        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/edit/${row.original.id}`" icon="i-lucide-edit" ></UButton>
+        <UButton v-if="can('manage inventory')" size="xs" color="error" variant="ghost" @click="remove(row)" icon="i-lucide-trash" ></UButton>
       </template>
     </UTable>
   </div>

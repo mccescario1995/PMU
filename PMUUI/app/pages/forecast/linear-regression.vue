@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { useForecast } from '~/composables/useForecast'
+import { computed } from 'vue'
 
 definePageMeta({
   layout: "dashboard",
@@ -18,19 +19,35 @@ const {
   runModel,
   weatherLabel,
   currency,
-  totalRevenue,
-  periods,
-  latestModel,
   columns,
 } = useForecast()
+
+const model = 'linear_regression'
+const modelLabel = 'Linear Regression'
+
+const filteredForecasts = computed(() =>
+  forecasts.value.filter((f: any) => {
+    const mv = (f.model_version || '').toLowerCase()
+    const slug = model.replace(/_/g, '-')
+    return mv.includes(slug) || mv.includes(model)
+  })
+)
+
+const totalRevenue = computed(() =>
+  filteredForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
+)
+const periods = computed(() => filteredForecasts.value.length)
+const latestModel = computed(() => filteredForecasts.value[0]?.model_version ?? "-")
+
+const UBadge = resolveComponent('UBadge')
 </script>
 
 <template>
   <div class="p-6 space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-2xl font-bold">Forecasting</h1>
-        <p class="text-slate-500">Projected revenue and volume based on historical operations.</p>
+        <h1 class="text-2xl font-bold">{{ modelLabel }}</h1>
+        <p class="text-slate-500">Revenue projection using linear regression model.</p>
       </div>
       <div class="flex gap-2">
         <UButton
@@ -38,21 +55,7 @@ const {
           :loading="modelLoading"
           @click="runModel('linear_regression')"
         >
-          Run Linear
-        </UButton>
-        <UButton
-          icon="i-lucide-brain"
-          :loading="modelLoading"
-          @click="runModel('amira')"
-        >
-          Run AMIRA
-        </UButton>
-        <UButton
-          icon="i-lucide-wand-2"
-          :loading="modelLoading"
-          @click="runModel('samira')"
-        >
-          Run SAMIRA
+          Run {{ modelLabel }}
         </UButton>
         <UButton icon="i-lucide-plus" @click="showForm = true; reset()"> Add Forecast </UButton>
       </div>
@@ -102,6 +105,6 @@ const {
       </UCard>
     </div>
 
-    <UTable :data="forecasts" :columns="columns" />
+    <UTable :data="filteredForecasts" :columns="columns" />
   </div>
 </template>

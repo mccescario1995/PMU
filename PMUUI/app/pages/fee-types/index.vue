@@ -107,8 +107,8 @@ onMounted(load)
     ]" :loading="loading">
       <template #action-cell="{ row }">
         <div class="flex gap-1">
-          <UButton size="xs" variant="outline" @click="startEdit(row.original)"> Edit </UButton>
-          <UButton size="xs" color="error" variant="ghost" @click="remove(row.original)"> Delete </UButton>
+          <UButton size="xs" variant="outline" @click="startEdit(row.original)" icon="i-lucide-edit" ></UButton>
+          <UButton size="xs" color="error" variant="ghost" @click="remove(row.original)" icon="i-lucide-trash" ></UButton>
         </div>
       </template>
     </UTable>

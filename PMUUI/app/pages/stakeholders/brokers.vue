@@ -42,7 +42,7 @@ const columns: TableColumn<Broker>[] = [
 
     <UTable :data="brokers" :columns="columns">
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/stakeholders/${row.original.id}`"> View </UButton>
+        <UButton size="xs" :to="`/stakeholders/${row.original.id}`" icon="i-lucide-eye" ></UButton>
       </template>
     </UTable>
   </div>

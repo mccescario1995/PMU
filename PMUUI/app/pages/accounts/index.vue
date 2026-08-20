@@ -68,7 +68,7 @@ const columns: TableColumn<Account>[] = [
       const status = row.getValue('status') as keyof typeof statusColor
       const color = statusColor[status] ?? 'neutral'
 
-      return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () =>
+      return h(UBadge, { class: 'capitalize', color }, () =>
         status
       )
     }
@@ -95,11 +95,13 @@ const columns: TableColumn<Account>[] = [
       :columns="columns"
       :loading="loading"
     >
-      <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/accounts/edit/${row.original.id}`"> View </UButton>
-        <UButton v-if="can('manage users')" size="xs" :to="`/accounts/edit/${row.original.id}`"> Edit </UButton>
-        <UButton v-if="can('manage users')" size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
-      </template>
+      <template #action-cell="{ row }" >
+        <div class="flex gap-2">
+          <UButton size="xs" :to="`/accounts/edit/${row.original.id}`" icon="i-lucide-eye" ></UButton>
+          <UButton v-if="can('manage users')" size="xs" color="secondary" :to="`/accounts/edit/${row.original.id}`" icon="i-lucide-edit" ></UButton>
+          <UButton v-if="can('manage users')" size="xs" color="error" @click="remove(row)" icon="i-lucide-trash" ></UButton>
+        </div>
+        </template>
     </UTable>
   </div>
 </template>

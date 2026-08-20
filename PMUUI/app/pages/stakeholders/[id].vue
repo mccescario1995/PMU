@@ -25,7 +25,7 @@ onMounted(async () => {
         <h1 class="text-2xl font-bold">{{ stakeholder.name }}</h1>
         <p class="text-slate-500">Stakeholder #{{ stakeholder.id }}</p>
       </div>
-      <UButton :to="`/stakeholders/edit/${stakeholder.id}`" icon="i-lucide-pencil"> Edit </UButton>
+      <UButton :to="`/stakeholders/edit/${stakeholder.id}`" icon="i-lucide-pencil" > Edit </UButton>
     </div>
 
     <UCard>

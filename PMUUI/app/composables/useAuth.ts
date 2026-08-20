@@ -2,7 +2,14 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 
-export const accessToken = ref<string | null>(null);
+const getStoredToken = (): string | null => {
+  if (typeof localStorage !== "undefined") {
+    return localStorage.getItem("access_token");
+  }
+  return null;
+};
+
+export const accessToken = ref<string | null>(getStoredToken());
 export const user = ref<any>(null);
 
 export function useAuth() {
@@ -19,11 +26,14 @@ export function useAuth() {
 
     accessToken.value = response.token;
     user.value = response.user;
+    localStorage.setItem("access_token", response.token);
 
     return { status: "SUCCESS" };
   }
 
   async function logout() {
+    const hadToken = !!accessToken.value;
+
     try {
       if (accessToken.value) {
         await apiFetch("/v1/auth/logout", { method: "POST" });
@@ -34,11 +44,14 @@ export function useAuth() {
 
     accessToken.value = null;
     user.value = null;
+    localStorage.removeItem("access_token");
 
-    try {
-      router.push("/login");
-    } catch {
-      // ignore navigation errors
+    if (hadToken) {
+      try {
+        router.push("/login");
+      } catch {
+        // ignore navigation errors
+      }
     }
   }
 

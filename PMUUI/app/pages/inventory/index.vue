@@ -70,7 +70,7 @@ const columns: TableColumn<Inventory>[] = [
     cell: ({ row }) => {
       const color = statusColor[row.getValue('status') as keyof typeof statusColor]
 
-      return h(UBadge, { class: 'capitalize', variant: 'subtle', color }, () =>
+      return h(UBadge, { class: 'capitalize', color }, () =>
         row.getValue('status')
       )
     }
@@ -98,9 +98,11 @@ async function remove(row: any) {
       :columns="columns"
     >
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/inventory/${row.original.id}`"> View </UButton>
-        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/edit/${row.original.id}`"> Edit </UButton>
-        <UButton v-if="can('manage inventory')" size="xs" color="error" variant="ghost" @click="remove(row)"> Delete </UButton>
+        <div class="flex gap-2"x>
+          <UButton size="xs" :to="`/inventory/${row.original.id}`" icon="i-lucide-eye" ></UButton>
+          <UButton v-if="can('manage inventory')" size="xs" color="secondary" :to="`/inventory/edit/${row.original.id}`" icon="i-lucide-edit" ></UButton>
+          <UButton v-if="can('manage inventory')" size="xs" color="error" @click="remove(row)" icon="i-lucide-trash" ></UButton>
+        </div>
       </template>
     </UTable>
   </div>

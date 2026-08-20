@@ -73,8 +73,8 @@ async function submitDeductStock() {
           <p class="text-slate-500">Inventory Item #{{ item.id }}</p>
         </div>
         <div class="flex gap-2">
-          <UButton v-if="can('manage inventory')" :to="`/inventory/edit/${item.id}`" icon="i-lucide-pencil"> Edit </UButton>
-          <UButton v-if="can('manage inventory')" color="error" variant="ghost" icon="i-lucide-trash-2" @click="remove"> Delete </UButton>
+          <UButton v-if="can('manage inventory')" :to="`/inventory/edit/${item.id}`"  icon="i-lucide-edit" > Edit </UButton>
+          <UButton v-if="can('manage inventory')" color="error" variant="ghost"  @click="remove" icon="i-lucide-trash" > Delete </UButton>
         </div>
       </div>
 

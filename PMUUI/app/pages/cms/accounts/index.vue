@@ -129,49 +129,67 @@ const columns: TableColumn<Account>[] = [
   },
   { accessorKey: 'action', header: 'Action' },
 ]
+
+const open = ref(false)
+
+defineShortcuts({
+  o: () => open.value = !open.value
+})
+
 </script>
 
 <template>
   <div class="p-6 space-y-5">
     <div class="flex justify-between">
       <h1 class="text-2xl font-bold">Accounts</h1>
-      <UButton v-if="can('manage users')" icon="i-lucide-plus" @click="openCreate"> Add User </UButton>
+
+      <UModal v-if="can('manage users')" v-model:open="open">
+        <UButton icon="i-lucide-plus" @click="openCreate" label="Add User" />
+
+        <template #header>
+          {{ editing ? 'Edit Account' : 'New Account' }}
+        </template>
+
+        <template #body>
+          <div class="space-y-4">
+            <UFormField label="Name">
+              <UInput v-model="form.name" />
+            </UFormField>
+            <UFormField label="Email">
+              <UInput v-model="form.email" :disabled="!!editing" />
+            </UFormField>
+            <UFormField label="Password">
+              <UInput v-model="form.password" type="password"
+                :placeholder="editing ? 'Leave blank to keep current' : 'Enter password'" />
+            </UFormField>
+            <UFormField label="Status">
+              <USelect v-model="form.status" :items="['active', 'inactive', 'suspended']" />
+            </UFormField>
+            <UFormField label="Roles">
+              <USelect v-model="form.roles" :items="roleOptions" multiple />
+            </UFormField>
+          </div>
+        </template>
+
+        <template #footer>
+          <div class="flex justify-end gap-2">
+            <UButton variant="ghost" @click="open = false">Cancel</UButton>
+            <UButton @click="save">Save</UButton>
+          </div>
+        </template>
+      </UModal>
+
     </div>
 
     <UTable :data="accounts" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton v-if="can('manage users')" size="xs" @click="openEdit(row.original)"> Edit </UButton>
-        <UButton v-if="can('manage users')" size="xs" color="error" variant="ghost" @click="remove(row.original)"> Delete </UButton>
+        <div class="flex gap-2">
+          <UButton v-if="can('manage users')" size="xs" @click="openEdit(row.original)" icon="i-lucide-edit">
+          </UButton>
+          <UButton v-if="can('manage users')" size="xs" color="error" @click="remove(row.original)"
+            icon="i-lucide-trash"></UButton>
+        </div>
       </template>
     </UTable>
-
-    <UModal v-model:open="showForm">
-      <UCard>
-        <template #header> {{ editing ? 'Edit Account' : 'New Account' }} </template>
-        <div class="space-y-4">
-          <UFormField label="Name">
-            <UInput v-model="form.name" />
-          </UFormField>
-          <UFormField label="Email">
-            <UInput v-model="form.email" :disabled="!!editing" />
-          </UFormField>
-          <UFormField label="Password">
-            <UInput v-model="form.password" type="password" :placeholder="editing ? 'Leave blank to keep current' : 'Enter password'" />
-          </UFormField>
-          <UFormField label="Status">
-            <USelect v-model="form.status" :items="['active', 'inactive', 'suspended']" />
-          </UFormField>
-          <UFormField label="Roles">
-            <USelect v-model="form.roles" :items="roleOptions" multiple />
-          </UFormField>
-        </div>
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton variant="ghost" @click="showForm = false">Cancel</UButton>
-            <UButton @click="save">Save</UButton>
-          </div>
-        </template>
-      </UCard>
-    </UModal>
   </div>
 </template>

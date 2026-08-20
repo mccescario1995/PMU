@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { usePermissions } from "~/composables/usePermissions";
 
 definePageMeta({
@@ -19,6 +19,19 @@ const typeColor = {
 }
 
 const stakeholders = ref<any[]>([])
+
+const searchQuery = ref('')
+
+const filteredStakeholders = computed(() => {
+  if (!searchQuery.value) return stakeholders.value
+  const q = searchQuery.value.toLowerCase()
+  return stakeholders.value.filter((s: any) => {
+    const name = s.name?.toLowerCase() || ''
+    const contact = s.contact_no?.toLowerCase() || ''
+    const typeName = s.stakeholder_type?.name?.toLowerCase() || ''
+    return name.includes(q) || contact.includes(q) || typeName.includes(q)
+  })
+})
 
 onMounted(async () => {
   stakeholders.value = ((await apiFetch('/v1/stakeholders', { parseJson: true })) as any).data
@@ -68,8 +81,10 @@ const columns: TableColumn<Stakeholder>[] = [
 
 <template>
   <div class="p-6 space-y-5">
-    <div class="flex justify-between">
+    <div class="flex justify-between items-center gap-4">
       <h1 class="text-2xl font-bold">Stakeholders</h1>
+
+      <UInput v-model="searchQuery" placeholder="Search stakeholders..." icon="i-lucide-search" class="max-w-xs" />
 
       <UButton v-if="can('manage stakeholders')" to="/stakeholders/create" icon="i-lucide-plus">
         Add Stakeholder
@@ -77,11 +92,11 @@ const columns: TableColumn<Stakeholder>[] = [
     </div>
 
     <UTable
-      :data="stakeholders"
+      :data="filteredStakeholders"
       :columns="columns"
     >
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/stakeholders/${row.original.id}`"> View </UButton>
+        <UButton size="xs" :to="`/stakeholders/${row.original.id}`" icon="i-lucide-eye" > </UButton>
       </template>
     </UTable>
   </div>

@@ -76,7 +76,7 @@ const columns: TableColumn<Category>[] = [
 
     <UTable :data="categories" :columns="columns">
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/inventory/stocks`"> View </UButton>
+        <UButton size="xs" :to="`/inventory/stocks`" icon="i-lucide-eye" ></UButton>
       </template>
     </UTable>
   </div>

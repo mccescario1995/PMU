@@ -78,6 +78,7 @@ const handleSubmit = async () => {
           v-model="username"
           icon="i-lucide-user"
           size="xl"
+          color="secondary"
           placeholder="Username"
           :ui="{ base: 'text-lg px-4 py-3' }"
           class="w-full mb-3"
@@ -89,9 +90,8 @@ const handleSubmit = async () => {
           v-model="password"
           size="xl"
           placeholder="Password"
-          :color="color"
+          color="secondary"
           :type="show ? 'text' : 'password'"
-          :aria-invalid="score < 4"
           aria-describedby="password-strength"
           :ui="{ trailing: 'pe-1', base: 'text-lg px-4 py-3' }"
           class="w-full"
@@ -158,6 +158,7 @@ const handleSubmit = async () => {
           class="h-16 rounded-xl text-xl font-semibold mt-5"
           :loading="loading"
           @click="handleSubmit"
+          @keydown.enter="handleSubmit"
         >
         Sign In
       </UButton>

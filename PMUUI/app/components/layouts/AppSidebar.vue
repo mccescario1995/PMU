@@ -3,6 +3,8 @@ const route = useRoute();
 const { can } = usePermissions();
 const { logout } = useAuth();
 
+const forecastOpen = ref(route.path.startsWith('/forecast'));
+
 const menus = [
   {
     title: "Dashboard",
@@ -27,12 +29,14 @@ const menus = [
     icon: "i-lucide-package",
     to: "/inventory",
     permission: "manage inventory",
-  },
-  {
-    title: "Planning",
-    icon: "i-lucide-calendar-check",
-    to: "/inventory/planning",
-    permission: "manage inventory",
+    children: [
+      {
+        title: "Planning",
+        icon: "i-lucide-calendar-check",
+        to: "/inventory/planning",
+        permission: "manage inventory",
+      },
+    ],
   },
   {
     title: "Revenue",
@@ -45,6 +49,26 @@ const menus = [
     icon: "i-lucide-chart-line",
     to: "/forecast",
     permission: "view reports",
+    children: [
+      {
+        title: "Linear Regression",
+        icon: "i-lucide-trending-up",
+        to: "/forecast/linear-regression",
+        permission: "view reports",
+      },
+      {
+        title: "AMIRA",
+        icon: "i-lucide-brain",
+        to: "/forecast/amira",
+        permission: "view reports",
+      },
+      {
+        title: "SAMIRA",
+        icon: "i-lucide-wand-2",
+        to: "/forecast/samira",
+        permission: "view reports",
+      },
+    ],
   },
   {
     title: "Reports",
@@ -86,20 +110,84 @@ const menus = [
 
     <!-- Menu -->
     <nav class="flex-1 space-y-2 p-4">
-      <NuxtLink
+      <template
         v-for="menu in menus.filter((m) => !m.permission || can(m.permission))"
         :key="menu.title"
-        :to="menu.to"
-        class="flex items-center gap-4 rounded-xl px-4 py-3 transition"
-        :class="[
-          route.path.startsWith(menu.to)
-            ? 'bg-white text-[#17395C] font-semibold'
-            : 'hover:bg-white/10',
-        ]"
       >
-        <UIcon :name="menu.icon" class="size-5" />
-        {{ menu.title }}
-      </NuxtLink>
+        <template v-if="menu.title === 'Forecasting'">
+          <button
+            @click="forecastOpen = !forecastOpen"
+            class="flex w-full items-center justify-between gap-4 rounded-xl px-4 py-3 transition"
+            :class="[
+              route.path.startsWith('/forecast')
+                ? 'bg-white text-[#17395C] font-semibold'
+                : 'hover:bg-white/10',
+            ]"
+          >
+            <span class="flex items-center gap-4">
+              <UIcon :name="menu.icon" class="size-5" />
+              {{ menu.title }}
+            </span>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="size-4 transition-transform duration-200"
+              :class="forecastOpen ? 'rotate-180' : ''"
+            />
+          </button>
+
+          <div v-if="forecastOpen" class="ml-4 space-y-1">
+            <NuxtLink
+              v-for="child in menu.children.filter((c: any) => !c.permission || can(c.permission))"
+              :key="child.title"
+              :to="child.to"
+              class="flex items-center gap-4 rounded-xl px-4 py-2 pl-12 text-sm transition"
+              :class="[
+                route.path.startsWith(child.to)
+                  ? 'bg-white text-[#17395C] font-semibold'
+                  : 'hover:bg-white/10',
+              ]"
+            >
+              <UIcon :name="child.icon" class="size-4" />
+              {{ child.title }}
+            </NuxtLink>
+          </div>
+        </template>
+
+        <template v-else>
+          <NuxtLink
+            :to="menu.to"
+            class="flex items-center gap-4 rounded-xl px-4 py-3 transition"
+            :class="[
+              route.path.startsWith(menu.to)
+                ? 'bg-white text-[#17395C] font-semibold'
+                : 'hover:bg-white/10',
+            ]"
+          >
+            <UIcon :name="menu.icon" class="size-5" />
+            {{ menu.title }}
+          </NuxtLink>
+
+          <div
+            v-if="menu.children && menu.children.length"
+            class="ml-4 space-y-1"
+          >
+            <NuxtLink
+              v-for="child in menu.children.filter((c: any) => !c.permission || can(c.permission))"
+              :key="child.title"
+              :to="child.to"
+              class="flex items-center gap-4 rounded-xl px-4 py-2 pl-12 text-sm transition"
+              :class="[
+                route.path.startsWith(child.to)
+                  ? 'bg-white text-[#17395C] font-semibold'
+                  : 'hover:bg-white/10',
+              ]"
+            >
+              <UIcon :name="child.icon" class="size-4" />
+              {{ child.title }}
+            </NuxtLink>
+          </div>
+        </template>
+      </template>
     </nav>
 
     <!-- Logout -->

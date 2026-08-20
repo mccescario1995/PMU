@@ -90,8 +90,8 @@ const columns: TableColumn<StakeholderType>[] = [
 
     <UTable :data="types" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton v-if="can('manage stakeholders')" size="xs" @click="openEdit(row.original)"> Edit </UButton>
-        <UButton v-if="can('manage stakeholders')" size="xs" color="error" variant="ghost" @click="remove(row.original)"> Delete </UButton>
+        <UButton v-if="can('manage stakeholders')" size="xs" @click="openEdit(row.original)" icon="i-lucide-edit" ></UButton>
+        <UButton v-if="can('manage stakeholders')" size="xs" color="error" variant="ghost" @click="remove(row.original)" icon="i-lucide-trash" ></UButton>
       </template>
     </UTable>
 

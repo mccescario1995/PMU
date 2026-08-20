@@ -68,7 +68,7 @@ const columns: TableColumn<Import>[] = [
 
     <UTable :data="imports" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton size="xs" variant="ghost" @click="alert('View import details coming soon')"> View </UButton>
+        <UButton size="xs" variant="ghost" @click="alert('View import details coming soon')" icon="i-lucide-eye" ></UButton>
       </template>
     </UTable>
   </div>
