@@ -3,7 +3,7 @@ import sys
 import json
 from datetime import date, timedelta
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "src")))
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
@@ -11,8 +11,8 @@ import yaml
 
 load_dotenv()
 
-from .pmu_client import PMUClient
-from .evaluation import run_linear, run_amira, run_samira
+from pmu_client import PMUClient
+from evaluation import run_linear, run_amira, run_samira
 
 app = Flask(__name__)
 
