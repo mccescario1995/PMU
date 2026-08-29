@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "PMU API",
+            "type": "shell",
+            "command": "C:\\php85\\php.exe",
+            "args": [
+                "artisan",
+                "serve"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}\\PMUAPI"
+            },
+            "isBackground": true,
+            "problemMatcher": []
+        },
+        {
+            "label": "PMU UI",
+            "type": "shell",
+            "command": "npm",
+            "args": [
+                "run",
+                "dev"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}\\PMUUI"
+            },
+            "isBackground": true,
+            "problemMatcher": []
+        }
+    ]
+}
