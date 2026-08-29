@@ -55,9 +55,30 @@ export function useAuth() {
     }
   }
 
+  async function hydrateUser() {
+    if (!accessToken.value || user.value) {
+      return;
+    }
+
+    try {
+      const response = (await apiFetch("/v1/auth/me", {
+        parseJson: true,
+        throwOnError: true,
+      })) as { data?: any };
+
+      if (response?.data) {
+        user.value = response.data;
+      }
+    } catch {
+      accessToken.value = null;
+      user.value = null;
+      localStorage.removeItem("access_token");
+    }
+  }
+
   function refresh() {
     return Promise.resolve(accessToken.value);
   }
 
-  return { login, logout, refresh, accessToken, user };
+  return { login, logout, refresh, hydrateUser, accessToken, user };
 }

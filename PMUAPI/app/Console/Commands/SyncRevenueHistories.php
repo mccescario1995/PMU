@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 class SyncRevenueHistories extends Command
 {
     protected $signature = 'revenue:sync {--date= : Recalculate only for this date (Y-m-d)} {--all : Recalculate all dates}';
+
     protected $description = 'Reconcile revenue_histories against actual transaction totals';
 
     public function handle(): int
@@ -21,8 +22,9 @@ class SyncRevenueHistories extends Command
 
         if ($specificDate) {
             $query->whereDate('transaction_date', $specificDate);
-        } elseif (!$all) {
+        } elseif (! $all) {
             $this->error('Please specify --date or --all.');
+
             return 1;
         }
 

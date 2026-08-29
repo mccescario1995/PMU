@@ -27,7 +27,18 @@ export const useSidebar = () => {
         {
           title: "Inventory",
           icon: "i-lucide-package",
-          to: "/inventory",
+          children: [
+            {
+              title: "Inventory",
+              icon: "i-lucide-package",
+              to: "/inventory/inventory-list",
+            },
+            {
+              title: "Planning",
+              icon: "i-lucide-calendar-check",
+              to: "/inventory/planning",
+            },
+          ],
         },
       ],
     },
@@ -43,7 +54,6 @@ export const useSidebar = () => {
         {
           title: "Forecasting",
           icon: "i-lucide-chart-line",
-          to: "/forecast",
           children: [
             {
               title: "Linear Regression",

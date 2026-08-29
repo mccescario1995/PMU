@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "~/composables/useAuth";
 import { useToast } from "#imports";
+import RoleBadge from "~/components/auth/RoleBadge.vue";
 
 const router = useRouter();
 const auth = useAuth();
@@ -70,96 +71,31 @@ const handleSubmit = async () => {
 
 <template>
   <div class="mx-auto w-full max-w-md">
-    <RoleBadge :role="role" />
+    <!-- <RoleBadge :role="role" /> -->
 
-    <UForm class="w-full">
+    <UForm @submit.prevent="handleSubmit" class="w-full">
       <UFormField label="Username" class="text-xl">
-        <UInput
-          v-model="username"
-          icon="i-lucide-user"
-          size="xl"
-          color="secondary"
-          placeholder="Username"
-          :ui="{ base: 'text-lg px-4 py-3' }"
-          class="w-full mb-3"
-        />
+        <UInput v-model="username" icon="i-lucide-user" size="xl" color="secondary" placeholder="Username" 
+          :ui="{ base: 'text-lg px-4 py-3' }" class="w-full mb-3" />
       </UFormField>
 
       <UFormField label="Password" class="text-xl">
-        <UInput
-          v-model="password"
-          size="xl"
-          placeholder="Password"
-          color="secondary"
-          :type="show ? 'text' : 'password'"
-          aria-describedby="password-strength"
-          :ui="{ trailing: 'pe-1', base: 'text-lg px-4 py-3' }"
-          class="w-full"
-          icon="i-lucide-lock"
-        >
+        <UInput v-model="password" size="xl" placeholder="Password" color="secondary" :type="show ? 'text' : 'password'"
+          aria-describedby="password-strength" :ui="{ trailing: 'pe-1', base: 'text-lg px-4 py-3' }" class="w-full"
+          icon="i-lucide-lock">
           <template #trailing>
-            <UButton
-              color="neutral"
-              variant="link"
-              size="sm"
-              :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-              :aria-label="show ? 'Hide password' : 'Show password'"
-              :aria-pressed="show"
-              aria-controls="password"
+            <UButton color="neutral" variant="link" size="sm" :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+              :aria-label="show ? 'Hide password' : 'Show password'" :aria-pressed="show" aria-controls="password"
               @click="show = !show"
-            />
+               />
           </template>
         </UInput>
       </UFormField>
-      <!-- 
-      <UProgress
-        :color="color"
-        :indicator="text"
-        :model-value="score"
-        :max="4"
-        size="sm"
-      />
-
-      <div class="m-3">
-        <p id="password-strength" class="text-lg font-medium mb-2">
-          {{ text }}. Must contain:
-        </p>
-
-        <ul class="space-y-1" aria-label="Password requirements">
-          <li
-            v-for="(req, index) in strength"
-            :key="index"
-            class="flex items-center gap-0.5"
-            :class="req.met ? 'text-success' : 'text-muted'"
-          >
-            <UIcon
-              :name="req.met ? 'i-lucide-circle-check' : 'i-lucide-circle-x'"
-              class="size-7 shrink-0"
-            />
-
-            <span class="text-md font-light">
-              {{ req.text }}
-              <span class="sr-only">
-                {{ req.met ? " - Requirement met" : " - Requirement not met" }}
-              </span>
-            </span>
-          </li>
-        </ul> -->
-
-      <!-- </div> -->
       <div class="my-3">
         <UCheckbox label="Remember me" />
       </div>
-        <UButton
-          block
-          size="xl"
-          variant="outline"
-          color="neutral"
-          class="h-16 rounded-xl text-xl font-semibold mt-5"
-          :loading="loading"
-          @click="handleSubmit"
-          @keydown.enter="handleSubmit"
-        >
+      <UButton type="submit" block size="xl" variant="outline" color="neutral"
+        class="h-16 rounded-xl text-xl font-semibold mt-5" :loading="loading">
         Sign In
       </UButton>
     </UForm>

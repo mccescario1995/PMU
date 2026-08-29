@@ -8,7 +8,6 @@ use App\Models\Setting;
 use App\Models\Stakeholder;
 use App\Models\Status;
 use App\Models\User;
-use Database\Seeders\StakeholderTypeSeeder;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;

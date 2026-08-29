@@ -24,6 +24,7 @@ class RevenueForecast extends Model
     public function getSeasonFromDateAttribute(): string
     {
         $month = (int) $this->forecast_date->format('n');
+
         return $month >= 1 && $month <= 6 ? 'Peak' : 'Off-Peak';
     }
 }

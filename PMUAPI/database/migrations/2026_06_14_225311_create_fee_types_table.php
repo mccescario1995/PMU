@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -24,14 +25,14 @@ return new class extends Migration {
         });
 
         // ideal fee_name:
-            // Fish Landing 
-            // Fish Unloading
-            // Wharfage
-            // Parking
-            // Storage
-            // Rental
-            // Accreditation
-            // Auxiliary Invoice
+        // Fish Landing
+        // Fish Unloading
+        // Wharfage
+        // Parking
+        // Storage
+        // Rental
+        // Accreditation
+        // Auxiliary Invoice
     }
 
     /**

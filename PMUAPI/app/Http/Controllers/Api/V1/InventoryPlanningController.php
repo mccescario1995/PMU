@@ -5,8 +5,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
 use App\Models\RevenueForecast;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class InventoryPlanningController extends Controller
 {
@@ -90,12 +88,14 @@ class InventoryPlanningController extends Controller
     private function isPeakSeason($date): bool
     {
         $month = (int) $date->format('n');
+
         return $month >= 1 && $month <= 6;
     }
 
     private function isOffPeakSeason($date): bool
     {
         $month = (int) $date->format('n');
+
         return $month >= 7 && $month <= 12;
     }
 

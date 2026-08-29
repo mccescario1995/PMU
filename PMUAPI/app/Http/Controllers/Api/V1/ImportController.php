@@ -10,7 +10,6 @@ use App\Models\WeatherData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
 
 class ImportController extends Controller
 {
@@ -113,6 +112,7 @@ class ImportController extends Controller
 
             if ($index === 1) {
                 $header = $values;
+
                 continue;
             }
 
@@ -133,9 +133,10 @@ class ImportController extends Controller
         foreach ($rows as $row) {
             $total++;
 
-            if (!$row || empty($row['revenue_date']) || !isset($row['total_revenue'])) {
+            if (! $row || empty($row['revenue_date']) || ! isset($row['total_revenue'])) {
                 $skipped++;
                 $errors[] = "Row {$total}: missing required fields";
+
                 continue;
             }
 
@@ -163,9 +164,10 @@ class ImportController extends Controller
         foreach ($rows as $row) {
             $total++;
 
-            if (!$row || empty($row['weather_date'])) {
+            if (! $row || empty($row['weather_date'])) {
                 $skipped++;
                 $errors[] = "Row {$total}: missing weather_date";
+
                 continue;
             }
 
@@ -194,18 +196,20 @@ class ImportController extends Controller
         foreach ($rows as $row) {
             $total++;
 
-            if (!$row || empty($row['name']) || empty($row['type'])) {
+            if (! $row || empty($row['name']) || empty($row['type'])) {
                 $skipped++;
                 $errors[] = "Row {$total}: missing name or type";
+
                 continue;
             }
 
             $type = strtolower($row['type']);
             $allowed = ['buyer', 'broker', 'renter'];
 
-            if (!in_array($type, $allowed)) {
+            if (! in_array($type, $allowed)) {
                 $skipped++;
                 $errors[] = "Row {$total}: invalid type '{$type}'";
+
                 continue;
             }
 

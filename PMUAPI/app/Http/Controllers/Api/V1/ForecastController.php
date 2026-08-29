@@ -94,7 +94,7 @@ class ForecastController extends Controller
             return response()->json(['error' => 'PMUML_URL not configured'], 500);
         }
 
-        $url = $pmumlUrl . '/forecast';
+        $url = $pmumlUrl.'/forecast';
         $payload = json_encode(['model' => $model, 'days' => $days]);
 
         $ch = curl_init($url);
@@ -110,12 +110,12 @@ class ForecastController extends Controller
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
-        if ($httpCode !== 200 || !$response) {
+        if ($httpCode !== 200 || ! $response) {
             return response()->json(['error' => 'PMUML request failed', 'details' => $response], 502);
         }
 
         $result = json_decode($response, true);
-        if (!isset($result['forecasts']) || !is_array($result['forecasts'])) {
+        if (! isset($result['forecasts']) || ! is_array($result['forecasts'])) {
             return response()->json(['error' => 'Invalid PMUML response', 'details' => $result], 502);
         }
 
@@ -124,7 +124,7 @@ class ForecastController extends Controller
             $forecastDate = $item['date'] ?? null;
             $predicted = $item['predicted_revenue'] ?? null;
 
-            if (!$forecastDate || $predicted === null) {
+            if (! $forecastDate || $predicted === null) {
                 continue;
             }
 
@@ -135,7 +135,7 @@ class ForecastController extends Controller
                 'forecast_date' => $forecastDate,
                 'predicted_revenue' => $predicted,
                 'season' => $season,
-                'model_version' => $model . '-v1',
+                'model_version' => $model.'-v1',
             ]);
 
             $saved[] = [

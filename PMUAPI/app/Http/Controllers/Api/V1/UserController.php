@@ -30,7 +30,7 @@ class UserController extends Controller
 
         $user = User::create($data);
 
-        if (!empty($data['roles'])) {
+        if (! empty($data['roles'])) {
             $user->syncRoles($data['roles']);
         }
 
@@ -46,14 +46,14 @@ class UserController extends Controller
     {
         $data = $request->validate([
             'name' => 'sometimes|required|string',
-            'email' => 'sometimes|required|email|unique:users,email,' . $user->id,
+            'email' => 'sometimes|required|email|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8',
             'status' => 'nullable|in:active,inactive',
             'roles' => 'nullable|array',
             'roles.*' => 'string|exists:roles,name',
         ]);
 
-        if (!empty($data['password'])) {
+        if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
             unset($data['password']);

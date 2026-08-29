@@ -74,7 +74,7 @@ class InventoryItemController extends Controller
     public function allLogs()
     {
         return response()->json(
-            \App\Models\InventoryLog::with(['item', 'user'])->latest()->get()
+            InventoryLog::with(['item', 'user'])->latest()->get()
         );
     }
 

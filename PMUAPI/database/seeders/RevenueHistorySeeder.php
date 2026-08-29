@@ -3,12 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\FeeType;
+use App\Models\RevenueHistory;
 use App\Models\Stakeholder;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
-use App\Models\RevenueHistory;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class RevenueHistorySeeder extends Seeder
@@ -17,18 +16,19 @@ class RevenueHistorySeeder extends Seeder
     {
         $filePath = 'C:/Users/Marthen Christ/Downloads/PMU-FILE-2020-2025.xlsx';
 
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             $this->command?->error("File not found: {$filePath}");
+
             return;
         }
 
         $this->command?->info('Reading Excel file...');
         $rows = $this->readXlsx($filePath);
 
-        $this->command?->info('Found ' . count($rows) . ' data rows');
+        $this->command?->info('Found '.count($rows).' data rows');
 
         $user = User::first();
-        if (!$user) {
+        if (! $user) {
             $user = User::create([
                 'name' => 'System Importer',
                 'email' => 'importer@pmu.gov.ph',
@@ -38,7 +38,7 @@ class RevenueHistorySeeder extends Seeder
         }
 
         $stakeholder = Stakeholder::first();
-        if (!$stakeholder) {
+        if (! $stakeholder) {
             $stakeholder = Stakeholder::create([
                 'name' => 'Walk-in',
                 'type' => 'buyer',
@@ -82,7 +82,7 @@ class RevenueHistorySeeder extends Seeder
                 }
 
                 $feeType = $feeTypes->get($feeName);
-                if (!$feeType) {
+                if (! $feeType) {
                     continue;
                 }
 
@@ -101,7 +101,7 @@ class RevenueHistorySeeder extends Seeder
 
     private function readXlsx(string $filePath): array
     {
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         if ($zip->open($filePath) !== true) {
             throw new \RuntimeException("Unable to open xlsx file: {$filePath}");
         }
@@ -166,7 +166,7 @@ class RevenueHistorySeeder extends Seeder
                     $date = date('Y-m-d', strtotime(str_replace('/', '-', $date)));
                 }
 
-                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
                     continue;
                 }
 
@@ -202,6 +202,7 @@ class RevenueHistorySeeder extends Seeder
     private function excelSerialToDate(int $serial): string
     {
         $unixTimestamp = ($serial - 25569) * 86400;
+
         return date('Y-m-d', (int) $unixTimestamp);
     }
 }

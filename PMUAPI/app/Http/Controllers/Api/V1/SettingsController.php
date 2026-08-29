@@ -33,7 +33,7 @@ class SettingsController extends Controller
     public function update(Request $request, Setting $setting)
     {
         $data = $request->validate([
-            'key' => 'sometimes|required|string|max:255|unique:settings,key,' . $setting->id,
+            'key' => 'sometimes|required|string|max:255|unique:settings,key,'.$setting->id,
             'value' => 'nullable|string',
             'type' => 'nullable|string|max:255',
             'description' => 'nullable|string',

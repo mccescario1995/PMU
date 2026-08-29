@@ -22,19 +22,19 @@ const stockQty = ref(1)
 
 onMounted(async () => {
   loading.value = true
-  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
-  itemLogs.value = (await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]
+  item.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { parseJson: true })).data
+  itemLogs.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}/logs`, { parseJson: true })) as any[]
   loading.value = false
 })
 
 async function remove() {
   if (!confirm('Delete this inventory item?')) return
-  await apiFetch(`/v1/inventory/items/${id}`, { method: 'DELETE' })
-  useRouter().push('/inventory')
+  await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { method: 'DELETE' })
+  useRouter().push('/inventory/inventory-list')
 }
 
 async function submitAddStock() {
-  await apiFetch(`/v1/inventory/items/${id}/add-stock`, {
+  await apiFetch(`/v1/inventory/inventory-list/items/${id}/add-stock`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity: stockQty.value }),
@@ -43,12 +43,12 @@ async function submitAddStock() {
   })
   showAddStock.value = false
   stockQty.value = 1
-  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
-  itemLogs.value = ((await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]).data
+  item.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { parseJson: true })).data
+  itemLogs.value = ((await apiFetch(`/v1/inventory/inventory-list/items/${id}/logs`, { parseJson: true })) as any[]).data
 }
 
 async function submitDeductStock() {
-  await apiFetch(`/v1/inventory/items/${id}/deduct-stock`, {
+  await apiFetch(`/v1/inventory/inventory-list/items/${id}/deduct-stock`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity: stockQty.value }),
@@ -57,14 +57,14 @@ async function submitDeductStock() {
   })
   showDeductStock.value = false
   stockQty.value = 1
-  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
-  itemLogs.value = (await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]
+  item.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { parseJson: true })).data
+  itemLogs.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}/logs`, { parseJson: true })) as any[]
 }
 </script>
 
 <template>
   <div class="p-6 space-y-5">
-    <UButton icon="i-lucide-arrow-left" variant="ghost" to="/inventory"> Back </UButton>
+    <UButton icon="i-lucide-arrow-left" variant="ghost" to="/inventory/inventory-list"> Back </UButton>
 
     <div v-if="item" class="space-y-6">
       <div class="flex items-center justify-between">
@@ -73,7 +73,7 @@ async function submitDeductStock() {
           <p class="text-slate-500">Inventory Item #{{ item.id }}</p>
         </div>
         <div class="flex gap-2">
-          <UButton v-if="can('manage inventory')" :to="`/inventory/edit/${item.id}`"  icon="i-lucide-edit" > Edit </UButton>
+          <UButton v-if="can('manage inventory')" :to="`/inventory/inventory-list/edit/${item.id}`"  icon="i-lucide-edit" > Edit </UButton>
           <UButton v-if="can('manage inventory')" color="error" variant="ghost"  @click="remove" icon="i-lucide-trash" > Delete </UButton>
         </div>
       </div>

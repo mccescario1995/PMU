@@ -7,6 +7,7 @@ use App\Http\Resources\TransactionResource;
 use App\Models\FeeType;
 use App\Models\RevenueHistory;
 use App\Models\Transaction;
+use App\Services\WeatherService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -65,6 +66,9 @@ class TransactionController extends Controller
         $transaction->update(['total_amount' => $total]);
 
         $this->updateRevenueHistory($data['transaction_date'], $total);
+
+        $weatherService = app(WeatherService::class);
+        $weatherService->fetchForDate($data['transaction_date']);
 
         return new TransactionResource(
             $transaction->load(['stakeholder', 'items.feeType', 'recordedBy'])
@@ -152,6 +156,9 @@ class TransactionController extends Controller
         if ($oldDate !== $newDate) {
             $this->adjustRevenueHistory($oldDate, -$oldTotal);
             $this->adjustRevenueHistory($newDate, $newTotal);
+
+            $weatherService = app(WeatherService::class);
+            $weatherService->fetchForDate($newDate);
         } elseif ($oldTotal != $newTotal) {
             $this->adjustRevenueHistory($newDate, $newTotal - $oldTotal);
         }

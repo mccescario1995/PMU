@@ -59,9 +59,9 @@ class StakeholderController extends Controller
             'status' => 'nullable|in:active,inactive',
         ]);
 
-        if (!empty($data['stakeholder_type_id'])) {
+        if (! empty($data['stakeholder_type_id'])) {
             $data['stakeholder_type_id'] = $data['stakeholder_type_id'];
-        } elseif (!empty($data['type'])) {
+        } elseif (! empty($data['type'])) {
             $typeName = ucfirst($data['type']);
             $type = StakeholderType::firstOrCreate(['name' => $typeName]);
             $data['stakeholder_type_id'] = $type->id;

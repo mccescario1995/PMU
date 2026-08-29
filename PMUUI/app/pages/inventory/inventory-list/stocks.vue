@@ -20,7 +20,7 @@ const loading = ref(true)
 
 onMounted(async () => {
   loading.value = true
-  stocks.value = ((await apiFetch('/v1/inventory/items', { parseJson: true })) as any).data
+  stocks.value = ((await apiFetch('/v1/inventory/inventory-list/items', { parseJson: true })) as any).data
   loading.value = false
 })
 
@@ -65,7 +65,7 @@ const columns: TableColumn<Stock>[] = [
 
 async function remove(row: any) {
   if (!confirm('Delete this item?')) return
-  await apiFetch(`/v1/inventory/items/${row.original.id}`, { method: 'DELETE' })
+  await apiFetch(`/v1/inventory/inventory-list/items/${row.original.id}`, { method: 'DELETE' })
   stocks.value = stocks.value.filter(i => i.id !== row.id)
 }
 </script>
@@ -74,13 +74,13 @@ async function remove(row: any) {
   <div class="p-6 space-y-5">
     <div class="flex justify-between">
       <h1 class="text-2xl font-bold">Stocks</h1>
-      <UButton to="/inventory/create" icon="i-lucide-plus"> Add Item </UButton>
+      <UButton to="/inventory/inventory-list/create" icon="i-lucide-plus"> Add Item </UButton>
     </div>
 
     <UTable :data="stocks" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/inventory/${row.original.id}`" icon="i-lucide-eye" ></UButton>
-        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/edit/${row.original.id}`" icon="i-lucide-edit" ></UButton>
+        <UButton size="xs" :to="`/inventory/inventory-list/${row.original.id}`" icon="i-lucide-eye" ></UButton>
+        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/inventory-list/edit/${row.original.id}`" icon="i-lucide-edit" ></UButton>
         <UButton v-if="can('manage inventory')" size="xs" color="error" variant="ghost" @click="remove(row)" icon="i-lucide-trash" ></UButton>
       </template>
     </UTable>

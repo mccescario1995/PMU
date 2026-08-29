@@ -4,6 +4,7 @@ const { can } = usePermissions();
 const { logout } = useAuth();
 
 const forecastOpen = ref(route.path.startsWith('/forecast'));
+const inventoryOpen = ref(route.path.startsWith('/inventory'));
 
 const menus = [
   {
@@ -27,9 +28,14 @@ const menus = [
   {
     title: "Inventory",
     icon: "i-lucide-package",
-    to: "/inventory",
     permission: "manage inventory",
     children: [
+      {
+        title: "Inventory",
+        icon: "i-lucide-package",
+        to: "/inventory/inventory-list",
+        permission: "manage inventory",
+      },
       {
         title: "Planning",
         icon: "i-lucide-calendar-check",
@@ -47,7 +53,6 @@ const menus = [
   {
     title: "Forecasting",
     icon: "i-lucide-chart-line",
-    to: "/forecast",
     permission: "view reports",
     children: [
       {
@@ -114,12 +119,12 @@ const menus = [
         v-for="menu in menus.filter((m) => !m.permission || can(m.permission))"
         :key="menu.title"
       >
-        <template v-if="menu.title === 'Forecasting'">
+        <template v-if="menu.title === 'Forecasting' || menu.title === 'Inventory'">
           <button
-            @click="forecastOpen = !forecastOpen"
+            @click="menu.title === 'Forecasting' ? forecastOpen = !forecastOpen : inventoryOpen = !inventoryOpen"
             class="flex w-full items-center justify-between gap-4 rounded-xl px-4 py-3 transition"
             :class="[
-              route.path.startsWith('/forecast')
+              (menu.title === 'Forecasting' ? forecastOpen : inventoryOpen)
                 ? 'bg-white text-[#17395C] font-semibold'
                 : 'hover:bg-white/10',
             ]"
@@ -131,11 +136,11 @@ const menus = [
             <UIcon
               name="i-lucide-chevron-down"
               class="size-4 transition-transform duration-200"
-              :class="forecastOpen ? 'rotate-180' : ''"
+              :class="(menu.title === 'Forecasting' ? forecastOpen : inventoryOpen) ? 'rotate-180' : ''"
             />
           </button>
 
-          <div v-if="forecastOpen" class="ml-4 space-y-1">
+          <div v-if="menu.title === 'Forecasting' ? forecastOpen : inventoryOpen" class="ml-4 space-y-1">
             <NuxtLink
               v-for="child in menu.children.filter((c: any) => !c.permission || can(c.permission))"
               :key="child.title"

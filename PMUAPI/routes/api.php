@@ -1,37 +1,35 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController as ApiAuthController;
-
-// v1 Controllers
+use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\RoleController;
-use App\Http\Controllers\Api\V1\UserController;
-use App\Http\Controllers\Api\V1\StakeholderController;
-use App\Http\Controllers\Api\V1\StakeholderTypeController;
+// v1 Controllers
+use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\FeeTypeController;
-use App\Http\Controllers\Api\V1\TransactionController;
+use App\Http\Controllers\Api\V1\ForecastController;
+use App\Http\Controllers\Api\V1\ImportController;
 use App\Http\Controllers\Api\V1\InventoryItemController;
 use App\Http\Controllers\Api\V1\InventoryPlanningController;
-use App\Http\Controllers\Api\V1\WeatherController;
-use App\Http\Controllers\Api\V1\ForecastController;
-use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\ReportController;
-use App\Http\Controllers\Api\V1\AuditLogController;
-use App\Http\Controllers\Api\V1\ImportController;
+use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Controllers\Api\V1\StakeholderController;
+use App\Http\Controllers\Api\V1\StakeholderTypeController;
 use App\Http\Controllers\Api\V1\StatusesController;
+use App\Http\Controllers\Api\V1\TransactionController;
+use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\WeatherController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-
 Route::get('/health', function () {
     return response()->json([
         'status' => 'ok',
-        'message' => 'PMU API is running'
+        'message' => 'PMU API is running',
     ]);
 });
 
@@ -318,3 +316,5 @@ Route::prefix('v1')->group(function () {
         });
     });
 });
+
+Route::middleware('auth:sanctum')->put('/auth/profile', [AuthController::class, 'updateProfile']);

@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Stakeholder;
 use App\Models\StakeholderType;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class StakeholderTypeSeeder extends Seeder

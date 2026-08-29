@@ -18,7 +18,7 @@ const form = reactive({
 })
 
 onMounted(async () => {
-  const item = await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })
+  const item = await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { parseJson: true })
   Object.assign(form, {
     item_name: item.data.item_name,
     category: item.data.category,
@@ -30,13 +30,13 @@ onMounted(async () => {
 })
 
 function save() {
-  apiFetch(`/v1/inventory/items/${id}`, {
+  apiFetch(`/v1/inventory/inventory-list/items/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(form),
     parseJson: true,
     throwOnError: true,
-  }).then(() => useRouter().push('/inventory'))
+  }).then(() => useRouter().push('/inventory/inventory-list'))
 }
 </script>
 
@@ -77,7 +77,7 @@ function save() {
 
       <div class="flex gap-2 mt-4">
         <UButton type="submit"> Save </UButton>
-        <UButton variant="ghost" to="/inventory"> Cancel </UButton>
+        <UButton variant="ghost" to="/inventory/inventory-list"> Cancel </UButton>
       </div>
     </UForm>
   </div>

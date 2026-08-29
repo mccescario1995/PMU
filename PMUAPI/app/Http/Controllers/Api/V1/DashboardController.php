@@ -7,7 +7,6 @@ use App\Models\InventoryItem;
 use App\Models\RevenueHistory;
 use App\Models\Stakeholder;
 use App\Models\Transaction;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -64,21 +63,21 @@ class DashboardController extends Controller
             ->orderBy('revenue_histories.revenue_date')
             ->get();
 
-        $pairs = $correlations->filter(fn($r) => $r->rainfall_mm !== null && $r->total_revenue > 0)->values();
+        $pairs = $correlations->filter(fn ($r) => $r->rainfall_mm !== null && $r->total_revenue > 0)->values();
 
         $rainCorr = $this->pearsonCorrelation(
-            $pairs->pluck('rainfall_mm')->map(fn($v) => (float) $v),
-            $pairs->pluck('total_revenue')->map(fn($v) => (float) $v)
+            $pairs->pluck('rainfall_mm')->map(fn ($v) => (float) $v),
+            $pairs->pluck('total_revenue')->map(fn ($v) => (float) $v)
         );
 
         $tempCorr = $this->pearsonCorrelation(
-            $pairs->pluck('temperature')->map(fn($v) => (float) $v),
-            $pairs->pluck('total_revenue')->map(fn($v) => (float) $v)
+            $pairs->pluck('temperature')->map(fn ($v) => (float) $v),
+            $pairs->pluck('total_revenue')->map(fn ($v) => (float) $v)
         );
 
         $windCorr = $this->pearsonCorrelation(
-            $pairs->pluck('wind_speed')->map(fn($v) => (float) $v),
-            $pairs->pluck('total_revenue')->map(fn($v) => (float) $v)
+            $pairs->pluck('wind_speed')->map(fn ($v) => (float) $v),
+            $pairs->pluck('total_revenue')->map(fn ($v) => (float) $v)
         );
 
         return response()->json([
@@ -94,17 +93,21 @@ class DashboardController extends Controller
     private function pearsonCorrelation($x, $y)
     {
         $n = $x->count();
-        if ($n < 2) return 0;
+        if ($n < 2) {
+            return 0;
+        }
 
         $meanX = $x->avg();
         $meanY = $y->avg();
 
-        $sumXY = $x->zip($y)->sum(fn($pair) => ($pair[0] - $meanX) * ($pair[1] - $meanY));
-        $sumX2 = $x->sum(fn($v) => ($v - $meanX) ** 2);
-        $sumY2 = $y->sum(fn($v) => ($v - $meanY) ** 2);
+        $sumXY = $x->zip($y)->sum(fn ($pair) => ($pair[0] - $meanX) * ($pair[1] - $meanY));
+        $sumX2 = $x->sum(fn ($v) => ($v - $meanX) ** 2);
+        $sumY2 = $y->sum(fn ($v) => ($v - $meanY) ** 2);
 
         $denominator = sqrt($sumX2 * $sumY2);
-        if ($denominator == 0) return 0;
+        if ($denominator == 0) {
+            return 0;
+        }
 
         return $sumXY / $denominator;
     }

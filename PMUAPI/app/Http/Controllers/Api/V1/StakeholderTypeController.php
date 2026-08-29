@@ -32,7 +32,7 @@ class StakeholderTypeController extends Controller
     public function update(Request $request, StakeholderType $stakeholderType)
     {
         $data = $request->validate([
-            'name' => 'sometimes|required|string|unique:stakeholder_types,name,' . $stakeholderType->id,
+            'name' => 'sometimes|required|string|unique:stakeholder_types,name,'.$stakeholderType->id,
             'description' => 'nullable|string',
         ]);
 
