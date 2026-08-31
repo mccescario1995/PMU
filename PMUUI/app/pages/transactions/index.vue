@@ -78,6 +78,12 @@ async function loadFeeTypes() {
     (await apiFetch("/v1/fee-types", { parseJson: true })) as any
   ).data;
   feeTypesLoaded.value = true;
+  form.items.forEach((item) => {
+    const feeType = feeTypes.value.find((f) => f.id === item.fee_type_id);
+    if (feeType) {
+      item.unit_price = feeType.base_rate;
+    }
+  });
 }
 
 function openCreate() {
@@ -94,6 +100,7 @@ function openCreate() {
   form.transaction_date = new Date().toISOString().slice(0, 10);
   form.status = "pending";
   showModal.value = true;
+  loadFeeTypes();
 }
 
 function openView(row: any) {
@@ -108,6 +115,7 @@ function openView(row: any) {
   form.transaction_date = (row.transaction_date ?? "").toString().slice(0, 10);
   form.status = row.status;
   showModal.value = true;
+  loadFeeTypes();
 }
 
 function openEdit(row: any) {
@@ -122,6 +130,7 @@ function openEdit(row: any) {
   form.transaction_date = (row.transaction_date ?? "").toString().slice(0, 10);
   form.status = row.status;
   showModal.value = true;
+  loadFeeTypes();
 }
 
 function addItem() {
@@ -143,7 +152,7 @@ watch(
   (newItems) => {
     newItems.forEach((item) => {
       const feeType = feeTypes.value.find((f) => f.id === item.fee_type_id);
-      if (feeType && item.unit_price === 0) {
+      if (feeType) {
         item.unit_price = feeType.base_rate;
       }
     });
@@ -294,6 +303,11 @@ const columns: TableColumn<Transactions>[] = [
   },
   { accessorKey: "action", header: "Action" },
 ];
+
+onMounted(() => {
+  loadStakeholders();
+  loadFeeTypes();
+})
 </script>
 
 <template>
@@ -390,7 +404,7 @@ const columns: TableColumn<Transactions>[] = [
                   v-model="item.fee_type_id"
                   :items="feeTypes.map((f) => ({ label: f.fee_name, value: f.id }))"
                   placeholder="Fee Type"
-                  class="w-[50%]"
+                  class="w-[30%]"
                   :disabled="modalMode === 'view'"
                   @update:open="(isOpen: boolean) => isOpen && loadFeeTypes()"
                 />

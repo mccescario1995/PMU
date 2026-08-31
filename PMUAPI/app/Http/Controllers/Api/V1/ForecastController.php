@@ -115,6 +115,33 @@ class ForecastController extends Controller
         ]);
     }
 
+    public function update(Request $request, RevenueForecast $forecast)
+    {
+        $data = $request->validate([
+            'forecast_date' => 'sometimes|required|date',
+            'predicted_revenue' => 'sometimes|required|numeric|min:0',
+            'season' => 'nullable|string',
+            'model_version' => 'nullable|string',
+        ]);
+
+        $oldValues = $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']);
+
+        $forecast->update($data);
+
+        $this->logAudit('update', 'revenue_forecasts', $forecast->id, $oldValues, $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
+
+        return response()->json($forecast);
+    }
+
+    public function destroy(RevenueForecast $forecast)
+    {
+        $this->logAudit('delete', 'revenue_forecasts', $forecast->id, $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']), null);
+
+        $forecast->delete();
+
+        return response()->noContent();
+    }
+
     public function generate(Request $request, WeatherService $weather)
     {
         $data = $request->validate([

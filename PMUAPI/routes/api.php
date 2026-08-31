@@ -198,6 +198,8 @@ Route::prefix('v1')->group(function () {
             Route::get('/table', [ForecastController::class, 'table'])->middleware('can:view forecasts');
             Route::get('/chart', [ForecastController::class, 'chart'])->middleware('can:view forecasts');
             Route::get('/{forecast}', [ForecastController::class, 'show'])->middleware('can:view forecasts');
+            Route::put('/{forecast}', [ForecastController::class, 'update'])->middleware('can:edit forecasts');
+            Route::delete('/{forecast}', [ForecastController::class, 'destroy'])->middleware('can:delete forecasts');
 
             Route::post('/generate', [ForecastController::class, 'generate'])->middleware('can:create forecasts');
             Route::post('/run-model', [ForecastController::class, 'runModel'])->middleware('can:create forecasts');

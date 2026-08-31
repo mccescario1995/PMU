@@ -16,15 +16,24 @@ const {
   modelLoading,
   modelError,
   form,
+  modalMode,
+  saving,
+  viewing,
   reset,
   submit,
   runModel,
+  remove,
+  openCreate,
+  openView,
+  openEdit,
   weatherLabel,
   currency,
   totalRevenue,
   periods,
   latestModel,
   columns,
+  can,
+  load,
 } = useForecast()
 
 const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => forecasts.value.length)
@@ -59,38 +68,50 @@ const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPag
         >
           Run SAMIRA
         </UButton>
-        <UButton icon="i-lucide-plus" @click="showForm = true; reset()"> Add Forecast </UButton>
+        <UButton v-if="can('create forecasts')" icon="i-lucide-plus" @click="openCreate"> Add Forecast </UButton>
       </div>
     </div>
 
     <UAlert v-if="modelError" type="error" :title="modelError" class="mb-4" />
 
-    <UCard v-if="showForm">
-      <template #header> New Forecast </template>
-      <UForm @submit="submit">
-        <div class="grid gap-4 sm:grid-cols-2">
-          <UFormField label="Forecast Date" required>
-            <UInput type="date" v-model="form.forecast_date" />
-          </UFormField>
-          <UFormField label="Predicted Revenue" required>
-            <UInput type="number" v-model.number="form.predicted_revenue" />
-          </UFormField>
-          <UFormField label="Season">
-            <UInput v-model="form.season" placeholder="e.g. Rainy, Dry" />
-          </UFormField>
-          <UFormField label="Model Version">
-            <UInput v-model="form.model_version" placeholder="e.g. v1.0" />
-          </UFormField>
-          <UFormField label="Weather on Date">
-            <p class="text-sm text-gray-500 py-2">{{ weatherLabel(form.weather) }}</p>
-          </UFormField>
+    <UModal v-model:open="showForm">
+      <template #header>
+        {{
+          viewing
+            ? 'View Forecast'
+            : modalMode === 'edit'
+              ? 'Edit Forecast'
+              : 'New Forecast'
+        }}
+      </template>
+      <template #body>
+        <div class="space-y-4">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <UFormField label="Forecast Date" required>
+              <UInput type="date" v-model="form.forecast_date" :disabled="viewing" />
+            </UFormField>
+            <UFormField label="Predicted Revenue" required>
+              <UInput type="number" v-model.number="form.predicted_revenue" :disabled="viewing" />
+            </UFormField>
+            <UFormField label="Season">
+              <UInput v-model="form.season" placeholder="e.g. Rainy, Dry" :disabled="viewing" />
+            </UFormField>
+            <UFormField label="Model Version">
+              <UInput v-model="form.model_version" placeholder="e.g. v1.0" :disabled="viewing" />
+            </UFormField>
+            <UFormField label="Weather on Date">
+              <p class="text-sm text-gray-500 py-2">{{ weatherLabel(form.weather) }}</p>
+            </UFormField>
+          </div>
         </div>
-        <div class="flex gap-2 mt-4">
-          <UButton type="submit"> Save </UButton>
-          <UButton variant="ghost" @click="reset"> Cancel </UButton>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" @click="showForm = false">Close</UButton>
+          <UButton v-if="!viewing" @click="submit" :loading="saving">Save</UButton>
         </div>
-      </UForm>
-    </UCard>
+      </template>
+    </UModal>
 
     <div class="grid gap-6 sm:grid-cols-3">
       <UCard>
@@ -107,7 +128,34 @@ const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPag
       </UCard>
     </div>
 
-    <UTable :data="forecasts" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination" />
+    <UTable :data="forecasts" :columns="columns" :loading="loading" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
+      <template #action-cell="{ row }">
+        <UButton
+          v-if="can('view forecasts')"
+          size="xs"
+          color="info"
+          variant="ghost"
+          @click="openView(row.original)"
+          icon="i-lucide-eye"
+          class="me-2"
+        ></UButton>
+        <UButton
+          v-if="can('edit forecasts')"
+          size="xs"
+          @click="openEdit(row.original)"
+          icon="i-lucide-edit"
+          class="me-2"
+        ></UButton>
+        <UButton
+          v-if="can('delete forecasts')"
+          size="xs"
+          color="error"
+          variant="ghost"
+          @click="remove(row.original)"
+          icon="i-lucide-trash"
+        ></UButton>
+      </template>
+    </UTable>
 
     <div class="flex items-center justify-between mt-4">
       <div class="flex items-center gap-2">
@@ -116,7 +164,14 @@ const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPag
       </div>
       <div class="flex items-center gap-2">
         <span class="text-sm text-slate-500">Go to page:</span>
-        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+        <UInput
+          v-model="goToPageInput"
+          type="number"
+          :min="1"
+          :max="totalPages"
+          class="w-16"
+          @keyup.enter="handleGoToPage"
+        />
         <UButton size="sm" @click="handleGoToPage">Go</UButton>
       </div>
       <UPagination :total="forecasts.length" v-model:page="page" :items-per-page="pageSizeNumber" />

@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 import yaml
+from flask_cors import CORS
 
 load_dotenv()
 
@@ -15,6 +16,7 @@ from pmu_client import PMUClient
 from evaluation import run_linear, run_amira, run_samira
 
 app = Flask(__name__)
+CORS(app)
 
 MODELS = {
     "linear_regression": run_linear,
