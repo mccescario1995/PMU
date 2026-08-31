@@ -149,14 +149,33 @@ jobs:
 
             npm ci
 
-            echo "Building Nuxt application..."
+            echo "Building Nuxt SPA..."
+            npm run generate
 
-            npm run build
+            WEB_ROOT="${{ secrets.HOSTINGER_PMUUI_WEB_ROOT }}"
+            if [ -z "$WEB_ROOT" ]; then
+              WEB_ROOT="$DEPLOY_PATH"
+            fi
 
-            echo "Restarting Nuxt..."
+            echo "Deploying static files to web root: $WEB_ROOT"
+            mkdir -p "$WEB_ROOT"
+            cp -r .output/public/* "$WEB_ROOT/"
 
-            pkill -f "nuxt start" || true
+            echo "Creating .htaccess (SPA fallback + API routing)..."
+            cat > "$WEB_ROOT/.htaccess" << 'HTACCESS'
+            <IfModule mod_rewrite.c>
+                RewriteEngine On
 
-            nohup npx nuxt start > storage/logs/nuxt.log 2>&1 &
+                # Route /api/ requests to Laravel backend
+                RewriteCond %{REQUEST_FILENAME} !-d
+                RewriteCond %{REQUEST_FILENAME} !-f
+                RewriteRule ^api/(.*) index.php [L,QSA]
+
+                # SPA fallback: serve index.html for all non-file routes
+                RewriteCond %{REQUEST_FILENAME} !-d
+                RewriteCond %{REQUEST_FILENAME} !-f
+                RewriteRule ^ /index.html [L]
+            </IfModule>
+            HTACCESS
 
             echo "PMUUI deployment completed!"
