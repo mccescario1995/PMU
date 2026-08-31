@@ -8,6 +8,7 @@ use App\Models\WeatherData;
 use App\Services\WeatherService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ForecastController extends Controller
 {
@@ -183,11 +184,17 @@ class ForecastController extends Controller
 
         $pmumlUrl = rtrim(env('PMUML_URL', ''), '/');
         if (empty($pmumlUrl)) {
+            Log::error('PMUML_URL not configured');
             return response()->json(['error' => 'PMUML_URL not configured'], 500);
         }
 
         $url = $pmumlUrl.'/forecast';
         $payload = json_encode(['model' => $model, 'days' => $days]);
+
+        Log::info('PMUML request starting', [
+            'url' => $url,
+            'payload' => $payload,
+        ]);
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -200,7 +207,15 @@ class ForecastController extends Controller
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
+
+        Log::info('PMUML response received', [
+            'url' => $url,
+            'http_code' => $httpCode,
+            'response' => $response,
+            'curl_error' => $curlError,
+        ]);
 
         if ($httpCode !== 200 || ! $response) {
             return response()->json(['error' => 'PMUML request failed', 'details' => $response], 502);
@@ -208,6 +223,7 @@ class ForecastController extends Controller
 
         $result = json_decode($response, true);
         if (! isset($result['forecasts']) || ! is_array($result['forecasts'])) {
+            Log::error('Invalid PMUML response format', ['response' => $result]);
             return response()->json(['error' => 'Invalid PMUML response', 'details' => $result], 502);
         }
 
