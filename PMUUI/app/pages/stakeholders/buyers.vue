@@ -1,16 +1,28 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const buyers = ref<any[]>([])
-
-onMounted(async () => {
-  buyers.value = (await apiFetch('/v1/stakeholders?type=buyer', { parseJson: true })) as any[]
+const {
+  page,
+  pageSize, pageSizeNumber,
+  goToPageInput,
+  totalPages,
+  handleGoToPage,
+  data,
+  totalItems,
+  loading,
+} = useTablePagination(null, 10, {
+  fetchData: async (page, pageSize) => {
+    const result = await apiFetch(`/v1/stakeholders?page=${page}&per_page=${pageSize}&type=buyer`, { parseJson: true })
+    return { data: result.data, total: result.meta.total }
+  }
 })
 
 type Buyer = {
@@ -40,10 +52,23 @@ const columns: TableColumn<Buyer>[] = [
       <UButton to="/stakeholders/create" icon="i-lucide-plus"> Add Buyer </UButton>
     </div>
 
-    <UTable :data="buyers" :columns="columns">
+    <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
         <UButton size="xs" :to="`/stakeholders/${row.original.id}`" icon="i-lucide-eye" > View </UButton>
       </template>
     </UTable>
+
+    <div class="flex items-center justify-between mt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Rows per page:</span>
+        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Go to page:</span>
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+        <UButton size="sm" @click="handleGoToPage">Go</UButton>
+      </div>
+      <UPagination :total="totalItems" v-model:page="page" :items-per-page="pageSizeNumber" />
+    </div>
   </div>
 </template>

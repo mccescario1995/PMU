@@ -13,13 +13,17 @@ use Illuminate\Support\Facades\Auth;
 
 class TransactionController extends Controller
 {
+    use LogsAudit;
+
     public function index()
     {
-        return TransactionResource::collection(
-            Transaction::with(['stakeholder', 'items.feeType', 'recordedBy'])
-                ->latest()
-                ->get()
-        );
+        $query = Transaction::with(['stakeholder', 'items.feeType', 'recordedBy'])->latest();
+
+        if (request()->has('page')) {
+            return TransactionResource::collection($query->paginate(request('per_page', 10)));
+        }
+
+        return TransactionResource::collection($query->get());
     }
 
     public function store(Request $request)
@@ -70,6 +74,8 @@ class TransactionController extends Controller
         $weatherService = app(WeatherService::class);
         $weatherService->fetchForDate($data['transaction_date']);
 
+        $this->logAudit('create', 'transactions', $transaction->id, null, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']));
+
         return new TransactionResource(
             $transaction->load(['stakeholder', 'items.feeType', 'recordedBy'])
         );
@@ -106,6 +112,8 @@ class TransactionController extends Controller
     {
         $oldTotal = (float) $transaction->total_amount;
         $oldDate = $transaction->transaction_date->toDateString();
+
+        $oldValues = $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']);
 
         $data = $request->validate([
             'stakeholder_id' => 'nullable|exists:stakeholders,id',
@@ -163,6 +171,8 @@ class TransactionController extends Controller
             $this->adjustRevenueHistory($newDate, $newTotal - $oldTotal);
         }
 
+        $this->logAudit('update', 'transactions', $transaction->id, $oldValues, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']));
+
         return new TransactionResource(
             $transaction->load(['stakeholder', 'items.feeType', 'recordedBy'])
         );
@@ -192,6 +202,8 @@ class TransactionController extends Controller
     {
         $date = $transaction->transaction_date->toDateString();
         $amount = $transaction->total_amount;
+
+        $this->logAudit('delete', 'transactions', $transaction->id, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']), null);
 
         $transaction->delete();
 

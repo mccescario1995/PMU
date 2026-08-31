@@ -1,31 +1,60 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
-import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from "vue";
+import { apiFetch } from "~/composables/useApiFetch";
+import { onMounted, ref, computed, watch } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { h } from "vue";
+import { useTablePagination } from "~/composables/useTablePagination";
+import { useToast } from "#imports";
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const { can } = usePermissions();
+const toast = useToast();
 
-const transactions = ref<any[]>([])
+const transactions = ref<any[]>([]);
+const {
+  page,
+  pageSize,
+  pageSizeNumber,
+  goToPageInput,
+  totalPages,
+  handleGoToPage,
+  data,
+  totalItems,
+  loading,
+} = useTablePagination(null, 10, {
+  fetchData: async (page, pageSize) => {
+    const result = await apiFetch(
+      `/v1/transactions?page=${page}&per_page=${pageSize}`,
+      { parseJson: true },
+    );
+    return { data: result.data, total: result.meta.total };
+  },
+});
 
-onMounted(async () => {
-  const list = ((await apiFetch('/v1/transactions', { parseJson: true })) as any[]).data
-  transactions.value = list
-})
+async function remove(row: any) {
+  if (!confirm("Delete this transaction?")) return;
+  await apiFetch(`/v1/transactions/${row.id}`, { method: "DELETE" });
+  data.value = data.value.filter((t: any) => t.id !== row.id);
+  totalItems.value = Math.max(0, totalItems.value - 1);
+  toast.add({ title: "Transaction deleted", color: "success" });
+}
 
 function formatFeeTypes(items: any[]): string {
   if (!items || items.length === 0) return "-";
   if (items.length === 1) return items[0].fee_type?.fee_name ?? "-";
-  return items.map((i: any) => i.fee_type?.fee_name).filter(Boolean).join(", ");
+  return items
+    .map((i: any) => i.fee_type?.fee_name)
+    .filter(Boolean)
+    .join(", ");
 }
 
 type Transactions = {
   id: number;
+  stakeholder: string;
   type: string;
   amount: number;
   date: string;
@@ -38,10 +67,15 @@ const columns: TableColumn<Transactions>[] = [
     cell: ({ row }) => `#${row.getValue("id")}`,
   },
   {
+    accessorKey: "stakeholder",
+    header: "Stakeholder",
+    cell: ({ row }) => row.original.stakeholder?.name,
+  },
+  {
     accessorKey: "type",
     header: "Type(s)",
     cell: ({ row }) => {
-      const tx = transactions.value.find(t => t.id === row.getValue("id"));
+      const tx = data.value.find((t: any) => t.id === row.getValue("id"));
       return formatFeeTypes(tx?.items ?? []);
     },
   },
@@ -67,16 +101,17 @@ const columns: TableColumn<Transactions>[] = [
     accessorKey: "transaction_date",
     header: "Date",
     cell: ({ row }) => {
-      return new Date(row.getValue('transaction_date')).toLocaleString('en-US', {
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      })
-    }
+      return new Date(row.getValue("transaction_date")).toLocaleString(
+        "en-US",
+        {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        },
+      );
+    },
   },
+  { accessorKey: "action", header: "Action" },
 ];
 </script>
 
@@ -85,13 +120,58 @@ const columns: TableColumn<Transactions>[] = [
     <div class="flex justify-between mb-5">
       <h1 class="text-2xl font-bold">Transactions</h1>
 
-      <UButton v-if="can('manage transactions')" to="/transactions/create"> Add Transaction </UButton>
+      <UButton v-if="can('create transactions')" to="/transactions/create">
+        Add Transaction
+      </UButton>
     </div>
 
-    <UTable :data="transactions" :columns="columns">
+    <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton size="xs" :to="`/transactions/${row.original.id}`" icon="i-lucide-eye" ></UButton>
+        <UButton
+          v-if="can('view transactions')"
+          size="xs"
+          :to="`/transactions/${row.original.id}`"
+          icon="i-lucide-eye"
+        ></UButton>
+        <UButton
+          v-if="can('edit transactions')"
+          size="xs"
+          :to="`/transactions/${row.original.id}/edit`"
+          icon="i-lucide-edit"
+        ></UButton>
+        <UButton
+          v-if="can('delete transactions')"
+          size="xs"
+          color="error"
+          variant="ghost"
+          @click="remove(row.original)"
+          icon="i-lucide-trash"
+        ></UButton>
       </template>
     </UTable>
+
+    <div class="flex items-center justify-between mt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Rows per page:</span>
+        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Go to page:</span>
+        <UInput
+          v-model="goToPageInput"
+          type="number"
+          :min="1"
+          :max="totalPages"
+          class="w-16"
+          @keyup.enter="handleGoToPage"
+        />
+        <UButton size="sm" @click="handleGoToPage">Go</UButton>
+      </div>
+      <UPagination
+        :total="totalItems"
+        v-model:page="page"
+        :items-per-page="pageSizeNumber"
+      />
+    </div>
   </div>
 </template>

@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch, h } from 'vue'
+import { getPaginationRowModel } from '@tanstack/vue-table'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: 'dashboard',
 })
 
 const planning = ref<any>(null)
+const { page: overviewPage, pageSize: overviewPageSize, goToPageInput: overviewGoToPageInput, tablePagination: overviewTablePagination, totalPages: overviewTotalPages, handleGoToPage: overviewHandleGoToPage } = useTablePagination(() => Array.isArray(planning.value?.recommended_stock) ? planning.value.recommended_stock.length : 0)
+const { page: planPage, pageSize: planPageSize, goToPageInput: planGoToPageInput, tablePagination: planTablePagination, totalPages: planTotalPages, handleGoToPage: planHandleGoToPage } = useTablePagination(() => planning.value?.items?.filter((i: any) => i.needs_reorder)?.length ?? 0)
 const loading = ref(true)
 
 const currency = (v: number) =>
@@ -154,7 +158,20 @@ const planColumns: TableColumn<any>[] = [
         <!-- Recommended Stock Levels -->
         <UCard>
           <template #header>Recommended Stock Levels</template>
-          <UTable :data="Array.isArray(planning.recommended_stock) ? planning.recommended_stock : []" :columns="columns" />
+          <UTable :data="Array.isArray(planning.recommended_stock) ? planning.recommended_stock : []" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="overviewTablePagination" />
+
+          <div class="flex items-center justify-between mt-4">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-500">Rows per page:</span>
+              <USelect v-model="overviewPageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-500">Go to page:</span>
+              <UInput v-model="overviewGoToPageInput" type="number" :min="1" :max="overviewTotalPages" class="w-16" @keyup.enter="overviewHandleGoToPage" />
+              <UButton size="sm" @click="overviewHandleGoToPage">Go</UButton>
+            </div>
+            <UPagination :total="Array.isArray(planning.recommended_stock) ? planning.recommended_stock.length : 0" v-model:page="overviewPage" :items-per-page="overviewPageSize" />
+          </div>
         </UCard>
 
         <!-- Inventory by Category Type -->
@@ -176,8 +193,21 @@ const planColumns: TableColumn<any>[] = [
         <UCard>
           <template #header>Peak Season Items (Jan – Jun)</template>
           <p class="text-sm text-slate-500 mb-4">Items requiring attention during peak season for resource planning and LGU budget preparation.</p>
-          <UTable :data="planning.items?.filter((i: any) => i.needs_reorder) ?? []" :columns="planColumns" />
+          <UTable :data="planning.items?.filter((i: any) => i.needs_reorder) ?? []" :columns="planColumns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="planTablePagination" />
           <p v-if="!planning.items?.filter((i: any) => i.needs_reorder)?.length" class="text-sm text-slate-400 py-4">No items need reordering during peak season.</p>
+
+          <div class="flex items-center justify-between mt-4">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-500">Rows per page:</span>
+              <USelect v-model="planPageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-slate-500">Go to page:</span>
+              <UInput v-model="planGoToPageInput" type="number" :min="1" :max="planTotalPages" class="w-16" @keyup.enter="planHandleGoToPage" />
+              <UButton size="sm" @click="planHandleGoToPage">Go</UButton>
+            </div>
+            <UPagination :total="planning.items?.filter((i: any) => i.needs_reorder)?.length ?? 0" v-model:page="planPage" :items-per-page="planPageSize" />
+          </div>
         </UCard>
 
         <UCard>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { onMounted, ref, computed, watch, h } from 'vue'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
@@ -16,12 +17,11 @@ const statusColor = {
 }
 
 const stocks = ref<any[]>([])
-const loading = ref(true)
-
-onMounted(async () => {
-  loading.value = true
-  stocks.value = ((await apiFetch('/v1/inventory/inventory-list/items', { parseJson: true })) as any).data
-  loading.value = false
+const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading } = useTablePagination(null, 10, {
+  fetchData: async (page, pageSize) => {
+    const result = await apiFetch(`/v1/inventory/items?page=${page}&per_page=${pageSize}`, { parseJson: true })
+    return { data: result.data, total: result.meta.total }
+  },
 })
 
 
@@ -65,8 +65,8 @@ const columns: TableColumn<Stock>[] = [
 
 async function remove(row: any) {
   if (!confirm('Delete this item?')) return
-  await apiFetch(`/v1/inventory/inventory-list/items/${row.original.id}`, { method: 'DELETE' })
-  stocks.value = stocks.value.filter(i => i.id !== row.id)
+  await apiFetch(`/v1/inventory/items/${row.original.id}`, { method: 'DELETE' })
+  data.value = data.value.filter(i => i.id !== row.original.id)
 }
 </script>
 
@@ -77,12 +77,25 @@ async function remove(row: any) {
       <UButton to="/inventory/inventory-list/create" icon="i-lucide-plus"> Add Item </UButton>
     </div>
 
-    <UTable :data="stocks" :columns="columns" :loading="loading">
+    <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
         <UButton size="xs" :to="`/inventory/inventory-list/${row.original.id}`" icon="i-lucide-eye" ></UButton>
-        <UButton v-if="can('manage inventory')" size="xs" :to="`/inventory/inventory-list/edit/${row.original.id}`" icon="i-lucide-edit" ></UButton>
-        <UButton v-if="can('manage inventory')" size="xs" color="error" variant="ghost" @click="remove(row)" icon="i-lucide-trash" ></UButton>
+        <UButton v-if="can('edit inventory')" size="xs" :to="`/inventory/inventory-list/edit/${row.original.id}`" icon="i-lucide-edit" ></UButton>
+        <UButton v-if="can('delete inventory')" size="xs" color="error" variant="ghost" @click="remove(row)" icon="i-lucide-trash" ></UButton>
       </template>
     </UTable>
+
+    <div class="flex items-center justify-between mt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Rows per page:</span>
+        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Go to page:</span>
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+        <UButton size="sm" @click="handleGoToPage">Go</UButton>
+      </div>
+      <UPagination :total="totalItems" v-model:page="page" :items-per-page="pageSizeNumber" />
+    </div>
   </div>
 </template>

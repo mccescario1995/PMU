@@ -30,7 +30,9 @@ return [
 
     'openweather' => [
         'key' => env('OPENWEATHER_API_KEY'),
-        'url' => env('OPENWEATHER_URL', 'https://api.openweathermap.org/data/2.5/weather'),
+        // OpenWeather One Call 3.0 (free tier, 1000 calls/day) - daily forecast up to 8 days.
+        'url' => env('OPENWEATHER_URL', 'https://api.openweathermap.org/data/3.0/onecall'),
+        // Human-readable location used to resolve lat/lon via the Geocoding API at runtime.
         'default_location' => env('OPENWEATHER_DEFAULT_LOCATION', 'Pasao,Camarines Sur,PH'),
     ],
 

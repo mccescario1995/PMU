@@ -14,7 +14,7 @@ const forecasts = ref<
 >([]);
 
 onMounted(async () => {
-  forecasts.value = (await apiFetch("/v1/forecasts", { parseJson: true })) as any[];
+  forecasts.value = (await apiFetch("/v1/forecasts?page=1&per_page=4", { parseJson: true })) as any[];
 });
 
 const weatherLabel = (w: any) => {

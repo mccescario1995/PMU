@@ -13,11 +13,17 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ImportController extends Controller
 {
+    use LogsAudit;
+
     public function index()
     {
-        return response()->json(
-            ImportLog::orderByDesc('created_at')->get()
-        );
+        $query = ImportLog::orderByDesc('created_at');
+
+        if (request()->has('page')) {
+            return response()->json($query->paginate(request('per_page', 10)));
+        }
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
@@ -63,6 +69,8 @@ class ImportController extends Controller
         } finally {
             Storage::delete($path);
         }
+
+        $this->logAudit('create', 'import_logs', $log->id, null, $this->modelToArray($log, ['entity_type', 'filename', 'status', 'total_rows', 'imported_rows', 'skipped_rows', 'errors']));
 
         return response()->json($log, 201);
     }

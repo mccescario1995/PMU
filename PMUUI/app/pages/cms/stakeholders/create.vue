@@ -18,10 +18,20 @@ const form = reactive({
 });
 
 const types = ref<any[]>([])
+const typesLoaded = ref(false)
 
-onMounted(async () => {
-  types.value = ((await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any).data
-})
+async function loadTypes() {
+  if (typesLoaded.value) return;
+  const fetched = ((await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any).data;
+  const existing = new Map(types.value.map((t: any) => [t.id, t]));
+  for (const t of fetched) {
+    if (!existing.has(t.id)) {
+      existing.set(t.id, t);
+    }
+  }
+  types.value = Array.from(existing.values());
+  typesLoaded.value = true;
+}
 
 function save() {
   apiFetch('/v1/stakeholders', {
@@ -47,7 +57,7 @@ function save() {
       </UFormField>
 
       <UFormField label="Stakeholder Type">
-        <USelect v-model="form.stakeholder_type_id" :items="types" value-attribute="id" option-attribute="name" />
+        <USelect v-model="form.stakeholder_type_id" :items="types" value-key="id" label-key="name" @update:open="(isOpen: boolean) => isOpen && loadTypes()" />
       </UFormField>
 
       <UFormField label="Contact">

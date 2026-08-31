@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\ForecastController;
 use App\Http\Controllers\Api\V1\ImportController;
 use App\Http\Controllers\Api\V1\InventoryItemController;
 use App\Http\Controllers\Api\V1\InventoryPlanningController;
+use App\Http\Controllers\Api\V1\PermissionController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SettingsController;
@@ -61,9 +62,12 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::middleware('can:manage roles')->group(function () {
-            Route::apiResource('roles', RoleController::class);
-        });
+        Route::get('roles', [RoleController::class, 'index'])->middleware('can:view roles');
+        Route::post('roles', [RoleController::class, 'store'])->middleware('can:create roles');
+        Route::get('roles/{role}', [RoleController::class, 'show'])->middleware('can:view roles');
+        Route::put('roles/{role}', [RoleController::class, 'update'])->middleware('can:edit roles');
+        Route::delete('roles/{role}', [RoleController::class, 'destroy'])->middleware('can:delete roles');
+        Route::get('permissions', [PermissionController::class, 'index'])->middleware('can:view roles');
 
         /*
         |--------------------------------------------------------------------------
@@ -71,9 +75,11 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::middleware('can:manage users')->group(function () {
-            Route::apiResource('users', UserController::class);
-        });
+        Route::get('users', [UserController::class, 'index'])->middleware('can:view users');
+        Route::post('users', [UserController::class, 'store'])->middleware('can:create users');
+        Route::get('users/{user}', [UserController::class, 'show'])->middleware('can:view users');
+        Route::put('users/{user}', [UserController::class, 'update'])->middleware('can:edit users');
+        Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('can:delete users');
 
         /*
         |--------------------------------------------------------------------------
@@ -81,22 +87,41 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::middleware('can:manage stakeholders')->group(function () {
-            Route::apiResource('stakeholders', StakeholderController::class);
-            Route::apiResource('stakeholder-types', StakeholderTypeController::class);
-        });
+        Route::get('stakeholders', [StakeholderController::class, 'index'])->middleware('can:view stakeholders');
+        Route::post('stakeholders', [StakeholderController::class, 'store'])->middleware('can:create stakeholders');
+        Route::get('stakeholders/{stakeholder}', [StakeholderController::class, 'show'])->middleware('can:view stakeholders');
+        Route::put('stakeholders/{stakeholder}', [StakeholderController::class, 'update'])->middleware('can:edit stakeholders');
+        Route::delete('stakeholders/{stakeholder}', [StakeholderController::class, 'destroy'])->middleware('can:delete stakeholders');
+
+        Route::get('stakeholder-types', [StakeholderTypeController::class, 'index'])->middleware('can:view stakeholder types');
+        Route::post('stakeholder-types', [StakeholderTypeController::class, 'store'])->middleware('can:create stakeholder types');
+        Route::get('stakeholder-types/{stakeholder_type}', [StakeholderTypeController::class, 'show'])->middleware('can:view stakeholder types');
+        Route::put('stakeholder-types/{stakeholder_type}', [StakeholderTypeController::class, 'update'])->middleware('can:edit stakeholder types');
+        Route::delete('stakeholder-types/{stakeholder_type}', [StakeholderTypeController::class, 'destroy'])->middleware('can:delete stakeholder types');
 
         /*
         |--------------------------------------------------------------------------
-        | Fee Types
+        | Fee Types / Settings / Statuses
         |--------------------------------------------------------------------------
         */
 
-        Route::middleware('can:manage settings')->group(function () {
-            Route::apiResource('fee-types', FeeTypeController::class);
-            Route::apiResource('settings', SettingsController::class);
-            Route::apiResource('statuses', StatusesController::class);
-        });
+        Route::get('fee-types', [FeeTypeController::class, 'index'])->middleware('can:view fee types');
+        Route::post('fee-types', [FeeTypeController::class, 'store'])->middleware('can:create fee types');
+        Route::get('fee-types/{fee_type}', [FeeTypeController::class, 'show'])->middleware('can:view fee types');
+        Route::put('fee-types/{fee_type}', [FeeTypeController::class, 'update'])->middleware('can:edit fee types');
+        Route::delete('fee-types/{fee_type}', [FeeTypeController::class, 'destroy'])->middleware('can:delete fee types');
+
+        Route::get('settings', [SettingsController::class, 'index'])->middleware('can:view settings');
+        Route::post('settings', [SettingsController::class, 'store'])->middleware('can:create settings');
+        Route::get('settings/{setting}', [SettingsController::class, 'show'])->middleware('can:view settings');
+        Route::put('settings/{setting}', [SettingsController::class, 'update'])->middleware('can:edit settings');
+        Route::delete('settings/{setting}', [SettingsController::class, 'destroy'])->middleware('can:delete settings');
+
+        Route::get('statuses', [StatusesController::class, 'index'])->middleware('can:view statuses');
+        Route::post('statuses', [StatusesController::class, 'store'])->middleware('can:create statuses');
+        Route::get('statuses/{status}', [StatusesController::class, 'show'])->middleware('can:view statuses');
+        Route::put('statuses/{status}', [StatusesController::class, 'update'])->middleware('can:edit statuses');
+        Route::delete('statuses/{status}', [StatusesController::class, 'destroy'])->middleware('can:delete statuses');
 
         /*
         |--------------------------------------------------------------------------
@@ -104,9 +129,11 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::middleware('can:manage transactions')->group(function () {
-            Route::apiResource('transactions', TransactionController::class);
-        });
+        Route::get('transactions', [TransactionController::class, 'index'])->middleware('can:view transactions');
+        Route::post('transactions', [TransactionController::class, 'store'])->middleware('can:create transactions');
+        Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->middleware('can:view transactions');
+        Route::put('transactions/{transaction}', [TransactionController::class, 'update'])->middleware('can:edit transactions');
+        Route::delete('transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('can:delete transactions');
 
         /*
         |--------------------------------------------------------------------------
@@ -114,29 +141,18 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::prefix('inventory')->middleware('can:manage inventory')->group(function () {
+        Route::prefix('inventory')->group(function () {
 
-            Route::apiResource('items', InventoryItemController::class);
+            Route::get('items', [InventoryItemController::class, 'index'])->middleware('can:view inventory');
+            Route::post('items', [InventoryItemController::class, 'store'])->middleware('can:create inventory');
+            Route::get('items/{item}', [InventoryItemController::class, 'show'])->middleware('can:view inventory');
+            Route::put('items/{item}', [InventoryItemController::class, 'update'])->middleware('can:edit inventory');
+            Route::delete('items/{item}', [InventoryItemController::class, 'destroy'])->middleware('can:delete inventory');
 
-            Route::get(
-                'items/{item}/logs',
-                [InventoryItemController::class, 'logs']
-            );
-
-            Route::post(
-                'items/{item}/add-stock',
-                [InventoryItemController::class, 'addStock']
-            );
-
-            Route::post(
-                '/items/{item}/deduct-stock',
-                [InventoryItemController::class, 'deductStock']
-            );
-
-            Route::get(
-                '/logs',
-                [InventoryItemController::class, 'allLogs']
-            );
+            Route::get('items/{item}/logs', [InventoryItemController::class, 'logs'])->middleware('can:view inventory');
+            Route::post('items/{item}/add-stock', [InventoryItemController::class, 'addStock'])->middleware('can:edit inventory');
+            Route::post('items/{item}/deduct-stock', [InventoryItemController::class, 'deductStock'])->middleware('can:edit inventory');
+            Route::get('logs', [InventoryItemController::class, 'allLogs'])->middleware('can:view inventory');
 
             /*
             |--------------------------------------------------------------------------
@@ -144,7 +160,7 @@ Route::prefix('v1')->group(function () {
             |--------------------------------------------------------------------------
             */
 
-            Route::prefix('planning')->group(function () {
+            Route::prefix('planning')->middleware('can:view inventory planning')->group(function () {
 
                 Route::get('/', [InventoryPlanningController::class, 'index']);
 
@@ -161,10 +177,14 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::middleware('can:manage settings')->group(function () {
-            Route::apiResource('weather', WeatherController::class);
-            Route::apiResource('imports', ImportController::class);
-        });
+        Route::get('weather/forecast', [WeatherController::class, 'forecast'])->middleware('can:view weather');
+        Route::get('weather', [WeatherController::class, 'index'])->middleware('can:view weather');
+        Route::post('weather', [WeatherController::class, 'store'])->middleware('can:create weather');
+        Route::get('weather/{weather}', [WeatherController::class, 'show'])->middleware('can:view weather');
+        Route::put('weather/{weather}', [WeatherController::class, 'update'])->middleware('can:edit weather');
+        Route::delete('weather/{weather}', [WeatherController::class, 'destroy'])->middleware('can:delete weather');
+
+        Route::post('imports', [ImportController::class, 'store'])->middleware('can:create imports');
 
         /*
         |--------------------------------------------------------------------------
@@ -172,29 +192,15 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::prefix('forecasts')->middleware('can:view reports')->group(function () {
+        Route::prefix('forecasts')->group(function () {
 
-            Route::get('/', [ForecastController::class, 'index']);
+            Route::get('/', [ForecastController::class, 'index'])->middleware('can:view forecasts');
+            Route::get('/table', [ForecastController::class, 'table'])->middleware('can:view forecasts');
+            Route::get('/chart', [ForecastController::class, 'chart'])->middleware('can:view forecasts');
+            Route::get('/{forecast}', [ForecastController::class, 'show'])->middleware('can:view forecasts');
 
-            Route::get(
-                '/chart',
-                [ForecastController::class, 'chart']
-            );
-
-            Route::get(
-                '/{forecast}',
-                [ForecastController::class, 'show']
-            );
-
-            Route::post(
-                '/generate',
-                [ForecastController::class, 'generate']
-            );
-
-            Route::post(
-                '/run-model',
-                [ForecastController::class, 'runModel']
-            );
+            Route::post('/generate', [ForecastController::class, 'generate'])->middleware('can:create forecasts');
+            Route::post('/run-model', [ForecastController::class, 'runModel'])->middleware('can:create forecasts');
         });
 
         /*
@@ -203,7 +209,7 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::prefix('dashboard')->middleware('can:view reports')->group(function () {
+        Route::prefix('dashboard')->middleware('can:view dashboard')->group(function () {
 
             Route::get('/', [DashboardController::class, 'index']);
 
@@ -303,7 +309,7 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::middleware('can:manage users')->group(function () {
+        Route::middleware('can:view audit logs')->group(function () {
             Route::get(
                 '/audit-logs',
                 [AuditLogController::class, 'index']

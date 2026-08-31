@@ -1,37 +1,48 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted, watch } from 'vue'
+import { onMounted, watch, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useToast } from '#imports'
 
 definePageMeta({
   layout: "dashboard",
 });
 
+const toast = useToast();
+const router = useRouter();
 const route = useRoute();
 const id = route.params.id;
 
 const stakeholders = ref([]);
 const feeTypes = ref([]);
-
-const form = reactive({
-  id: Number(id),
-  stakeholder_id: null,
-  items: [] as any[],
-  transaction_date: "",
-  status: "pending",
-  remarks: "",
-});
+const saving = ref(false);
+const stakeholdersLoaded = ref(false);
+const feeTypesLoaded = ref(false);
 
 onMounted(async () => {
-  stakeholders.value = ((await apiFetch('/v1/stakeholders', { parseJson: true })) as any).data
-  feeTypes.value = ((await apiFetch('/v1/fee-types', { parseJson: true })) as any).data
   const t = (await apiFetch('/v1/transactions/' + id, { parseJson: true })) as any;
+
+  if (t.stakeholder) {
+    stakeholders.value = [{ id: t.stakeholder.id, name: t.stakeholder.name }];
+  }
 
   form.items = (t.items ?? []).map((item: any) => ({
     fee_type_id: item.fee_type_id,
     quantity: item.quantity,
     unit_price: item.unit_price,
   }));
+
+  if (t.items) {
+    t.items.forEach((item: any) => {
+      if (item.fee_type && !feeTypes.value.find(f => f.id === item.fee_type.id)) {
+        feeTypes.value.push({
+          id: item.fee_type.id,
+          fee_name: item.fee_type.fee_name,
+          base_rate: item.unit_price,
+        });
+      }
+    });
+  }
 
   if (form.items.length === 0) {
     form.items.push({
@@ -49,6 +60,18 @@ onMounted(async () => {
     remarks: t.remarks ?? "",
   });
 });
+
+async function loadStakeholders() {
+  if (stakeholdersLoaded.value) return;
+  stakeholders.value = ((await apiFetch('/v1/stakeholders', { parseJson: true })) as any).data;
+  stakeholdersLoaded.value = true;
+}
+
+async function loadFeeTypes() {
+  if (feeTypesLoaded.value) return;
+  feeTypes.value = ((await apiFetch('/v1/fee-types', { parseJson: true })) as any).data;
+  feeTypesLoaded.value = true;
+}
 
 function addItem() {
   form.items.push({
@@ -88,29 +111,39 @@ function calculateTotal() {
   return form.items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
 }
 
-function save() {
-  const items = form.items.map(item => ({
-    fee_type_id: item.fee_type_id,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    subtotal: calculateSubtotal(item),
-  }));
+async function save() {
+  saving.value = true;
+  try {
+    const items = form.items.map(item => ({
+      fee_type_id: item.fee_type_id,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+      subtotal: calculateSubtotal(item),
+    }));
 
-  const payload = {
-    stakeholder_id: form.stakeholder_id,
-    transaction_date: form.transaction_date,
-    status: form.status,
-    remarks: form.remarks,
-    total_amount: calculateTotal(),
-    items: items,
-  };
+    const payload = {
+      stakeholder_id: form.stakeholder_id,
+      transaction_date: form.transaction_date,
+      status: form.status,
+      remarks: form.remarks,
+      total_amount: calculateTotal(),
+      items: items,
+    };
 
-  apiFetch('/v1/transactions/' + id, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-    parseJson: true
-  }).then(() => useRouter().push('/cms/transactions'));
+    await apiFetch('/v1/transactions/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      parseJson: true
+    });
+
+    toast.add({ title: 'Transaction updated', description: 'The transaction was saved successfully.', color: 'success' });
+    router.push('/cms/transactions');
+  } catch (e: any) {
+    toast.add({ title: 'Failed to update transaction', description: e.message ?? 'Please try again.', color: 'error' });
+  } finally {
+    saving.value = false;
+  }
 }
 </script>
 
@@ -124,6 +157,7 @@ function save() {
           v-model="form.stakeholder_id"
           :items="stakeholders.map((s: any) => ({ label: s.name, value: s.id }))"
           placeholder="Select stakeholder"
+          @update:open="(isOpen: boolean) => isOpen && loadStakeholders()"
         />
       </UFormField>
 
@@ -134,6 +168,7 @@ function save() {
             :items="feeTypes.map((f: any) => ({ label: f.fee_name, value: f.id }))"
             placeholder="Fee Type"
             class="w-48"
+            @update:open="(isOpen: boolean) => isOpen && loadFeeTypes()"
           />
           <UInputNumber
             v-model="item.quantity"
@@ -185,7 +220,7 @@ function save() {
         <USelect v-model="form.status" :items="['pending', 'completed', 'cancelled']" />
       </UFormField>
 
-      <UButton type="submit"> Save </UButton>
+      <UButton type="submit" :loading="saving"> Save </UButton>
     </UForm>
   </div>
 </template>

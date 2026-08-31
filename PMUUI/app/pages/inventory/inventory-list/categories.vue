@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { onMounted, ref, computed, watch, h } from 'vue'
+import { getPaginationRowModel } from '@tanstack/vue-table'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
@@ -10,6 +12,7 @@ definePageMeta({
 const UBadge = resolveComponent('UBadge')
 
 const categories = ref<any[]>([])
+const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => categories.value.length)
 
 onMounted(async () => {
   const items = ((await apiFetch('/v1/inventory/items', { parseJson: true })) as any).data
@@ -74,10 +77,23 @@ const columns: TableColumn<Category>[] = [
   <div class="p-6 space-y-5">
     <h1 class="text-2xl font-bold">Inventory Categories</h1>
 
-    <UTable :data="categories" :columns="columns">
+    <UTable :data="categories" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
       <template #action-cell="{ row }">
         <UButton size="xs" :to="`/inventory/inventory-list/stocks`" icon="i-lucide-eye" ></UButton>
       </template>
     </UTable>
+
+    <div class="flex items-center justify-between mt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Rows per page:</span>
+        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Go to page:</span>
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+        <UButton size="sm" @click="handleGoToPage">Go</UButton>
+      </div>
+      <UPagination :total="categories.length" v-model:page="page" :items-per-page="pageSizeNumber" />
+    </div>
   </div>
 </template>

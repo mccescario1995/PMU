@@ -10,7 +10,7 @@ class AuditLogController extends Controller
     public function index()
     {
         return response()->json(
-            AuditLog::with('user')->latest()->paginate(20)
+            AuditLog::with('user')->latest()->paginate(request('per_page', 20))
         );
     }
 

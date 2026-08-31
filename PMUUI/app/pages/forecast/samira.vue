@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { useForecast } from '~/composables/useForecast'
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
+import { getPaginationRowModel } from '@tanstack/vue-table'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
@@ -32,6 +34,7 @@ const filteredForecasts = computed(() =>
     return mv.includes(slug) || mv.includes(model)
   })
 )
+const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => filteredForecasts.value.length)
 
 const totalRevenue = computed(() =>
   filteredForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
@@ -105,6 +108,19 @@ const UBadge = resolveComponent('UBadge')
       </UCard>
     </div>
 
-    <UTable :data="filteredForecasts" :columns="columns" />
+    <UTable :data="filteredForecasts" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination" />
+
+    <div class="flex items-center justify-between mt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Rows per page:</span>
+        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Go to page:</span>
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+        <UButton size="sm" @click="handleGoToPage">Go</UButton>
+      </div>
+      <UPagination :total="filteredForecasts.length" v-model:page="page" :items-per-page="pageSizeNumber" />
+    </div>
   </div>
 </template>

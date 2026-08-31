@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { ref, reactive, computed, watch, h } from 'vue'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const weather = ref<any[]>([])
-const loading = ref(true)
+const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading } = useTablePagination(null, 10, {
+  fetchData: async (page, pageSize) => {
+    const result = await apiFetch(`/v1/weather?page=${page}&per_page=${pageSize}`, { parseJson: true })
+    return { data: result.data, total: result.meta.total }
+  },
+})
 const showForm = ref(false)
 const editing = ref<any>(null)
 
@@ -71,12 +77,10 @@ async function remove(item: any) {
 }
 
 async function load() {
-  loading.value = true
-  weather.value = (await apiFetch('/v1/weather', { parseJson: true })) as any[]
-  loading.value = false
+  const result = await apiFetch('/v1/weather', { parseJson: true })
+  data.value = result.data
+  totalItems.value = result.total
 }
-
-onMounted(load)
 </script>
 
 <template>
@@ -111,11 +115,11 @@ onMounted(load)
       </UForm>
     </UCard>
 
-    <UTable :data="weather" :columns="[
+    <UTable :data="data" :columns="[
       { accessorKey: 'id', header: '#', cell: ({ row }) => `#${row.getValue('id')}` },
       { accessorKey: 'weather_date', header: 'Date' },
       { accessorKey: 'rainfall_mm', header: 'Rainfall (mm)', meta: { class: { td: 'text-right font-mono' } } },
-      { accessorKey: 'wind_speed', header: 'Wind Speed', meta: { class: { td: 'text-right font-mono' } } },
+      { accessorKey: 'wind_speed', header: 'Wind Speed (km/h)', meta: { class: { td: 'text-right font-mono' } } },
       { accessorKey: 'temperature', header: 'Temp (°C)', meta: { class: { td: 'text-right font-mono' } } },
       { accessorKey: 'action', header: 'Action' },
     ]" :loading="loading">
@@ -126,5 +130,18 @@ onMounted(load)
         </div>
       </template>
     </UTable>
+
+    <div class="flex items-center justify-between mt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Rows per page:</span>
+        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Go to page:</span>
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+        <UButton size="sm" @click="handleGoToPage">Go</UButton>
+      </div>
+      <UPagination :total="totalItems" v-model:page="page" :items-per-page="pageSizeNumber" />
+    </div>
   </div>
 </template>

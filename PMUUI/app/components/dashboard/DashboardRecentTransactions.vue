@@ -14,7 +14,7 @@ const transactions = ref<
 >([]);
 
 onMounted(async () => {
-  transactions.value = ((await apiFetch("/v1/transactions", { parseJson: true })) as any).data
+  transactions.value = ((await apiFetch("/v1/transactions?page=1&per_page=5", { parseJson: true })) as any).data
 });
 
 const currency = (v: number) =>

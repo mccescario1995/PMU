@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
+import { useRouter } from 'vue-router'
+import { useToast } from '#imports'
+import { ref } from 'vue'
 
 definePageMeta({
   layout: "dashboard",
 });
+
+const router = useRouter()
+const toast = useToast()
+const saving = ref(false)
 
 const route = useRoute()
 const id = route.params.id
@@ -25,14 +32,22 @@ onMounted(async () => {
   })
 })
 
-function save() {
-  apiFetch('/v1/weather/' + id, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(form),
-    parseJson: true,
-    throwOnError: true,
-  }).then(() => useRouter().push('/cms/weather'))
+async function save() {
+  saving.value = true
+  try {
+    await apiFetch('/v1/weather/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+      parseJson: true,
+    })
+    toast.add({ title: 'Weather record updated', description: 'The record was saved successfully.', color: 'success' })
+    router.push('/cms/weather')
+  } catch (e: any) {
+    toast.add({ title: 'Failed to update weather record', description: e.message ?? 'Please try again.', color: 'error' })
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -58,7 +73,7 @@ function save() {
       </UFormField>
 
       <div class="flex gap-2 mt-4">
-        <UButton type="submit"> Save </UButton>
+        <UButton type="submit" :loading="saving"> Save </UButton>
         <UButton variant="ghost" to="/cms/weather"> Cancel </UButton>
       </div>
     </UForm>

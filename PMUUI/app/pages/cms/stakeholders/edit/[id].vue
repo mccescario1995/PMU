@@ -36,8 +36,19 @@ onMounted(async () => {
     status: s.status,
   });
 
-  types.value = ((await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any).data
-})
+  if (s.stakeholder_type) {
+    types.value = [{ id: s.stakeholder_type.id, name: s.stakeholder_type.name }];
+  }
+
+  const allTypes = ((await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any).data;
+  const existing = new Map(types.value.map((t: any) => [t.id, t]));
+  for (const t of allTypes) {
+    if (!existing.has(t.id)) {
+      existing.set(t.id, t);
+    }
+  }
+  types.value = Array.from(existing.values());
+});
 
 function save() {
   apiFetch('/v1/stakeholders/' + id, {
@@ -63,7 +74,7 @@ function save() {
       </UFormField>
 
       <UFormField label="Stakeholder Type">
-        <USelect v-model="form.stakeholder_type_id" :items="types" value-attribute="id" option-attribute="name" />
+        <USelect v-model="form.stakeholder_type_id" :items="types" value-key="id" label-key="name" />
       </UFormField>
 
       <UFormField label="Contact">

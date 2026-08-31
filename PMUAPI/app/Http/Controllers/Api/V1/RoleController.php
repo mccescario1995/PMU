@@ -8,9 +8,34 @@ use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
+    use LogsAudit;
+
     public function index()
     {
-        return response()->json(Role::all(['id', 'name', 'guard_name', 'created_at']));
+        $query = Role::with('permissions');
+
+        if (request()->has('page')) {
+            $roles = $query->paginate(request('per_page', 10));
+            $roles->getCollection()->transform(fn ($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'guard_name' => $role->guard_name,
+                'created_at' => $role->created_at,
+                'permissions' => $role->permissions->pluck('name')->values()->all(),
+            ]);
+
+            return response()->json($roles);
+        }
+
+        return response()->json(
+            $query->get()->map(fn ($role) => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'guard_name' => $role->guard_name,
+                'created_at' => $role->created_at,
+                'permissions' => $role->permissions->pluck('name')->values()->all(),
+            ])
+        );
     }
 
     public function store(Request $request)
@@ -22,6 +47,8 @@ class RoleController extends Controller
         ]);
 
         $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
+
+        $this->logAudit('create', 'roles', $role->id, null, $this->modelToArray($role, ['name', 'guard_name']));
 
         if (! empty($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
@@ -45,17 +72,23 @@ class RoleController extends Controller
             'permissions.*' => 'string|exists:permissions,name',
         ]);
 
+        $oldValues = $this->modelToArray($role, ['name', 'guard_name']);
+
         $role->update(['name' => $data['name'] ?? $role->name]);
 
         if (isset($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
         }
 
+        $this->logAudit('update', 'roles', $role->id, $oldValues, $this->modelToArray($role, ['name', 'guard_name']));
+
         return response()->json($role->load('permissions'));
     }
 
     public function destroy(Role $role)
     {
+        $this->logAudit('delete', 'roles', $role->id, $this->modelToArray($role, ['name', 'guard_name']), null);
+
         $role->delete();
 
         return response()->noContent();

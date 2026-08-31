@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted, h } from 'vue'
+import { onMounted, h, computed, watch } from 'vue'
 import { ref } from 'vue'
 import { usePermissions } from "~/composables/usePermissions";
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
@@ -13,21 +14,11 @@ const { can } = usePermissions();
 
 const UBadge = resolveComponent('UBadge')
 
-const statuses = ref<any[]>([])
-const loading = ref(true)
-const showForm = ref(false)
-const editing = ref<any>(null)
-
-const form = reactive({
-  name: '',
-  type: 'inventory',
-  color: 'green',
-})
-
-onMounted(async () => {
-  loading.value = true
-  statuses.value = ((await apiFetch('/v1/statuses', { parseJson: true })) as any).data
-  loading.value = false
+const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading } = useTablePagination(null, 10, {
+  fetchData: async (page, pageSize) => {
+    const result = await apiFetch(`/v1/statuses?page=${page}&per_page=${pageSize}`, { parseJson: true })
+    return { data: result.data, total: result.meta.total }
+  },
 })
 
 function openCreate() {
@@ -63,13 +54,15 @@ async function save() {
     })
   }
   showForm.value = false
-  statuses.value = ((await apiFetch('/v1/statuses', { parseJson: true })) as any).data
+  const result = await apiFetch('/v1/statuses', { parseJson: true })
+  data.value = result.data
+  totalItems.value = result.total
 }
 
 async function remove(row: any) {
   if (!confirm('Delete this status?')) return
   await apiFetch(`/v1/statuses/${row.id}`, { method: 'DELETE' })
-  statuses.value = statuses.value.filter((s: any) => s.id !== row.id)
+  data.value = data.value.filter((s: any) => s.id !== row.id)
 }
 
 const colorOptions = [
@@ -123,15 +116,28 @@ const columns: TableColumn<Status>[] = [
   <div class="p-6 space-y-5">
     <div class="flex justify-between">
       <h1 class="text-2xl font-bold">Statuses</h1>
-      <UButton v-if="can('manage settings')" icon="i-lucide-plus" @click="openCreate"> Add Status </UButton>
+      <UButton v-if="can('create statuses')" icon="i-lucide-plus" @click="openCreate"> Add Status </UButton>
     </div>
 
-    <UTable :data="statuses" :columns="columns" :loading="loading">
+     <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton v-if="can('manage settings')" size="xs" @click="openEdit(row.original)" icon="i-lucide-edit" ></UButton>
-        <UButton v-if="can('manage settings')" size="xs" color="error" variant="ghost" @click="remove(row.original)" icon="i-lucide-trash" ></UButton>
+        <UButton v-if="can('edit statuses')" size="xs" @click="openEdit(row.original)" icon="i-lucide-edit" ></UButton>
+        <UButton v-if="can('delete statuses')" size="xs" color="error" variant="ghost" @click="remove(row.original)" icon="i-lucide-trash" ></UButton>
       </template>
-    </UTable>
+      </UTable>
+
+      <div class="flex items-center justify-between mt-4">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-500">Rows per page:</span>
+          <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-500">Go to page:</span>
+          <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+          <UButton size="sm" @click="handleGoToPage">Go</UButton>
+        </div>
+        <UPagination :total="totalItems" v-model:page="page" :items-per-page="pageSizeNumber" />
+      </div>
 
     <UModal v-model:open="showForm">
       <UCard>
@@ -141,10 +147,10 @@ const columns: TableColumn<Status>[] = [
             <UInput v-model="form.name" />
           </UFormField>
           <UFormField label="Type">
-            <USelect v-model="form.type" :items="typeOptions" value-attribute="value" option-attribute="label" />
+            <USelect v-model="form.type" :items="typeOptions" value-key="value" label-key="label" />
           </UFormField>
           <UFormField label="Color">
-            <USelect v-model="form.color" :items="colorOptions" value-attribute="value" option-attribute="label" />
+            <USelect v-model="form.color" :items="colorOptions" value-key="value" label-key="label" />
           </UFormField>
         </div>
         <template #footer>

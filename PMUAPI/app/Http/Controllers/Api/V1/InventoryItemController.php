@@ -11,12 +11,18 @@ use Illuminate\Support\Facades\Auth;
 
 class InventoryItemController extends Controller
 {
+    use LogsAudit;
+
     public function index()
     {
         $query = InventoryItem::query();
 
         if ($category = request('category')) {
             $query->where('category', $category);
+        }
+
+        if (request()->has('page')) {
+            return InventoryItemResource::collection($query->paginate(request('per_page', 10)));
         }
 
         return InventoryItemResource::collection($query->get());
@@ -33,7 +39,11 @@ class InventoryItemController extends Controller
             'status' => 'nullable|in:available,low_stock,damaged',
         ]);
 
-        return new InventoryItemResource(InventoryItem::create($data));
+        $item = InventoryItem::create($data);
+
+        $this->logAudit('create', 'inventory_items', $item->id, null, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status']));
+
+        return new InventoryItemResource($item);
     }
 
     public function show(InventoryItem $item)
@@ -52,13 +62,19 @@ class InventoryItemController extends Controller
             'status' => 'nullable|in:available,low_stock,damaged',
         ]);
 
+        $oldValues = $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status']);
+
         $item->update($data);
+
+        $this->logAudit('update', 'inventory_items', $item->id, $oldValues, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status']));
 
         return new InventoryItemResource($item);
     }
 
     public function destroy(InventoryItem $item)
     {
+        $this->logAudit('delete', 'inventory_items', $item->id, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status']), null);
+
         $item->delete();
 
         return response()->noContent();

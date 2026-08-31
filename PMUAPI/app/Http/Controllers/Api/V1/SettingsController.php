@@ -8,9 +8,17 @@ use Illuminate\Http\Request;
 
 class SettingsController extends Controller
 {
+    use LogsAudit;
+
     public function index()
     {
-        return response()->json(Setting::all());
+        $query = Setting::query();
+
+        if (request()->has('page')) {
+            return response()->json($query->paginate(request('per_page', 10)));
+        }
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
@@ -22,7 +30,11 @@ class SettingsController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        return response()->json(Setting::create($data), 201);
+        $setting = Setting::create($data);
+
+        $this->logAudit('create', 'settings', $setting->id, null, $this->modelToArray($setting, ['key', 'value', 'type', 'description']));
+
+        return response()->json($setting, 201);
     }
 
     public function show(Setting $setting)
@@ -39,13 +51,19 @@ class SettingsController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        $oldValues = $this->modelToArray($setting, ['key', 'value', 'type', 'description']);
+
         $setting->update($data);
+
+        $this->logAudit('update', 'settings', $setting->id, $oldValues, $this->modelToArray($setting, ['key', 'value', 'type', 'description']));
 
         return response()->json($setting);
     }
 
     public function destroy(Setting $setting)
     {
+        $this->logAudit('delete', 'settings', $setting->id, $this->modelToArray($setting, ['key', 'value', 'type', 'description']), null);
+
         $setting->delete();
 
         return response()->noContent();

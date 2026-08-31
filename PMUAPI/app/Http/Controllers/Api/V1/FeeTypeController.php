@@ -9,9 +9,17 @@ use Illuminate\Http\Request;
 
 class FeeTypeController extends Controller
 {
+    use LogsAudit;
+
     public function index()
     {
-        return FeeTypeResource::collection(FeeType::all());
+        $query = FeeType::query();
+
+        if (request()->has('page')) {
+            return FeeTypeResource::collection($query->paginate(request('per_page', 10)));
+        }
+
+        return FeeTypeResource::collection($query->get());
     }
 
     public function store(Request $request)
@@ -22,7 +30,11 @@ class FeeTypeController extends Controller
             'unit' => 'nullable|string',
         ]);
 
-        return new FeeTypeResource(FeeType::create($data));
+        $feeType = FeeType::create($data);
+
+        $this->logAudit('create', 'fee_types', $feeType->id, null, $this->modelToArray($feeType, ['fee_name', 'base_rate', 'unit']));
+
+        return new FeeTypeResource($feeType);
     }
 
     public function show(FeeType $feeType)
@@ -38,13 +50,19 @@ class FeeTypeController extends Controller
             'unit' => 'nullable|string',
         ]);
 
+        $oldValues = $this->modelToArray($feeType, ['fee_name', 'base_rate', 'unit']);
+
         $feeType->update($data);
+
+        $this->logAudit('update', 'fee_types', $feeType->id, $oldValues, $this->modelToArray($feeType, ['fee_name', 'base_rate', 'unit']));
 
         return new FeeTypeResource($feeType);
     }
 
     public function destroy(FeeType $feeType)
     {
+        $this->logAudit('delete', 'fee_types', $feeType->id, $this->modelToArray($feeType, ['fee_name', 'base_rate', 'unit']), null);
+
         $feeType->delete();
 
         return response()->noContent();

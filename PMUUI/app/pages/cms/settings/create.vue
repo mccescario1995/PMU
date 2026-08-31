@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
+import { useRouter } from 'vue-router'
+import { useToast } from '#imports'
+import { ref } from 'vue'
 
 definePageMeta({
   layout: "dashboard",
 });
+
+const router = useRouter()
+const toast = useToast()
+const saving = ref(false)
 
 const form = reactive({
   key: '',
@@ -12,14 +19,22 @@ const form = reactive({
   description: '',
 });
 
-function save() {
-  apiFetch('/v1/settings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(form),
-    parseJson: true,
-    throwOnError: true,
-  }).then(() => useRouter().push('/cms/settings'))
+async function save() {
+  saving.value = true
+  try {
+    await apiFetch('/v1/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+      parseJson: true,
+    })
+    toast.add({ title: 'Setting created', description: 'The setting was saved successfully.', color: 'success' })
+    router.push('/cms/settings')
+  } catch (e: any) {
+    toast.add({ title: 'Failed to create setting', description: e.message ?? 'Please try again.', color: 'error' })
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -44,7 +59,7 @@ function save() {
         <UTextarea v-model="form.description" />
       </UFormField>
 
-      <UButton type="submit"> Save </UButton>
+      <UButton type="submit" :loading="saving"> Save </UButton>
     </UForm>
   </div>
 </template>

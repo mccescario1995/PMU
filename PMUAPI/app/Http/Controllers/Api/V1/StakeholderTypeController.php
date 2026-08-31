@@ -9,9 +9,17 @@ use Illuminate\Http\Request;
 
 class StakeholderTypeController extends Controller
 {
+    use LogsAudit;
+
     public function index()
     {
-        return StakeholderTypeResource::collection(StakeholderType::all());
+        $query = StakeholderType::query();
+
+        if (request()->has('page')) {
+            return StakeholderTypeResource::collection($query->paginate(request('per_page', 10)));
+        }
+
+        return StakeholderTypeResource::collection($query->get());
     }
 
     public function store(Request $request)
@@ -21,7 +29,11 @@ class StakeholderTypeController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        return new StakeholderTypeResource(StakeholderType::create($data));
+        $stakeholderType = StakeholderType::create($data);
+
+        $this->logAudit('create', 'stakeholder_types', $stakeholderType->id, null, $this->modelToArray($stakeholderType, ['name', 'description']));
+
+        return new StakeholderTypeResource($stakeholderType);
     }
 
     public function show(StakeholderType $stakeholderType)
@@ -36,13 +48,19 @@ class StakeholderTypeController extends Controller
             'description' => 'nullable|string',
         ]);
 
+        $oldValues = $this->modelToArray($stakeholderType, ['name', 'description']);
+
         $stakeholderType->update($data);
+
+        $this->logAudit('update', 'stakeholder_types', $stakeholderType->id, $oldValues, $this->modelToArray($stakeholderType, ['name', 'description']));
 
         return new StakeholderTypeResource($stakeholderType);
     }
 
     public function destroy(StakeholderType $stakeholderType)
     {
+        $this->logAudit('delete', 'stakeholder_types', $stakeholderType->id, $this->modelToArray($stakeholderType, ['name', 'description']), null);
+
         $stakeholderType->delete();
 
         return response()->noContent();

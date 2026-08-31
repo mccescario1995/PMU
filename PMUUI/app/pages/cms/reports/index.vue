@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { onMounted, computed, watch } from 'vue'
 import { ref } from 'vue'
+import { getPaginationRowModel } from '@tanstack/vue-table'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
@@ -14,6 +16,7 @@ const currency = (value: number) =>
 const today = new Date().toISOString().slice(0, 10)
 
 const transactions = ref<any[]>([])
+const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => transactions.value.length)
 const total = ref(0)
 const count = ref(0)
 const loading = ref(true)
@@ -102,6 +105,19 @@ const columns: TableColumn<Transaction>[] = [
       </UCard>
     </div>
 
-    <UTable :data="transactions" :columns="columns" :loading="loading" />
+    <UTable :data="transactions" :columns="columns" :loading="loading" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination" />
+
+    <div class="flex items-center justify-between mt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Rows per page:</span>
+        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Go to page:</span>
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+        <UButton size="sm" @click="handleGoToPage">Go</UButton>
+      </div>
+      <UPagination :total="transactions.length" v-model:page="page" :items-per-page="pageSizeNumber" />
+    </div>
   </div>
 </template>

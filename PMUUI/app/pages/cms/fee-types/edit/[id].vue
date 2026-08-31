@@ -1,9 +1,15 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
+import { useRouter } from 'vue-router'
+import { useToast } from '#imports'
 
 definePageMeta({
   layout: "dashboard",
 });
+
+const router = useRouter()
+const toast = useToast()
+const saving = ref(false)
 
 const route = useRoute()
 const id = route.params.id
@@ -23,14 +29,22 @@ onMounted(async () => {
   })
 })
 
-function save() {
-  apiFetch('/v1/fee-types/' + id, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(form),
-    parseJson: true,
-    throwOnError: true,
-  }).then(() => useRouter().push('/cms/fee-types'))
+async function save() {
+  saving.value = true
+  try {
+    await apiFetch('/v1/fee-types/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+      parseJson: true,
+    })
+    toast.add({ title: 'Fee type updated', description: 'The fee type was saved successfully.', color: 'success' })
+    router.push('/cms/fee-types')
+  } catch (e: any) {
+    toast.add({ title: 'Failed to update fee type', description: e.message ?? 'Please try again.', color: 'error' })
+  } finally {
+    saving.value = false
+  }
 }
 </script>
 
@@ -52,7 +66,7 @@ function save() {
       </UFormField>
 
       <div class="flex gap-2 mt-4">
-        <UButton type="submit"> Save </UButton>
+        <UButton type="submit" :loading="saving"> Save </UButton>
         <UButton variant="ghost" to="/cms/fee-types"> Cancel </UButton>
       </div>
     </UForm>

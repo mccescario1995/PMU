@@ -7,7 +7,7 @@ import AppSidebar from '~/components/layouts/AppSidebar.vue';
 </script>
 
 <template>
-  <div class="flex h-screen overflow-hidden bg-slate-100">
+  <div class="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-900">
 
     <AppSidebar />
 

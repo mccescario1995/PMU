@@ -14,6 +14,7 @@ class WeatherData extends Model
         'rainfall_mm',
         'wind_speed',
         'temperature',
+        'source',
     ];
 
     protected $casts = [
@@ -21,5 +22,6 @@ class WeatherData extends Model
         'rainfall_mm' => 'decimal:2',
         'wind_speed' => 'decimal:2',
         'temperature' => 'decimal:2',
+        'source' => 'string',
     ];
 }

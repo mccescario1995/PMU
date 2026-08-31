@@ -17,30 +17,30 @@ const menus = [
     title: "Transactions",
     icon: "i-lucide-receipt",
     to: "/transactions",
-    permission: "manage transactions",
+    permission: "view transactions",
   },
   {
     title: "Stakeholders",
     icon: "i-lucide-users",
     to: "/stakeholders",
-    permission: "manage stakeholders",
+    permission: "view stakeholders",
   },
   {
     title: "Inventory",
     icon: "i-lucide-package",
-    permission: "manage inventory",
+    permission: null,
     children: [
       {
         title: "Inventory",
         icon: "i-lucide-package",
         to: "/inventory/inventory-list",
-        permission: "manage inventory",
+        permission: "view inventory",
       },
       {
         title: "Planning",
         icon: "i-lucide-calendar-check",
         to: "/inventory/planning",
-        permission: "manage inventory",
+        permission: "view inventory planning",
       },
     ],
   },
@@ -82,28 +82,22 @@ const menus = [
     permission: "view reports",
   },
   {
-    title: "Accounts",
-    icon: "i-lucide-user-cog",
-    to: "/accounts",
-    permission: "manage users",
-  },
-  {
     title: "CMS",
     icon: "i-lucide-layout-grid",
     to: "/cms",
-    permission: "manage settings",
+    permission: "view settings",
   },
   {
     title: "Audit Logs",
     icon: "i-lucide-scroll-text",
     to: "/audit-logs",
-    permission: "manage users",
+    permission: "view audit logs",
   },
 ];
 </script>
 
 <template>
-  <aside class="flex w-72 flex-col bg-[#17395C] text-white">
+  <aside class="flex w-72 flex-col bg-[#17395C] text-white dark:bg-slate-950">
     <!-- Logo -->
     <div class="flex h-24 items-center gap-4 border-b border-white/20 px-6">
       <img src="/assets/images/pmu-logo.png" class="w-14" />

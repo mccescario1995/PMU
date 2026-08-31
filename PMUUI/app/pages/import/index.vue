@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
@@ -8,7 +9,12 @@ definePageMeta({
 
 const entityType = ref('revenue_histories')
 const file = ref<File | null>(null)
-const logs = ref<any[]>([])
+const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading } = useTablePagination(null, 10, {
+  fetchData: async (page, pageSize) => {
+    const result = await apiFetch(`/v1/imports?page=${page}&per_page=${pageSize}`, { parseJson: true })
+    return { data: result.data, total: result.meta.total }
+  },
+})
 const uploading = ref(false)
 
 const entityOptions = [
@@ -45,10 +51,10 @@ async function submit() {
 }
 
 async function load() {
-  logs.value = (await apiFetch('/v1/imports', { parseJson: true })) as any[]
+  const result = await apiFetch('/v1/imports', { parseJson: true })
+  data.value = result.data
+  totalItems.value = result.total
 }
-
-onMounted(load)
 </script>
 
 <template>
@@ -77,7 +83,7 @@ onMounted(load)
 
     <UCard>
       <template #header> Import History </template>
-      <UTable :data="logs" :columns="[
+      <UTable :data="data" :columns="[
         { accessorKey: 'id', header: '#', cell: ({ row }) => `#${row.getValue('id')}` },
         { accessorKey: 'entity_type', header: 'Entity' },
         { accessorKey: 'filename', header: 'File' },
@@ -85,13 +91,26 @@ onMounted(load)
         { accessorKey: 'imported_rows', header: 'Imported' },
         { accessorKey: 'skipped_rows', header: 'Skipped' },
         { accessorKey: 'status', header: 'Status' },
-      ]">
+      ]" :loading="loading">
         <template #status-data="{ row }">
           <UBadge :color="row.original.status === 'completed' ? 'success' : row.original.status === 'partial' ? 'warning' : 'error'" variant="subtle">
             {{ row.original.status }}
           </UBadge>
         </template>
       </UTable>
+
+      <div class="flex items-center justify-between mt-4">
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-500">Rows per page:</span>
+          <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-sm text-slate-500">Go to page:</span>
+          <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+          <UButton size="sm" @click="handleGoToPage">Go</UButton>
+        </div>
+        <UPagination :total="totalItems" v-model:page="page" :items-per-page="pageSizeNumber" />
+      </div>
     </UCard>
   </div>
 </template>

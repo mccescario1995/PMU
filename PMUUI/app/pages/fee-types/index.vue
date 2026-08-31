@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { ref, reactive, computed, watch, h } from 'vue'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const feeTypes = ref<any[]>([])
-const loading = ref(true)
+const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading } = useTablePagination(null, 10, {
+  fetchData: async (page, pageSize) => {
+    const result = await apiFetch(`/v1/fee-types?page=${page}&per_page=${pageSize}`, { parseJson: true })
+    return { data: result.data, total: result.meta.total }
+  },
+})
 const showForm = ref(false)
 const editing = ref<any>(null)
 
@@ -61,12 +67,33 @@ async function remove(item: any) {
 }
 
 async function load() {
-  loading.value = true
-  feeTypes.value = (await apiFetch('/v1/fee-types', { parseJson: true })) as any[]
-  loading.value = false
+  const result = await apiFetch('/v1/fee-types', { parseJson: true })
+  data.value = result.data
+  totalItems.value = result.total
 }
 
-onMounted(load)
+type FeeType = {
+  id: number
+  fee_name: string
+  base_rate: number
+  unit: string
+}
+
+const columns: TableColumn<FeeType>[] = [
+  { accessorKey: 'id', header: '#' },
+  { accessorKey: 'fee_name', header: 'Fee Name' },
+  {
+    accessorKey: 'base_rate',
+    header: 'Base Rate',
+    meta: { class: { th: 'text-right', td: 'text-right font-mono' } },
+    cell: ({ row }) => {
+      const v = Number(row.getValue('base_rate'))
+      return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(v)
+    },
+  },
+  { accessorKey: 'unit', header: 'Unit' },
+  { accessorKey: 'action', header: 'Action' },
+]
 </script>
 
 <template>
@@ -98,7 +125,7 @@ onMounted(load)
       </UForm>
     </UCard>
 
-    <UTable :data="feeTypes" :columns="[
+    <UTable :data="data" :columns="[
       { accessorKey: 'id', header: '#', cell: ({ row }) => `#${row.getValue('id')}` },
       { accessorKey: 'fee_name', header: 'Fee Name' },
       { accessorKey: 'base_rate', header: 'Base Rate', meta: { class: { td: 'text-right font-mono' } }, cell: ({ row }) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(row.getValue('base_rate'))) },
@@ -112,5 +139,18 @@ onMounted(load)
         </div>
       </template>
     </UTable>
+
+    <div class="flex items-center justify-between mt-4">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Rows per page:</span>
+        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-slate-500">Go to page:</span>
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+        <UButton size="sm" @click="handleGoToPage">Go</UButton>
+      </div>
+      <UPagination :total="totalItems" v-model:page="page" :items-per-page="pageSizeNumber" />
+    </div>
   </div>
 </template>

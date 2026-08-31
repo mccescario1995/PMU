@@ -40,11 +40,8 @@ touch pages/reports/daily.vue
 touch pages/reports/monthly.vue
 touch pages/reports/yearly.vue
 
-# Accounts
-mkdir -p pages/accounts/edit
-touch pages/accounts/index.vue
-touch pages/accounts/create.vue
-touch pages/accounts/edit/[id].vue
+# Accounts (under Admin CMS)
+touch pages/cms/accounts/index.vue
 
 # Settings
 mkdir -p pages/settings

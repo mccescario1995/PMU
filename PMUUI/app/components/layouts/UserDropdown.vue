@@ -42,7 +42,7 @@ const dropdownItems = [
           {{ user?.name || 'Loading...' }}
         </p>
 
-        <p class="text-xs text-gray-500">
+        <p class="text-xs text-gray-500 dark:text-slate-400">
           {{ user?.email || '' }}
         </p>
       </div>

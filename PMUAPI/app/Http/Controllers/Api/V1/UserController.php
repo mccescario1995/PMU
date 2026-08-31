@@ -10,9 +10,17 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
+    use LogsAudit;
+
     public function index()
     {
-        return UserResource::collection(User::with('roles', 'permissions')->get());
+        $query = User::with('roles', 'permissions');
+
+        if (request()->has('page')) {
+            return UserResource::collection($query->paginate(request('per_page', 10)));
+        }
+
+        return UserResource::collection($query->get());
     }
 
     public function store(Request $request)
@@ -29,6 +37,8 @@ class UserController extends Controller
         $data['password'] = Hash::make($data['password']);
 
         $user = User::create($data);
+
+        $this->logAudit('create', 'users', $user->id, null, $this->modelToArray($user, ['name', 'email', 'status']));
 
         if (! empty($data['roles'])) {
             $user->syncRoles($data['roles']);
@@ -53,6 +63,8 @@ class UserController extends Controller
             'roles.*' => 'string|exists:roles,name',
         ]);
 
+        $oldValues = $this->modelToArray($user, ['name', 'email', 'status']);
+
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
         } else {
@@ -65,11 +77,15 @@ class UserController extends Controller
             $user->syncRoles($data['roles']);
         }
 
+        $this->logAudit('update', 'users', $user->id, $oldValues, $this->modelToArray($user, ['name', 'email', 'status']));
+
         return new UserResource($user->load('roles', 'permissions'));
     }
 
     public function destroy(User $user)
     {
+        $this->logAudit('delete', 'users', $user->id, $this->modelToArray($user, ['name', 'email', 'status']), null);
+
         $user->delete();
 
         return response()->noContent();

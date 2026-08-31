@@ -5,29 +5,91 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\RevenueForecast;
 use App\Models\WeatherData;
+use App\Services\WeatherService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class ForecastController extends Controller
 {
-    public function index()
+    use LogsAudit;
+
+    public function index(WeatherService $weather)
     {
-        $forecasts = RevenueForecast::orderBy('forecast_date')->get();
+        $query = RevenueForecast::orderBy('forecast_date');
+
+        if (request()->has('page')) {
+            $forecasts = $query->paginate(request('per_page', 10));
+        } else {
+            $forecasts = $query->get();
+        }
 
         $dates = $forecasts->pluck('forecast_date')->map(fn ($d) => $d->toDateString())->unique();
+        $weather->ensureWeatherForDates($dates->toArray());
+
         $weatherMap = WeatherData::whereIn('weather_date', $dates)
             ->get()
             ->keyBy('weather_date');
 
+        if (request()->has('page')) {
+            $forecasts->getCollection()->transform(fn ($f) => $this->toRow($f, $weatherMap));
+            return response()->json($forecasts);
+        }
+
+        return response()->json(
+            $forecasts->map(fn ($f) => $this->toRow($f, $weatherMap))
+        );
+    }
+
+    public function table(WeatherService $weather)
+    {
+        $query = RevenueForecast::orderBy('forecast_date');
+
+        if (request()->has('page')) {
+            $forecasts = $query->paginate(request('per_page', 10));
+        } else {
+            $forecasts = $query->get();
+        }
+
+        $dates = $forecasts->pluck('forecast_date')->map(fn ($d) => $d->toDateString())->unique();
+        $weather->ensureWeatherForDates($dates->toArray());
+
+        $weatherMap = WeatherData::whereIn('weather_date', $dates)
+            ->get()
+            ->keyBy('weather_date');
+
+        if (request()->has('page')) {
+            $forecasts->getCollection()->transform(fn ($f) => [
+                'period' => $f->forecast_date->format('M Y'),
+                'forecast_date' => $f->forecast_date,
+                'projected_revenue' => $f->predicted_revenue,
+                'season' => $f->season,
+                'weather' => $weatherMap[$f->forecast_date->toDateString()] ?? null,
+            ]);
+            return response()->json($forecasts);
+        }
+
         return response()->json(
             $forecasts->map(fn ($f) => [
-                'id' => $f->id,
+                'period' => $f->forecast_date->format('M Y'),
                 'forecast_date' => $f->forecast_date,
-                'predicted_revenue' => $f->predicted_revenue,
+                'projected_revenue' => $f->predicted_revenue,
                 'season' => $f->season,
-                'model_version' => $f->model_version,
                 'weather' => $weatherMap[$f->forecast_date->toDateString()] ?? null,
             ])
         );
+    }
+
+    protected function toRow(RevenueForecast $f, \Illuminate\Support\Collection $weatherMap): array
+    {
+        return [
+            'id' => $f->id,
+            'period' => $f->forecast_date->format('M Y'),
+            'forecast_date' => $f->forecast_date,
+            'predicted_revenue' => $f->predicted_revenue,
+            'season' => $f->season,
+            'model_version' => $f->model_version,
+            'weather' => $weatherMap[$f->forecast_date->toDateString()] ?? null,
+        ];
     }
 
     public function chart()
@@ -38,9 +100,10 @@ class ForecastController extends Controller
         );
     }
 
-    public function show(RevenueForecast $forecast)
+    public function show(RevenueForecast $forecast, WeatherService $weather)
     {
-        $weather = WeatherData::where('weather_date', $forecast->forecast_date->toDateString())->first();
+        $weather->ensureWeatherForDates([$forecast->forecast_date->toDateString()]);
+        $weatherData = WeatherData::where('weather_date', $forecast->forecast_date->toDateString())->first();
 
         return response()->json([
             'id' => $forecast->id,
@@ -48,11 +111,11 @@ class ForecastController extends Controller
             'predicted_revenue' => $forecast->predicted_revenue,
             'season' => $forecast->season,
             'model_version' => $forecast->model_version,
-            'weather' => $weather,
+            'weather' => $weatherData,
         ]);
     }
 
-    public function generate(Request $request)
+    public function generate(Request $request, WeatherService $weather)
     {
         $data = $request->validate([
             'forecast_date' => 'required|date',
@@ -67,7 +130,9 @@ class ForecastController extends Controller
         }
 
         $forecast = RevenueForecast::create($data);
-        $weather = WeatherData::where('weather_date', $forecast->forecast_date->toDateString())->first();
+        $this->logAudit('create', 'revenue_forecasts', $forecast->id, null, $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
+        $weather->ensureWeatherForDates([$forecast->forecast_date->toDateString()]);
+        $weatherData = WeatherData::where('weather_date', $forecast->forecast_date->toDateString())->first();
 
         return response()->json([
             'id' => $forecast->id,
@@ -75,11 +140,11 @@ class ForecastController extends Controller
             'predicted_revenue' => $forecast->predicted_revenue,
             'season' => $forecast->season,
             'model_version' => $forecast->model_version,
-            'weather' => $weather,
+            'weather' => $weatherData,
         ], 201);
     }
 
-    public function runModel(Request $request)
+    public function runModel(Request $request, WeatherService $weather)
     {
         $data = $request->validate([
             'model' => 'required|string|in:linear_regression,amira,samira',
@@ -146,6 +211,10 @@ class ForecastController extends Controller
                 'model_version' => $forecast->model_version,
             ];
         }
+
+        $weather->ensureWeatherForDates(
+            collect($saved)->pluck('forecast_date')->map(fn ($d) => Carbon::parse($d)->toDateString())->toArray()
+        );
 
         return response()->json([
             'model' => $model,

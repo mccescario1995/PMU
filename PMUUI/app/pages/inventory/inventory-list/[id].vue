@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted } from 'vue'
+import { onMounted, ref, computed, watch, h } from 'vue'
 import { usePermissions } from '~/composables/usePermissions'
+import { getPaginationRowModel } from '@tanstack/vue-table'
+import { useTablePagination } from '~/composables/useTablePagination'
 
 definePageMeta({
   layout: "dashboard",
@@ -15,6 +17,7 @@ const UBadge = resolveComponent('UBadge')
 
 const item = ref<any>(null)
 const itemLogs = ref<any[]>([])
+const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => itemLogs.value.length)
 const loading = ref(true)
 const showAddStock = ref(false)
 const showDeductStock = ref(false)
@@ -22,19 +25,19 @@ const stockQty = ref(1)
 
 onMounted(async () => {
   loading.value = true
-  item.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { parseJson: true })).data
-  itemLogs.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}/logs`, { parseJson: true })) as any[]
+  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
+  itemLogs.value = (await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]
   loading.value = false
 })
 
 async function remove() {
   if (!confirm('Delete this inventory item?')) return
-  await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { method: 'DELETE' })
+  await apiFetch(`/v1/inventory/items/${id}`, { method: 'DELETE' })
   useRouter().push('/inventory/inventory-list')
 }
 
 async function submitAddStock() {
-  await apiFetch(`/v1/inventory/inventory-list/items/${id}/add-stock`, {
+  await apiFetch(`/v1/inventory/items/${id}/add-stock`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity: stockQty.value }),
@@ -43,12 +46,12 @@ async function submitAddStock() {
   })
   showAddStock.value = false
   stockQty.value = 1
-  item.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { parseJson: true })).data
-  itemLogs.value = ((await apiFetch(`/v1/inventory/inventory-list/items/${id}/logs`, { parseJson: true })) as any[]).data
+  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
+  itemLogs.value = ((await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]).data
 }
 
 async function submitDeductStock() {
-  await apiFetch(`/v1/inventory/inventory-list/items/${id}/deduct-stock`, {
+  await apiFetch(`/v1/inventory/items/${id}/deduct-stock`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ quantity: stockQty.value }),
@@ -57,8 +60,8 @@ async function submitDeductStock() {
   })
   showDeductStock.value = false
   stockQty.value = 1
-  item.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}`, { parseJson: true })).data
-  itemLogs.value = (await apiFetch(`/v1/inventory/inventory-list/items/${id}/logs`, { parseJson: true })) as any[]
+  item.value = (await apiFetch(`/v1/inventory/items/${id}`, { parseJson: true })).data
+  itemLogs.value = (await apiFetch(`/v1/inventory/items/${id}/logs`, { parseJson: true })) as any[]
 }
 </script>
 
@@ -73,8 +76,8 @@ async function submitDeductStock() {
           <p class="text-slate-500">Inventory Item #{{ item.id }}</p>
         </div>
         <div class="flex gap-2">
-          <UButton v-if="can('manage inventory')" :to="`/inventory/inventory-list/edit/${item.id}`"  icon="i-lucide-edit" > Edit </UButton>
-          <UButton v-if="can('manage inventory')" color="error" variant="ghost"  @click="remove" icon="i-lucide-trash" > Delete </UButton>
+          <UButton v-if="can('edit inventory')" :to="`/inventory/inventory-list/edit/${item.id}`"  icon="i-lucide-edit" > Edit </UButton>
+          <UButton v-if="can('delete inventory')" color="error" variant="ghost"  @click="remove" icon="i-lucide-trash" > Delete </UButton>
         </div>
       </div>
 
@@ -101,7 +104,7 @@ async function submitDeductStock() {
         </UCard>
       </div>
 
-      <div v-if="can('manage inventory')" class="flex gap-2">
+      <div v-if="can('edit inventory')" class="flex gap-2">
         <UButton v-if="!showAddStock" icon="i-lucide-plus" @click="showAddStock = true"> Add Stock </UButton>
         <UButton v-if="!showDeductStock" color="error" variant="outline" icon="i-lucide-minus" @click="showDeductStock = true"> Deduct Stock </UButton>
       </div>
@@ -144,8 +147,21 @@ async function submitDeductStock() {
           { accessorKey: 'quantity_changed', header: 'Qty Changed', meta: { class: { th: 'text-right', td: 'text-right font-mono' } } },
           { accessorKey: 'user', header: 'User', cell: ({ row }) => row.original.user?.name ?? '-' },
           { accessorKey: 'created_at', header: 'Date', cell: ({ row }) => new Date(row.original.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) },
-        ]">
+        ]" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
         </UTable>
+
+        <div class="flex items-center justify-between mt-4">
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-slate-500">Rows per page:</span>
+            <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-slate-500">Go to page:</span>
+            <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16" @keyup.enter="handleGoToPage" />
+            <UButton size="sm" @click="handleGoToPage">Go</UButton>
+          </div>
+          <UPagination :total="itemLogs.length" v-model:page="page" :items-per-page="pageSizeNumber" />
+        </div>
       </UCard>
     </div>
 

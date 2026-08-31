@@ -7,6 +7,7 @@ use App\Models\InventoryItem;
 use App\Models\RevenueHistory;
 use App\Models\Stakeholder;
 use App\Models\Transaction;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -31,13 +32,20 @@ class DashboardController extends Controller
         );
     }
 
-    public function revenueBreakdown()
+    public function revenueBreakdown(Request $request)
     {
-        $rows = DB::table('transaction_items')
+        $year = $request->query('year');
+
+        $query = DB::table('transaction_items')
             ->join('fee_types', 'fee_types.id', '=', 'transaction_items.fee_type_id')
-            ->selectRaw('fee_types.fee_name as source, SUM(transaction_items.subtotal) as amount, COUNT(*) as count')
-            ->groupBy('fee_types.fee_name')
-            ->get();
+            ->join('transactions', 'transactions.id', '=', 'transaction_items.transaction_id')
+            ->selectRaw('fee_types.fee_name as source, SUM(transaction_items.subtotal) as amount, COUNT(*) as count');
+
+        if ($year) {
+            $query->whereYear('transactions.transaction_date', $year);
+        }
+
+        $rows = $query->groupBy('fee_types.fee_name')->get();
 
         return response()->json($rows);
     }
