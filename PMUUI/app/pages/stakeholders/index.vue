@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from "~/composables/useApiFetch";
-import { onMounted, ref, computed, watch } from "vue";
+import { onMounted, ref, computed, watch, h } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
+import { useToast } from "#imports";
+import type { SelectItem } from "@nuxt/ui";
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const { can } = usePermissions();
+const toast = useToast();
 
 const UBadge = resolveComponent("UBadge");
 
@@ -21,7 +24,6 @@ const typeColor = {
 
 const stakeholders = ref<any[]>([]);
 const searchQuery = ref("");
-const loading = ref(false);
 const {
   page,
   pageSize,
@@ -31,6 +33,8 @@ const {
   handleGoToPage,
   data,
   totalItems,
+  loading,
+  refresh,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
     const params = new URLSearchParams({
@@ -50,6 +54,118 @@ const {
 watch(searchQuery, () => {
   page.value = 1;
 });
+
+const showModal = ref(false);
+const modalMode = ref<"create" | "edit" | "view">("create");
+const saving = ref(false);
+const editingStakeholder = ref<any>(null);
+
+const types = ref<any[]>([]);
+const typesLoaded = ref(false);
+
+const form = reactive({
+  name: "",
+  stakeholder_type_id: null as number | null,
+  contact_no: "",
+  email: "",
+  address: "",
+  status: "active",
+});
+
+async function loadTypes() {
+  if (typesLoaded.value) return;
+  const allTypes = (
+    (await apiFetch("/v1/stakeholder-types", { parseJson: true })) as any
+  ).data;
+  const existing = new Map(types.value.map((t: any) => [t.id, t]));
+  for (const t of allTypes) {
+    if (!existing.has(t.id)) {
+      existing.set(t.id, t);
+    }
+  }
+  types.value = Array.from(existing.values());
+  typesLoaded.value = true;
+}
+
+function openCreate() {
+  modalMode.value = "create";
+  editingStakeholder.value = null;
+  form.name = "";
+  form.stakeholder_type_id = null;
+  form.contact_no = "";
+  form.email = "";
+  form.address = "";
+  form.status = "active";
+  showModal.value = true;
+  loadTypes();
+}
+
+function openView(row: any) {
+  modalMode.value = "view";
+  editingStakeholder.value = row;
+  form.name = row.name;
+  form.stakeholder_type_id = row.stakeholder_type_id;
+  form.contact_no = row.contact_no ?? "";
+  form.email = row.email ?? "";
+  form.address = row.address ?? "";
+  form.status = row.status ?? "active";
+  showModal.value = true;
+  loadTypes();
+}
+
+function openEdit(row: any) {
+  modalMode.value = "edit";
+  editingStakeholder.value = row;
+  form.name = row.name;
+  form.stakeholder_type_id = row.stakeholder_type_id;
+  form.contact_no = row.contact_no ?? "";
+  form.email = row.email ?? "";
+  form.address = row.address ?? "";
+  form.status = row.status ?? "active";
+  showModal.value = true;
+  loadTypes();
+}
+
+async function save() {
+  saving.value = true;
+  try {
+    if (modalMode.value === "edit" && editingStakeholder.value) {
+      await apiFetch(`/v1/stakeholders/${editingStakeholder.value.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+        parseJson: true,
+      });
+      toast.add({ title: "Stakeholder updated", color: "success" });
+    } else {
+      await apiFetch("/v1/stakeholders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+        parseJson: true,
+      });
+      toast.add({ title: "Stakeholder created", color: "success" });
+    }
+    showModal.value = false;
+    refresh();
+  } catch (e: any) {
+    toast.add({
+      title: modalMode.value === "edit" ? "Failed to update stakeholder" : "Failed to create stakeholder",
+      description: e.message ?? "Please try again.",
+      color: "error",
+    });
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function remove(row: any) {
+  if (!confirm("Delete this stakeholder?")) return;
+  await apiFetch(`/v1/stakeholders/${row.id}`, { method: "DELETE" });
+  data.value = data.value.filter((s: any) => s.id !== row.id);
+  totalItems.value = Math.max(0, totalItems.value - 1);
+  toast.add({ title: "Stakeholder deleted", color: "success" });
+}
 
 type Stakeholder = {
   id: number;
@@ -97,8 +213,6 @@ const columns: TableColumn<Stakeholder>[] = [
 <template>
   <div class="p-6 space-y-5">
     <div class="flex justify-between items-center gap-4">
-      
-
       <div class="flex flex-col">
         <h1 class="text-2xl font-bold mb-3">Stakeholders</h1>
         <UInput
@@ -109,32 +223,41 @@ const columns: TableColumn<Stakeholder>[] = [
         />
       </div>
 
-      <UButton 
-          v-if="can('create stakeholders')"
-          to="/stakeholders/create"
-          icon="i-lucide-plus"
-        >
-          Add Stakeholder
-        </UButton>
+      <UButton
+        v-if="can('create stakeholders')"
+        icon="i-lucide-plus"
+        @click="openCreate"
+      >
+        Add Stakeholder
+      </UButton>
     </div>
 
     <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
         <UButton
-         class="me-3"
+          class="me-2"
+          v-if="can('view stakeholders')"
           size="xs"
-          :to="`/stakeholders/${row.original.id}`"
+          color="info"
+          variant="ghost"
+          @click="openView(row.original)"
           icon="i-lucide-eye"
-        >
-        </UButton>
-
+        ></UButton>
         <UButton
+          class="me-2"
+          v-if="can('edit stakeholders')"
           size="xs"
           color="secondary"
-          :to="`/stakeholders/edit/${row.original.id}`"
+          @click="openEdit(row.original)"
           icon="i-lucide-edit"
-        >
-        </UButton>
+        ></UButton>
+        <UButton
+          v-if="can('delete stakeholders')"
+          size="xs"
+          color="error"
+          @click="remove(row.original)"
+          icon="i-lucide-trash"
+        ></UButton>
       </template>
     </UTable>
 
@@ -161,5 +284,67 @@ const columns: TableColumn<Stakeholder>[] = [
         :items-per-page="pageSizeNumber"
       />
     </div>
+
+    <UModal v-model:open="showModal">
+        <template #header>
+          {{
+            modalMode === "view"
+              ? "View Stakeholder"
+              : modalMode === "edit"
+                ? "Edit Stakeholder"
+                : "New Stakeholder"
+          }}
+        </template>
+        <template #body>
+          <div class="space-y-4">
+            <UFormField label="Name" class="mb-3">
+              <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" />
+            </UFormField>
+
+            <UFormField label="Stakeholder Type" class="mb-3">
+              <USelect
+                v-model="form.stakeholder_type_id"
+                :items="types"
+                value-key="id"
+                label-key="name"
+                class="w-full"
+                :disabled="modalMode === 'view'"
+              />
+            </UFormField>
+
+            <UFormField label="Contact" class="mb-3">
+              <UInput v-model="form.contact_no" :disabled="modalMode === 'view'" class="w-full" />
+            </UFormField>
+
+            <UFormField label="Email" class="mb-3">
+              <UInput v-model="form.email" type="email" :disabled="modalMode === 'view'" class="w-full" />
+            </UFormField>
+
+            <UFormField label="Address" class="mb-3">
+              <UTextarea v-model="form.address" :disabled="modalMode === 'view'" class="w-full" />
+            </UFormField>
+
+            <UFormField label="Status" class="mb-3">
+              <USelect
+                v-model="form.status"
+                :items="[
+                  { label: 'Active', value: 'active' },
+                  { label: 'Inactive', value: 'inactive' },
+                ]"
+                class="w-full"
+                :disabled="modalMode === 'view'"
+              />
+            </UFormField>
+          </div>
+        </template>
+        <template #footer>
+          <div class="flex justify-end gap-2">
+            <UButton variant="ghost" @click="showModal = false">Close</UButton>
+            <UButton v-if="modalMode !== 'view'" @click="save" :loading="saving">
+              Save
+            </UButton>
+          </div>
+        </template>
+    </UModal>
   </div>
 </template>

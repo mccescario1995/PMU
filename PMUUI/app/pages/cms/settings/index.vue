@@ -98,6 +98,7 @@ async function save() {
         body: JSON.stringify(form),
         parseJson: true,
       });
+      toast.add({ title: "Setting updated", color: "success" });
     } else {
       await apiFetch("/v1/settings", {
         method: "POST",
@@ -105,6 +106,7 @@ async function save() {
         body: JSON.stringify(form),
         parseJson: true,
       });
+      toast.add({ title: "Setting created", color: "success" });
     }
     showForm.value = false;
     page.value = 1;

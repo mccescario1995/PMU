@@ -6,18 +6,17 @@ import { ref } from "vue";
 import type { SelectItem } from "@nuxt/ui";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
-const toast = useToast();
-
+import { useToast } from "#imports";
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const { can } = usePermissions();
+const toast = useToast();
 
 const UBadge = resolveComponent("UBadge");
 const loading = ref(false);
-
 
 const {
   page,
@@ -28,6 +27,7 @@ const {
   handleGoToPage,
   data,
   totalItems,
+  refresh,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
     const result = await apiFetch(
@@ -40,6 +40,7 @@ const {
 
 const showForm = ref(false);
 const editing = ref<any>(null);
+const viewing = ref(false);
 
 const form = reactive({
   fee_name: "",
@@ -49,14 +50,25 @@ const form = reactive({
 
 function openCreate() {
   editing.value = null;
+  viewing.value = false;
   form.fee_name = "";
   form.base_rate = 0;
   form.unit = "kg";
   showForm.value = true;
 }
 
+function openView(row: any) {
+  editing.value = row;
+  viewing.value = true;
+  form.fee_name = row.fee_name;
+  form.base_rate = row.base_rate;
+  form.unit = row.unit;
+  showForm.value = true;
+}
+
 function openEdit(row: any) {
   editing.value = row;
+  viewing.value = false;
   form.fee_name = row.fee_name;
   form.base_rate = row.base_rate;
   form.unit = row.unit;
@@ -83,12 +95,16 @@ async function save() {
     }
     showForm.value = false;
     toast.add({
-      title: "Fee updated",
+      title: editing.value ? "Fee type updated" : "Fee type created",
       color: "success",
     });
-    page.value = 1;
+    refresh();
   } catch (e: any) {
-    alert(e.message ?? "Failed to save fee type");
+    toast.add({
+      title: "Failed to save fee type",
+      description: e.message ?? "Please try again.",
+      color: "error",
+    });
   } finally {
     loading.value = false;
   }
@@ -99,6 +115,7 @@ async function remove(row: any) {
   await apiFetch(`/v1/fee-types/${row.id}`, { method: "DELETE" });
   data.value = data.value.filter((f: any) => f.id !== row.id);
   totalItems.value = Math.max(0, totalItems.value - 1);
+  toast.add({ title: "Fee type deleted", color: "success" });
 }
 
 type FeeType = {
@@ -231,16 +248,26 @@ const feeUnits = ref<SelectItem[]>([
     <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
         <UButton
+          v-if="can('view fee types')"
+          size="xs"
+          color="info"
+          variant="ghost"
+          @click="openView(row.original)"
+          icon="i-lucide-eye"
+          class="me-2"
+        ></UButton>
+        <UButton
           v-if="can('edit fee types')"
           size="xs"
+          color="secondary"
           @click="openEdit(row.original)"
           icon="i-lucide-edit"
+          class="me-2"
         ></UButton>
         <UButton
           v-if="can('delete fee types')"
           size="xs"
           color="error"
-          variant="ghost"
           @click="remove(row.original)"
           icon="i-lucide-trash"
         ></UButton>
@@ -273,30 +300,45 @@ const feeUnits = ref<SelectItem[]>([
 
     <UModal v-model:open="showForm">
       <template #header>
-        {{ editing ? "Edit Fee Type" : "New Fee Type" }}
+        {{
+          viewing ? "View Fee Type" : editing ? "Edit Fee Type" : "New Fee Type"
+        }}
       </template>
-      <template #body class="space-y-4">
-        <UFormField label="Fee Name" class="mb-3">
-          <UInput v-model="form.fee_name" />
-        </UFormField>
-        <div class="flex">
-          <UFormField label="Base Rate" class="me-3">
-            <UInput v-model="form.base_rate" type="number" step="0.01" />
-          </UFormField>
-          <UFormField>/</UFormField>
-          <UFormField label="Unit" class="w-full">
-            <USelect
+      <template #body>
+        <div class="space-y-4">
+          <UFormField label="Fee Name" class="mb-3">
+            <UInput
+              v-model="form.fee_name"
+              :disabled="viewing"
               class="w-full"
-              v-model="form.unit"
-              :items="feeUnits"
             />
           </UFormField>
+          <div class="flex">
+            <UFormField label="Base Rate" class="me-3">
+              <UInput
+                v-model="form.base_rate"
+                type="number"
+                step="0.01"
+                :disabled="viewing"
+              />
+            </UFormField>
+            <UFormField label="Unit" class="w-full">
+              <USelect
+                class="w-full"
+                v-model="form.unit"
+                :items="feeUnits"
+                :disabled="viewing"
+              />
+            </UFormField>
+          </div>
         </div>
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton variant="ghost" @click="showForm = false">Cancel</UButton>
-          <UButton @click="save">Save</UButton>
+          <UButton variant="ghost" @click="showForm = false">Close</UButton>
+          <UButton v-if="!viewing" @click="save" :loading="loading"
+            >Save</UButton
+          >
         </div>
       </template>
     </UModal>

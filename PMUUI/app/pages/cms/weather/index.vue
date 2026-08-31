@@ -33,7 +33,11 @@ const {
     );
     // Handle Laravel paginated response: { data: [...], meta: { total: N } }
     // or fallback if meta is at top level
-    const items = Array.isArray(result?.data) ? result.data : (Array.isArray(result) ? result : []);
+    const items = Array.isArray(result?.data)
+      ? result.data
+      : Array.isArray(result)
+        ? result
+        : [];
     const total = result?.meta?.total ?? result?.total ?? items.length;
     return { data: items, total };
   },
@@ -41,6 +45,7 @@ const {
 
 const showForm = ref(false);
 const editing = ref<any>(null);
+const viewing = ref(false);
 
 const form = reactive({
   weather_date: "",
@@ -51,6 +56,7 @@ const form = reactive({
 
 function openCreate() {
   editing.value = null;
+  viewing.value = false;
   form.weather_date = new Date().toISOString().slice(0, 10);
   form.rainfall_mm = null;
   form.wind_speed = null;
@@ -58,8 +64,19 @@ function openCreate() {
   showForm.value = true;
 }
 
+function openView(row: any) {
+  editing.value = row;
+  viewing.value = true;
+  form.weather_date = row.weather_date?.slice(0, 10) ?? "";
+  form.rainfall_mm = row.rainfall_mm;
+  form.wind_speed = row.wind_speed;
+  form.temperature = row.temperature;
+  showForm.value = true;
+}
+
 function openEdit(row: any) {
   editing.value = row;
+  viewing.value = false;
   form.weather_date = row.weather_date?.slice(0, 10) ?? "";
   form.rainfall_mm = row.rainfall_mm;
   form.wind_speed = row.wind_speed;
@@ -91,7 +108,11 @@ async function save() {
     showForm.value = false;
     refresh();
   } catch (e: any) {
-    toast.add({ title: "Failed to save weather record", description: e.message ?? "Please try again.", color: "error" });
+    toast.add({
+      title: "Failed to save weather record",
+      description: e.message ?? "Please try again.",
+      color: "error",
+    });
   }
 }
 
@@ -100,6 +121,7 @@ async function remove(row: any) {
   await apiFetch(`/v1/weather/${row.id}`, { method: "DELETE" });
   data.value = data.value.filter((w: any) => w.id !== row.id);
   totalItems.value = Math.max(0, totalItems.value - 1);
+  toast.add({ title: "Weather record deleted", color: "success" });
 }
 
 const weatherLabel = (w: any) => {
@@ -168,16 +190,26 @@ const columns: TableColumn<Weather>[] = [
     <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
         <UButton
+          v-if="can('view weather')"
+          size="xs"
+          color="info"
+          variant="ghost"
+          @click="openView(row.original)"
+          icon="i-lucide-eye"
+          class="me-2"
+        ></UButton>
+        <UButton
           v-if="can('edit weather')"
           size="xs"
+          color="secondary"
           @click="openEdit(row.original)"
           icon="i-lucide-edit"
+          class="me-2"
         ></UButton>
         <UButton
           v-if="can('delete weather')"
           size="xs"
           color="error"
-          variant="ghost"
           @click="remove(row.original)"
           icon="i-lucide-trash"
         ></UButton>
@@ -210,30 +242,59 @@ const columns: TableColumn<Weather>[] = [
 
     <UModal v-model:open="showForm">
       <template #header>
-        {{ editing ? "Edit Weather Record" : "New Weather Record" }}
+        {{
+          viewing
+            ? "View Weather Record"
+            : editing
+              ? "Edit Weather Record"
+              : "New Weather Record"
+        }}
       </template>
       <template #body>
         <div class="space-y-4">
           <UFormField label="Date" class="mb-3">
-            <UInput v-model="form.weather_date" type="date" class="w-full"/>
+            <UInput
+              v-model="form.weather_date"
+              type="date"
+              class="w-full"
+              :disabled="viewing"
+            />
           </UFormField>
           <div class="flex gap-4">
-          <UFormField label="Rainfall (mm)" class="mb-3 w-full">
-            <UInput v-model="form.rainfall_mm" type="number" step="0.1" class="w-full"/>
-          </UFormField>
-          <UFormField label="Wind Speed (km/h)" class="mb-3 w-full">
-            <UInput v-model="form.wind_speed" type="number" step="0.1" class="w-full"/>
-          </UFormField>
+            <UFormField label="Rainfall (mm)" class="mb-3 w-full">
+              <UInput
+                v-model="form.rainfall_mm"
+                type="number"
+                step="0.1"
+                class="w-full"
+                :disabled="viewing"
+              />
+            </UFormField>
+            <UFormField label="Wind Speed (km/h)" class="mb-3 w-full">
+              <UInput
+                v-model="form.wind_speed"
+                type="number"
+                step="0.1"
+                class="w-full"
+                :disabled="viewing"
+              />
+            </UFormField>
           </div>
           <UFormField label="Temperature (°C)" class="mb-3">
-            <UInput v-model="form.temperature" type="number" step="0.1" class="w-full"/>
+            <UInput
+              v-model="form.temperature"
+              type="number"
+              step="0.1"
+              class="w-full"
+              :disabled="viewing"
+            />
           </UFormField>
         </div>
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton variant="ghost" @click="showForm = false">Cancel</UButton>
-          <UButton @click="save">Save</UButton>
+          <UButton variant="ghost" @click="showForm = false">Close</UButton>
+          <UButton v-if="!viewing" @click="save">Save</UButton>
         </div>
       </template>
     </UModal>

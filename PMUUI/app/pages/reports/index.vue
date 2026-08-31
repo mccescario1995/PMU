@@ -4,9 +4,9 @@ definePageMeta({
 });
 
 const reports = [
-  { title: "Daily Report", description: "Transactions and revenue for a specific day.", to: "/reports/daily", icon: "i-lucide-calendar-day" },
+  { title: "Daily Report", description: "Transactions and revenue for a specific day.", to: "/reports/daily", icon: "i-lucide-calendar-1" },
   { title: "Monthly Report", description: "Aggregated operations overview per month.", to: "/reports/monthly", icon: "i-lucide-calendar-range" },
-  { title: "Yearly Report", description: "Annual trends, totals and forecasts.", to: "/reports/yearly", icon: "i-lucide-calendar" },
+  { title: "Yearly Report", description: "Annual trends, totals and forecasts.", to: "/reports/yearly", icon: "i-lucide-calendars" },
 ]
 </script>
 

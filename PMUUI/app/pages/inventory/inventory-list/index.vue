@@ -5,12 +5,14 @@ import type { SelectItem } from "@nuxt/ui";
 import { onMounted, ref, computed, watch, h } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
+import { useToast } from "#imports";
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const { can } = usePermissions();
+const toast = useToast();
 
 const UBadge = resolveComponent("UBadge");
 
@@ -41,7 +43,7 @@ type Inventory = {
   category: string;
   category_type: string;
   quantity: number;
-  status: keyof typeof statusColor;
+  status: string;
 };
 
 const statusColor = {
@@ -91,38 +93,114 @@ const columns: TableColumn<Inventory>[] = [
     header: "Status",
     cell: ({ row }) => {
       const value = row.getValue("status") as string;
-      const color = statusColor[value];
-      const label = statusLabel.value[value] ?? value;
-
+      const color = statusColor[value as keyof typeof statusColor] ?? "neutral";
+      const label = value.replace(/_/g, " ");
       return h(UBadge, { class: "capitalize", color }, () => label);
     },
   },
   { accessorKey: "action", header: "Action" },
 ];
 
-const status = ref<SelectItem[]>([
+const categoryTypeOptions: SelectItem[] = [
+  { label: "Equipment", value: "equipment" },
+  { label: "Materials", value: "materials" },
+  { label: "Supplies", value: "supplies" },
+];
+
+const statusOptions: SelectItem[] = [
   { label: "Available", value: "available" },
   { label: "Low Stock", value: "low_stock" },
   { label: "Damaged", value: "damaged" },
-])
+];
 
-// build a lookup: value -> label
-const statusLabel = computed(() =>
-  Object.fromEntries(status.value.map(s => [s.value, s.label]))
-)
+const showModal = ref(false);
+const modalMode = ref<"create" | "edit" | "view">("create");
+const saving = ref(false);
+const editingItem = ref<any>(null);
 
-// const statusColor: Record<string, BadgeProps['color']> = {
-//   available: 'success',
-//   low_stock: 'warning',
-//   damaged: 'error',
-// }
+const form = reactive({
+  item_name: "",
+  category: "",
+  category_type: "supplies",
+  quantity: 0,
+  unit: "pcs",
+  status: "available",
+});
+
+function openCreate() {
+  modalMode.value = "create";
+  editingItem.value = null;
+  form.item_name = "";
+  form.category = "";
+  form.category_type = "supplies";
+  form.quantity = 0;
+  form.unit = "pcs";
+  form.status = "available";
+  showModal.value = true;
+}
+
+function openView(row: any) {
+  modalMode.value = "view";
+  editingItem.value = row;
+  form.item_name = row.item_name;
+  form.category = row.category;
+  form.category_type = row.category_type ?? "supplies";
+  form.quantity = row.quantity;
+  form.unit = row.unit ?? "pcs";
+  form.status = row.status;
+  showModal.value = true;
+}
+
+function openEdit(row: any) {
+  modalMode.value = "edit";
+  editingItem.value = row;
+  form.item_name = row.item_name;
+  form.category = row.category;
+  form.category_type = row.category_type ?? "supplies";
+  form.quantity = row.quantity;
+  form.unit = row.unit ?? "pcs";
+  form.status = row.status;
+  showModal.value = true;
+}
+
+async function save() {
+  saving.value = true;
+  try {
+    if (modalMode.value === "edit" && editingItem.value) {
+      await apiFetch(`/v1/inventory/items/${editingItem.value.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+        parseJson: true,
+      });
+      toast.add({ title: "Inventory item updated", color: "success" });
+    } else {
+      await apiFetch("/v1/inventory/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+        parseJson: true,
+      });
+      toast.add({ title: "Inventory item created", color: "success" });
+    }
+    showModal.value = false;
+  } catch (e: any) {
+    toast.add({
+      title: modalMode.value === "edit" ? "Failed to update item" : "Failed to create item",
+      description: e.message ?? "Please try again.",
+      color: "error",
+    });
+  } finally {
+    saving.value = false;
+  }
+}
 
 async function remove(row: any) {
-  if (!confirm("Delete this item?")) return;
-  await apiFetch(`/v1/inventory/items/${row.original.id}`, {
-    method: "DELETE",
-  });
-  data.value = data.value.filter((i) => i.id !== row.original.id);
+  if (!confirm("Delete this inventory item?")) return;
+  await apiFetch(`/v1/inventory/items/${row.id}`, { method: "DELETE" });
+  data.value = data.value.filter((i: any) => i.id !== row.id);
+  totalItems.value = Math.max(0, totalItems.value - 1);
+  toast.add({ title: "Inventory item deleted", color: "success" });
 }
 </script>
 
@@ -133,7 +211,8 @@ async function remove(row: any) {
 
       <UButton
         v-if="can('create inventory')"
-        to="/inventory/inventory-list/create"
+        icon="i-lucide-plus"
+        @click="openCreate"
       >
         Add Item
       </UButton>
@@ -141,27 +220,30 @@ async function remove(row: any) {
 
     <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <div class="flex gap-2">
-          <UButton
-            size="xs"
-            :to="`/inventory/inventory-list/${row.original.id}`"
-            icon="i-lucide-eye"
-          ></UButton>
-          <UButton
-            v-if="can('edit inventory')"
-            size="xs"
-            color="secondary"
-            :to="`/inventory/inventory-list/edit/${row.original.id}`"
-            icon="i-lucide-edit"
-          ></UButton>
-          <UButton
-            v-if="can('delete inventory')"
-            size="xs"
-            color="error"
-            @click="remove(row)"
-            icon="i-lucide-trash"
-          ></UButton>
-        </div>
+        <UButton
+          class="me-2"
+          v-if="can('view inventory')"
+          size="xs"
+          color="info"
+          variant="ghost"
+          @click="openView(row.original)"
+          icon="i-lucide-eye"
+        ></UButton>
+        <UButton
+          class="me-2"
+          v-if="can('edit inventory')"
+          size="xs"
+          color="secondary"
+          @click="openEdit(row.original)"
+          icon="i-lucide-edit"
+        ></UButton>
+        <UButton
+          v-if="can('delete inventory')"
+          size="xs"
+          color="error"
+          @click="remove(row.original)"
+          icon="i-lucide-trash"
+        ></UButton>
       </template>
     </UTable>
 
@@ -188,5 +270,64 @@ async function remove(row: any) {
         :items-per-page="pageSizeNumber"
       />
     </div>
+
+    <UModal v-model:open="showModal">
+        <template #header>
+          {{
+            modalMode === "view"
+              ? "View Inventory Item"
+              : modalMode === "edit"
+                ? "Edit Inventory Item"
+                : "New Inventory Item"
+          }}
+        </template>
+        <template #body>
+          <div class="space-y-4">
+            <UFormField label="Item Name" class="mb-3">
+              <UInput v-model="form.item_name" :disabled="modalMode === 'view'" class="w-full" />
+            </UFormField>
+
+            <UFormField label="Category" class="mb-3">
+              <UInput v-model="form.category" :disabled="modalMode === 'view'" class="w-full" />
+            </UFormField>
+
+            <UFormField label="Category Type" class="mb-3">
+              <USelect
+                v-model="form.category_type"
+                :items="categoryTypeOptions"
+                class="w-full"
+                :disabled="modalMode === 'view'"
+              />
+            </UFormField>
+
+            <div class="flex">
+              <UFormField label="Quantity" class="mb-3 w-full mr-3">
+                <UInput type="number" v-model="form.quantity" :disabled="modalMode === 'view'" class="w-full" />
+              </UFormField>
+
+              <UFormField label="Unit" class="mb-3 w-full">
+                <UInput v-model="form.unit" :disabled="modalMode === 'view'" class="w-full" />
+              </UFormField>
+            </div>
+
+            <UFormField label="Status" class="mb-3">
+              <USelect
+                v-model="form.status"
+                :items="statusOptions"
+                class="w-full"
+                :disabled="modalMode === 'view'"
+              />
+            </UFormField>
+          </div>
+        </template>
+        <template #footer>
+          <div class="flex justify-end gap-2">
+            <UButton variant="ghost" @click="showModal = false">Close</UButton>
+            <UButton v-if="modalMode !== 'view'" @click="save" :loading="saving">
+              Save
+            </UButton>
+          </div>
+        </template>
+    </UModal>
   </div>
 </template>

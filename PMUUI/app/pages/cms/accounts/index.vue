@@ -6,6 +6,7 @@ import { usePermissions } from "~/composables/usePermissions";
 import { getPaginationRowModel } from "@tanstack/vue-table";
 import { useTablePagination } from "~/composables/useTablePagination";
 import type { SelectItem } from "@nuxt/ui";
+import { useToast } from "#imports";
 
 definePageMeta({
   layout: "dashboard",
@@ -45,8 +46,9 @@ const roleOptions = computed(() =>
 
 const loading = ref(true);
 
-const showRoleModal = ref(false);
+const openRoleModal = ref(false);
 const editingRole = ref<any>(null);
+const viewingRole = ref(false);
 const roleForm = reactive({
   name: "",
   permissions: [] as string[],
@@ -54,6 +56,7 @@ const roleForm = reactive({
 
 const showUserModal = ref(false);
 const editingUser = ref<any>(null);
+const viewingUser = ref(false);
 const userForm = reactive({
   name: "",
   email: "",
@@ -136,15 +139,40 @@ async function removeRole(role: any) {
   await load();
 }
 
+function openNewRoleModal() {
+  editingRole.value = null;
+  viewingRole.value = false;
+  roleForm.name = "";
+  roleForm.permissions = [];
+  openRoleModal.value = true;
+}
+
+function openEditRoleModal(role: any) {
+  editingRole.value = role;
+  viewingRole.value = false;
+  roleForm.name = role.name;
+  roleForm.permissions = [...(role.permissions ?? [])];
+  openRoleModal.value = true;
+}
+
+function openViewRoleModal(role: any) {
+  editingRole.value = role;
+  viewingRole.value = true;
+  roleForm.name = role.name;
+  roleForm.permissions = [...(role.permissions ?? [])];
+  openRoleModal.value = true;
+}
+
 function openCreateUser() {
   editingUser.value = null;
+  viewingUser.value = false;
   userForm.name = "";
   userForm.email = "";
   userForm.password = "";
   userForm.status = "active";
 
   const portManager = roleOptions.value.find(
-    (role) => role.name === "Port Manager"
+    (role) => role.name === "Port Manager",
   );
 
   userForm.roles = portManager ? [portManager.id] : [];
@@ -154,6 +182,18 @@ function openCreateUser() {
 
 function openEditUser(user: any) {
   editingUser.value = user;
+  viewingUser.value = false;
+  userForm.name = user.name;
+  userForm.email = user.email;
+  userForm.password = "";
+  userForm.status = user.status ?? "active";
+  userForm.roles = [...(user.roles ?? [])];
+  showUserModal.value = true;
+}
+
+function openViewUser(user: any) {
+  editingUser.value = user;
+  viewingUser.value = true;
   userForm.name = user.name;
   userForm.email = user.email;
   userForm.password = "";
@@ -252,22 +292,6 @@ const userColumns: TableColumn<any>[] = [
   { accessorKey: "action", header: "Action" },
 ];
 
-const openRoleModal = ref(false);
-
-function openNewRoleModal() {
-  editingRole.value = null;
-  roleForm.name = "";
-  roleForm.permissions = [];
-  openRoleModal.value = true;
-}
-
-function openEditRoleModal(role: Role) {
-  editingRole.value = role;
-  roleForm.name = role.name;
-  roleForm.permissions = [...(role.permissions ?? [])];
-  openRoleModal.value = true;
-}
-
 const userStatus = ref<SelectItem[]>([
   {
     label: "Active",
@@ -323,7 +347,9 @@ const userStatus = ref<SelectItem[]>([
 
       <UModal v-model:open="openRoleModal">
         <template #header>
-          {{ editingRole ? "Edit Role" : "New Role" }}
+          {{
+            viewingRole ? "View Role" : editingRole ? "Edit Role" : "New Role"
+          }}
         </template>
 
         <template #body>
@@ -333,6 +359,7 @@ const userStatus = ref<SelectItem[]>([
                 class="w-full"
                 v-model="roleForm.name"
                 placeholder="e.g. Inventory Clerk"
+                :disabled="viewingRole"
               />
             </UFormField>
 
@@ -353,6 +380,7 @@ const userStatus = ref<SelectItem[]>([
                       :model-value="roleForm.permissions.includes(perm.name)"
                       :label="perm.action"
                       :ui="{ label: 'capitalize' }"
+                      :disabled="viewingRole"
                       @update:model-value="
                         (val: boolean) => togglePerm(perm.name, val)
                       "
@@ -367,9 +395,9 @@ const userStatus = ref<SelectItem[]>([
         <template #footer>
           <div class="flex justify-end gap-2">
             <UButton variant="ghost" @click="openRoleModal = false"
-              >Cancel</UButton
+              >Close</UButton
             >
-            <UButton @click="saveRole">Save</UButton>
+            <UButton v-if="!viewingRole" @click="saveRole">Save</UButton>
           </div>
         </template>
       </UModal>
@@ -384,8 +412,17 @@ const userStatus = ref<SelectItem[]>([
         <template #action-cell="{ row }">
           <div class="flex gap-2">
             <UButton
+              v-if="can('view roles')"
+              size="xs"
+              color="info"
+              variant="ghost"
+              @click="openViewRoleModal(row.original)"
+              icon="i-lucide-eye"
+            />
+            <UButton
               v-if="can('edit roles')"
               size="xs"
+              color="secondary"
               icon="i-lucide-edit"
               @click="openEditRoleModal(row.original)"
             />
@@ -443,63 +480,75 @@ const userStatus = ref<SelectItem[]>([
 
       <UModal v-model:open="showUserModal">
         <template #header>
-          {{ editingUser ? "Edit User" : "New User" }}
+          {{
+            viewingUser ? "View User" : editingUser ? "Edit User" : "New User"
+          }}
         </template>
 
-        <template #body class="space-y-4">
-          <UFormField label="Name" class="mb-3">
-            <UInput v-model="userForm.name" class="w-full" placeholder="Enter Name" />
-          </UFormField>
-          <UFormField label="Email" class="mb-3">
-            <UInput
-              class="w-full"
-              placeholder="Enter Email"
-              v-model="userForm.email"
-              :disabled="!!editingUser"
-              type="email"
-            />
-          </UFormField>
-          <UFormField
-            class="mb-3"
-            :label="
-              editingUser ? 'New Password (leave blank to keep)' : 'Password'
-            "
-          >
-            <UInput
-              class="w-full"
-              v-model="userForm.password"
-              type="password"
-              :placeholder="
-                editingUser ? 'Leave blank to keep current' : 'Enter password'
+        <template #body>
+          <div class="space-y-4">
+            <UFormField label="Name" class="mb-3">
+              <UInput
+                v-model="userForm.name"
+                class="w-full"
+                placeholder="Enter Name"
+                :disabled="viewingUser"
+              />
+            </UFormField>
+            <UFormField label="Email" class="mb-3">
+              <UInput
+                class="w-full"
+                placeholder="Enter Email"
+                v-model="userForm.email"
+                :disabled="viewingUser || !!editingUser"
+                type="email"
+              />
+            </UFormField>
+            <UFormField
+              class="mb-3"
+              :label="
+                editingUser ? 'New Password (leave blank to keep)' : 'Password'
               "
-            />
-          </UFormField>
-          <div class="flex flex-col">
-            <UFormField label="Status" class="mb-3">
-              <USelect
+            >
+              <UInput
                 class="w-full"
-                v-model="userForm.status"
-                :items="userStatus"
+                v-model="userForm.password"
+                type="password"
+                :placeholder="
+                  editingUser ? 'Leave blank to keep current' : 'Enter password'
+                "
+                :disabled="viewingUser"
               />
             </UFormField>
-            <UFormField label="Roles">
-              <USelect
-                class="w-full"
-                v-model="userForm.roles"
-                :items="roleOptions"
-                value-key="id"
-                label-key="name"
-                multiple
-              />
-            </UFormField>
+            <div class="flex flex-col">
+              <UFormField label="Status" class="mb-3">
+                <USelect
+                  class="w-full"
+                  v-model="userForm.status"
+                  :items="userStatus"
+                  :disabled="viewingUser"
+                />
+              </UFormField>
+              <UFormField label="Roles">
+                <USelect
+                  class="w-full"
+                  v-model="userForm.roles"
+                  :items="roleOptions"
+                  value-key="id"
+                  label-key="name"
+                  multiple
+                  :disabled="viewingUser"
+                />
+              </UFormField>
+            </div>
           </div>
         </template>
         <template #footer>
           <div class="flex justify-end gap-2">
             <UButton variant="ghost" @click="showUserModal = false"
-              >Cancel</UButton
+              >Close</UButton
             >
-            <UButton @click="saveUser">Save</UButton>
+            <UButton v-if="!viewingUser" @click="saveUser">Save</UButton>
           </div>
         </template>
       </UModal>
@@ -514,8 +563,17 @@ const userStatus = ref<SelectItem[]>([
         <template #action-cell="{ row }">
           <div class="flex gap-2">
             <UButton
+              v-if="can('view users')"
+              size="xs"
+              color="info"
+              variant="ghost"
+              @click="openViewUser(row.original)"
+              icon="i-lucide-eye"
+            />
+            <UButton
               v-if="can('edit users')"
               size="xs"
+              color="secondary"
               @click="openEditUser(row.original)"
               icon="i-lucide-edit"
             />
