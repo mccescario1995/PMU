@@ -105,7 +105,7 @@ jobs:
             echo "Deploying PMUUI"
             echo "================================="
 
-            DEPLOY_PATH="${{ secrets.HOSTINGER_PMUI_DEPLOY_PATH }}"
+            DEPLOY_PATH="${{ secrets.HOSTINGER_PMUUI_DEPLOY_PATH }}"
 
             mkdir -p "$DEPLOY_PATH"
 
