@@ -1,0 +1,55 @@
+<IfModule mod_rewrite.c>
+
+    RewriteEngine On
+
+
+    # ==========================================================
+    # SECURITY
+    # ==========================================================
+
+    # Block Git repository
+    RewriteRule ^\.git(?:/|$) - [F,L]
+
+    # Block Laravel source code
+    RewriteRule ^PMUAPI/(?!public(?:/|$)).* - [F,L]
+
+    # Block Nuxt source code
+    RewriteRule ^PMUUI(?:/|$) - [F,L]
+
+
+    # ==========================================================
+    # SENSITIVE FILES
+    # ==========================================================
+
+    <FilesMatch "^(\.env|\.env\..*|composer\.json|composer\.lock|package\.json|package-lock\.json|nuxt\.config\..*|tsconfig\.json)$">
+        Require all denied
+    </FilesMatch>
+
+
+    # ==========================================================
+    # LARAVEL API
+    # ==========================================================
+
+    RewriteCond %{DOCUMENT_ROOT}/PMUAPI/public/index.php -f
+
+    RewriteRule ^api(?:/(.*))?$ PMUAPI/public/index.php [L,QSA]
+
+
+    # ==========================================================
+    # EXISTING FILES / DIRECTORIES
+    # ==========================================================
+
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+
+    RewriteCond %{REQUEST_FILENAME} -d
+
+    RewriteRule ^ - [L]
+
+
+    # ==========================================================
+    # NUXT SPA
+    # ==========================================================
+
+    RewriteRule ^ index.html [L]
+
+</IfModule>
