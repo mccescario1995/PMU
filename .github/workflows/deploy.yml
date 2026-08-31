@@ -2,101 +2,149 @@ name: Deploy PMU to Hostinger
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+
   workflow_dispatch:
 
 jobs:
+
   deploy-pmuapi:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Deploy PMUAPI
         uses: appleboy/ssh-action@v1.0.3
+
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
+
           script: |
+
             set -e
-            echo "Deploying PMUAPI..."
+
+            echo "================================="
+            echo "Deploying PMUAPI"
+            echo "================================="
 
             DEPLOY_PATH="${{ secrets.HOSTINGER_PMUAPI_DEPLOY_PATH }}"
+
             mkdir -p "$DEPLOY_PATH"
+
             cd "$DEPLOY_PATH"
 
-            if [ ! -d .git ]; then
-              echo "First-time setup: initializing PMUAPI repo..."
+            if [ ! -d ".git" ]; then
+
+              echo "First deployment..."
+
               git init
-              git remote add origin ${{ secrets.HOSTINGER_GITHUB_REPO }}
+
+              git remote add origin "${{ secrets.HOSTINGER_GITHUB_REPO }}"
+
               git sparse-checkout init --cone
+
               git sparse-checkout set PMUAPI
+
               git fetch origin main
-              git reset --hard origin/main
-              git checkout main
+
+              git checkout -B main origin/main
+
             else
-              echo "Pulling latest code..."
-              git pull origin main
+
+              echo "Updating repository..."
+
+              git fetch origin main
+
+              git reset --hard origin/main
+
             fi
 
-            echo "Installing Composer dependencies..."
-            composer install --no-dev --optimize-autoloader --no-interaction
+            cd "$DEPLOY_PATH/PMUAPI"
 
-            echo "Running migrations..."
+            composer install \
+              --no-dev \
+              --optimize-autoloader \
+              --no-interaction
+
             php artisan migrate --force --no-interaction
 
-            echo "Clearing caches..."
             php artisan optimize:clear
 
-            echo "Rebuilding caches..."
             php artisan config:cache
+
             php artisan route:cache
+
             php artisan view:cache
 
             echo "PMUAPI deployment completed!"
+
 
   deploy-pmui:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Deploy PMUUI
         uses: appleboy/ssh-action@v1.0.3
+
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
+
           script: |
+
             set -e
-            echo "Deploying PMUUI..."
+
+            echo "================================="
+            echo "Deploying PMUUI"
+            echo "================================="
 
             DEPLOY_PATH="${{ secrets.HOSTINGER_PMUI_DEPLOY_PATH }}"
+
             mkdir -p "$DEPLOY_PATH"
+
             cd "$DEPLOY_PATH"
 
-            if [ ! -d .git ]; then
-              echo "First-time setup: initializing PMUUI repo..."
+            if [ ! -d ".git" ]; then
+
+              echo "First deployment..."
+
               git init
-              git remote add origin ${{ secrets.HOSTINGER_GITHUB_REPO }}
+
+              git remote add origin "${{ secrets.HOSTINGER_GITHUB_REPO }}"
+
               git sparse-checkout init --cone
+
               git sparse-checkout set PMUUI
+
               git fetch origin main
-              git reset --hard origin/main
-              git checkout main
+
+              git checkout -B main origin/main
+
             else
-              echo "Pulling latest code..."
-              git pull origin main
+
+              echo "Updating repository..."
+
+              git fetch origin main
+
+              git reset --hard origin/main
+
             fi
 
-            echo "Installing npm dependencies..."
+            cd "$DEPLOY_PATH/PMUUI"
+
             npm ci
 
-            echo "Building Nuxt application..."
             npm run build
 
-            echo "Restarting Nuxt..."
             pkill -f "nuxt start" || true
 
-            nohup npx nuxt start > storage/logs/nuxt.log 2>&1 &
+            nohup npx nuxt start \ > storage/logs/nuxt.log 2>&1 &
 
             echo "PMUUI deployment completed!"
