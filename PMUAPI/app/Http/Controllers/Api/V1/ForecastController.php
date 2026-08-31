@@ -205,6 +205,11 @@ class ForecastController extends Controller
             CURLOPT_TIMEOUT => 120,
         ]);
 
+        // LOCAL RENDER
+        if (app()->environment('local')) {
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        }
+
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);

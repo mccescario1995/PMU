@@ -22,7 +22,7 @@ class PMUClient:
 
     def get_transactions(self, start: date, end: date) -> list[dict]:
         with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=60) as client:
-            r = client.get("/api/v1/transactions")
+            r = client.get("/v1/transactions")
             r.raise_for_status()
             data = r.json()
         if isinstance(data, dict):
@@ -34,7 +34,7 @@ class PMUClient:
 
     def get_weather(self, start: date, end: date) -> list[dict]:
         with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=60) as client:
-            r = client.get("/api/v1/weather")
+            r = client.get("/v1/weather")
             r.raise_for_status()
             data = r.json()
         if isinstance(data, dict):
@@ -45,7 +45,7 @@ class PMUClient:
         ]
 
     def get_forecasts(self) -> list[dict]:
-        return self._get("/api/v1/forecasts")
+        return self._get("/v1/forecasts")
 
     def post_forecast(self, forecast_date: str, predicted_revenue: float, model_version: str, season: Optional[str] = None) -> dict:
         payload = {
@@ -55,7 +55,7 @@ class PMUClient:
         }
         if season:
             payload["season"] = season
-        return self._post("/api/v1/forecasts/generate", payload)
+        return self._post("/v1/forecasts/generate", payload)
 
     def post_forecast_batch(self, forecasts: list[dict], model_version: str) -> list[dict]:
         results = []
