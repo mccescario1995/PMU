@@ -49,7 +49,13 @@ def forecast():
         result["forecasts"] = result["forecasts"][:days]
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "error": str(e),
+            "pmu_api_url": os.getenv("PMU_API_URL", "NOT SET"),
+            "hint": "Set PMU_API_URL to your deployed Laravel URL, not localhost"
+        }), 500
 
 
 if __name__ == "__main__":
