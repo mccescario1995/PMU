@@ -9,70 +9,123 @@ on:
 
 jobs:
 
-  deploy-pmuapi:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
 
-      - name: Deploy PMUAPI
+      - name: Deploy PMU
         uses: appleboy/ssh-action@v1.0.3
 
         with:
+
           host: ${{ secrets.HOSTINGER_HOST }}
+
           username: ${{ secrets.HOSTINGER_USERNAME }}
+
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
+
           port: ${{ secrets.HOSTINGER_PORT }}
 
           script: |
 
             set -e
 
-            echo "================================="
-            echo "Deploying PMUAPI"
-            echo "================================="
 
-            DEPLOY_PATH="${{ secrets.HOSTINGER_PMUAPI_DEPLOY_PATH }}"
+            echo "=========================================="
+            echo "        PMU DEPLOYMENT"
+            echo "=========================================="
 
-            mkdir -p "$DEPLOY_PATH"
 
-            cd "$DEPLOY_PATH"
+            # ==================================================
+            # PATHS
+            # ==================================================
+
+            WEB_ROOT="${{ secrets.HOSTINGER_PUBLIC_HTML }}"
+
+            echo "Web root:"
+            echo "$WEB_ROOT"
+
+            mkdir -p "$WEB_ROOT"
+
+            cd "$WEB_ROOT"
+
+
+            # ==================================================
+            # UPDATE GITHUB REPOSITORY
+            # ==================================================
+
+            echo "=========================================="
+            echo "Updating Git repository"
+            echo "=========================================="
+
 
             if [ ! -d ".git" ]; then
 
-              echo "First deployment..."
+                echo "First deployment..."
 
-              git init
+                git init
 
-              git remote add origin "${{ secrets.HOSTINGER_GITHUB_REPO }}"
+                git remote add origin "${{ secrets.HOSTINGER_GITHUB_REPO }}"
 
-              git sparse-checkout init --cone
+                git fetch origin main
 
-              git sparse-checkout set PMUAPI
-
-              git fetch origin main
-
-              git checkout -B main origin/main
+                git checkout -B main origin/main
 
             else
 
-              echo "Updating repository..."
+                echo "Updating repository..."
 
-              git fetch origin main
+                git fetch origin main
 
-              git reset --hard origin/main
+                git reset --hard origin/main
 
             fi
 
-            cd "$DEPLOY_PATH/PMUAPI"
+
+            # ==================================================
+            # LARAVEL API
+            # ==================================================
+
+            echo "=========================================="
+            echo "Deploying PMUAPI"
+            echo "=========================================="
+
+
+            cd "$WEB_ROOT/PMUAPI"
+
+
+            echo "PHP version:"
+
+            php -v
+
+
+            echo "Composer version:"
+
+            composer --version
+
+
+            echo "Installing Laravel dependencies..."
 
             composer install \
-              --no-dev \
-              --optimize-autoloader \
-              --no-interaction
+                --no-dev \
+                --optimize-autoloader \
+                --no-interaction
 
-            php artisan migrate --force --no-interaction
+
+            echo "Running migrations..."
+
+            php artisan migrate \
+                --force \
+                --no-interaction
+
+
+            echo "Clearing Laravel cache..."
 
             php artisan optimize:clear
+
+
+            echo "Rebuilding Laravel cache..."
 
             php artisan config:cache
 
@@ -80,102 +133,116 @@ jobs:
 
             php artisan view:cache
 
+
             echo "PMUAPI deployment completed!"
 
 
-  deploy-pmui:
-    runs-on: ubuntu-latest
+            # ==================================================
+            # NUXT UI
+            # ==================================================
 
-    steps:
-
-      - name: Deploy PMUUI
-        uses: appleboy/ssh-action@v1.0.3
-
-        with:
-          host: ${{ secrets.HOSTINGER_HOST }}
-          username: ${{ secrets.HOSTINGER_USERNAME }}
-          key: ${{ secrets.HOSTINGER_SSH_KEY }}
-          port: ${{ secrets.HOSTINGER_PORT }}
-
-          script: |
-            set -e
-
-            echo "================================="
+            echo "=========================================="
             echo "Deploying PMUUI"
-            echo "================================="
+            echo "=========================================="
 
-            DEPLOY_PATH="${{ secrets.HOSTINGER_PMUUI_DEPLOY_PATH }}"
 
-            mkdir -p "$DEPLOY_PATH"
-            cd "$DEPLOY_PATH"
+            cd "$WEB_ROOT/PMUUI"
 
-            if [ ! -d ".git" ]; then
-              echo "First deployment..."
 
-              git init
+            # ==================================================
+            # LOAD NVM
+            # ==================================================
 
-              git remote add origin "${{ secrets.HOSTINGER_GITHUB_REPO }}"
-
-              git sparse-checkout init --cone
-              git sparse-checkout set PMUUI
-
-              git fetch origin main
-              git checkout -B main origin/main
-
-            else
-              echo "Updating repository..."
-
-              git fetch origin main
-              git reset --hard origin/main
-            fi
-
-            cd "$DEPLOY_PATH/PMUUI"
-
-            echo "Loading NVM..."
+            echo "Loading Node.js..."
 
             export NVM_DIR="$HOME/.nvm"
 
+
             if [ -s "$NVM_DIR/nvm.sh" ]; then
-              source "$NVM_DIR/nvm.sh"
+
+                source "$NVM_DIR/nvm.sh"
+
             fi
 
+
             echo "Node version:"
+
             node -v
 
+
             echo "NPM version:"
+
             npm -v
+
+
+            # ==================================================
+            # INSTALL NPM DEPENDENCIES
+            # ==================================================
 
             echo "Installing npm dependencies..."
 
             npm ci
 
-            echo "Building Nuxt SPA..."
+
+            # ==================================================
+            # GENERATE NUXT SPA
+            # ==================================================
+
+            echo "Generating Nuxt SPA..."
+
             npm run generate
 
-            WEB_ROOT="${{ secrets.HOSTINGER_PMUUI_WEB_ROOT }}"
-            if [ -z "$WEB_ROOT" ]; then
-              WEB_ROOT="$DEPLOY_PATH"
-            fi
 
-            echo "Deploying static files to web root: $WEB_ROOT"
-            mkdir -p "$WEB_ROOT"
-            cp -r .output/public/* "$WEB_ROOT/"
+            # ==================================================
+            # DEPLOY NUXT STATIC FILES
+            # ==================================================
 
-            echo "Creating .htaccess (SPA fallback + API routing)..."
-            cat > "$WEB_ROOT/.htaccess" << 'HTACCESS'
-            <IfModule mod_rewrite.c>
-                RewriteEngine On
+            echo "=========================================="
+            echo "Publishing Nuxt"
+            echo "=========================================="
 
-                # Route /api/ requests to Laravel backend
-                RewriteCond %{REQUEST_FILENAME} !-d
-                RewriteCond %{REQUEST_FILENAME} !-f
-                RewriteRule ^api/(.*) index.php [L,QSA]
 
-                # SPA fallback: serve index.html for all non-file routes
-                RewriteCond %{REQUEST_FILENAME} !-d
-                RewriteCond %{REQUEST_FILENAME} !-f
-                RewriteRule ^ /index.html [L]
-            </IfModule>
-            HTACCESS
+            cd "$WEB_ROOT"
+
+
+            echo "Removing previous Nuxt build..."
+
+            rm -rf _nuxt
+
+            rm -f index.html
+
+
+            echo "Copying new Nuxt build..."
+
+            cp -r "$WEB_ROOT/PMUUI/.output/public/." "$WEB_ROOT/"
+
 
             echo "PMUUI deployment completed!"
+
+
+            # ==================================================
+            # VERIFY
+            # ==================================================
+
+            echo "=========================================="
+            echo "Verifying deployment"
+            echo "=========================================="
+
+
+            test -f "$WEB_ROOT/index.html"
+
+            test -f "$WEB_ROOT/PMUAPI/public/index.php"
+
+            test -d "$WEB_ROOT/_nuxt"
+
+
+            echo "Nuxt index.html: OK"
+
+            echo "Laravel index.php: OK"
+
+            echo "Nuxt _nuxt directory: OK"
+
+
+            echo "=========================================="
+            echo "PMU DEPLOYMENT SUCCESSFUL"
+            echo "=========================================="
