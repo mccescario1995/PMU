@@ -74,8 +74,8 @@ const handleSubmit = async () => {
     <!-- <RoleBadge :role="role" /> -->
 
     <UForm @submit.prevent="handleSubmit" class="w-full">
-      <UFormField label="Username" class="text-xl">
-        <UInput v-model="username" icon="i-lucide-user" size="xl" color="secondary" placeholder="Username" 
+      <UFormField label="Email" class="text-xl">
+        <UInput v-model="username" icon="i-lucide-user" size="xl" color="secondary" placeholder="Email" 
           :ui="{ base: 'text-lg px-4 py-3' }" class="w-full mb-3" />
       </UFormField>
 
