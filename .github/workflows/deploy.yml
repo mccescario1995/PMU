@@ -42,79 +42,36 @@ jobs:
             php --version | head -n 1
             composer --version | head -n 1
 
-            echo "Preparing repository..."
-
-            echo "Checking home directory permissions..."
-            id
-            ls -ld "$HOME"
-
-            echo "Creating application directory..."
-            mkdir -pv "$HOME/apps" || {
-              echo "Cannot create $HOME/apps"
-              exit 1
-            }
-
-            mkdir -pv "$HOME/apps/pmu" || {
-              echo "Cannot create $HOME/apps/pmu"
-              exit 1
-            }
-
-            APP_ROOT="$HOME/apps/pmu"
-
-            echo "Checking application directory..."
-            ls -ld "$APP_ROOT"
-            test -d "$APP_ROOT" || {
-              echo "Application directory does not exist: $APP_ROOT"
-              exit 1
-            }
+            echo "Preparing application directory..."
+            mkdir -pv "$HOME/apps"
+            mkdir -pv "$APP_ROOT"
+            test -d "$APP_ROOT"
 
             echo "Testing write access..."
-
             TEST_FILE="$APP_ROOT/.deployment-test.$$"
-
             if ! (umask 077 && printf 'deployment test\n' > "$TEST_FILE"); then
               echo "Cannot write to $APP_ROOT"
               exit 1
             fi
+            rm -f -- "$TEST_FILE"
 
-            echo "Write test succeeded"
-
-            if ! rm -f -- "$TEST_FILE"; then
-              echo "Cannot remove temporary test file: $TEST_FILE"
-              exit 1
-            fi
-
-            echo "Write test cleanup succeeded"
-
-            echo "Contents of application directory:"
-            ls -la "$APP_ROOT"
-
+            echo "Synchronizing repository..."
             if [ -d "$APP_ROOT/.git" ]; then
               echo "Existing Git repository found; updating..."
               git -C "$APP_ROOT" fetch --prune origin "$BRANCH"
               git -C "$APP_ROOT" reset --hard "origin/$BRANCH"
-              git -C "$APP_ROOT" clean -fd
+              echo "Repository reset completed."
+              git -C "$APP_ROOT" status --short
             else
               echo "No Git repository found."
-
               if find "$APP_ROOT" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
                 echo "Application directory is not empty and is not a Git repository."
-                echo "Move or remove its existing contents before cloning."
+                echo "Inspect and remove old deployment files before cloning."
+                ls -la "$APP_ROOT"
                 exit 1
               fi
-
               echo "Cloning repository..."
               git clone --branch "$BRANCH" --single-branch "$REPOSITORY" "$APP_ROOT"
-            fi
-
-            if [ ! -d "$APP_ROOT/.git" ]; then
-              echo "Cloning repository..."
-              git clone --branch "$BRANCH" --single-branch "$REPOSITORY" "$APP_ROOT"
-            else
-              echo "Updating repository..."
-              git -C "$APP_ROOT" fetch --prune origin "$BRANCH"
-              git -C "$APP_ROOT" reset --hard "origin/$BRANCH"
-              git -C "$APP_ROOT" clean -fd
             fi
 
             echo "Checking repository structure..."
@@ -124,7 +81,7 @@ jobs:
             test -f "$APP_ROOT/PMUAPI/artisan" || { echo "Missing Laravel artisan file"; exit 1; }
             test -f "$APP_ROOT/PMUAPI/composer.json" || { echo "Missing Laravel composer.json"; exit 1; }
             test -f "$APP_ROOT/PMUUI/package.json" || { echo "Missing Nuxt package.json"; exit 1; }
-            test -f "$APP_ROOT/PMUUI/package-lock.json" || { echo "Missing Nuxt package-lock.json; run npm install locally and commit it"; exit 1; }
+            test -f "$APP_ROOT/PMUUI/package-lock.json" || { echo "Missing Nuxt package-lock.json"; exit 1; }
 
             echo "Deploying Laravel..."
             cd "$APP_ROOT/PMUAPI"
@@ -141,9 +98,8 @@ jobs:
             if [ -s "$NVM_DIR/nvm.sh" ]; then
               . "$NVM_DIR/nvm.sh"
             fi
-
-            command -v node || { echo "Node.js is not available in this SSH environment"; exit 127; }
-            command -v npm || { echo "npm is not available in this SSH environment"; exit 127; }
+            command -v node || { echo "Node.js is not available"; exit 127; }
+            command -v npm || { echo "npm is not available"; exit 127; }
             node --version
             npm --version
 
@@ -166,7 +122,6 @@ jobs:
             mkdir -p "$WEB_ROOT/api"
             cp -a "$APP_ROOT/PMUAPI/public/." "$WEB_ROOT/api/"
 
-            # This wrapper keeps Laravel's vendor and bootstrap directories private.
             cat > "$WEB_ROOT/api/index.php" <<PHP
             <?php
             require '$APP_ROOT/PMUAPI/public/index.php';
