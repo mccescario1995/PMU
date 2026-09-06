@@ -26,7 +26,7 @@ jobs:
             trap 'status=$?; echo "FAILED at line $LINENO: $BASH_COMMAND (exit code $status)"; exit "$status"' ERR
 
             WEB_ROOT='${{ secrets.HOSTINGER_PUBLIC_HTML }}'
-            APP_ROOT='${{ secrets.HOSTINGER_APP_ROOT }}'
+            APP_ROOT="$HOME/apps/pmu"
             REPOSITORY='${{ secrets.HOSTINGER_GITHUB_REPO }}'
             BRANCH='main'
 
@@ -44,6 +44,10 @@ jobs:
 
             echo "Preparing repository..."
             mkdir -p "$APP_ROOT"
+            test -d "$APP_ROOT" || {
+              echo "Cannot create application directory: $APP_ROOT"
+              exit 1
+            }
 
             if [ ! -d "$APP_ROOT/.git" ]; then
               echo "Cloning repository..."
