@@ -1,248 +1,90 @@
-name: Deploy PMU to Hostinger
+name: Deploy PMU
 
 on:
   push:
-    branches:
-      - main
-
+    branches: [main]
   workflow_dispatch:
 
-jobs:
+permissions:
+  contents: read
 
+jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-
-      - name: Deploy PMU
+      - name: Deploy on Hostinger
         uses: appleboy/ssh-action@v1.0.3
-
         with:
-
           host: ${{ secrets.HOSTINGER_HOST }}
-
           username: ${{ secrets.HOSTINGER_USERNAME }}
-
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
-
           port: ${{ secrets.HOSTINGER_PORT }}
-
+          script_stop: true
           script: |
+            set -Eeuo pipefail
 
-            set -e
+            WEB_ROOT='${{ secrets.HOSTINGER_PUBLIC_HTML }}'
+            APP_ROOT='${{ secrets.HOSTINGER_APP_ROOT }}'
+            REPOSITORY='${{ secrets.HOSTINGER_GITHUB_REPO }}'
+            BRANCH='main'
 
-
-            echo "=========================================="
-            echo "        PMU DEPLOYMENT"
-            echo "=========================================="
-
-
-            # ==================================================
-            # PATHS
-            # ==================================================
-
-            WEB_ROOT="${{ secrets.HOSTINGER_PUBLIC_HTML }}"
-
-            echo "Web root:"
-            echo "$WEB_ROOT"
-
-            mkdir -p "$WEB_ROOT"
-
-            cd "$WEB_ROOT"
-
-
-            # ==================================================
-            # UPDATE GITHUB REPOSITORY
-            # ==================================================
-
-            echo "=========================================="
-            echo "Updating Git repository"
-            echo "=========================================="
-
-
-            if [ ! -d ".git" ]; then
-
-                echo "First deployment..."
-
-                git init
-
-                git remote add origin "${{ secrets.HOSTINGER_GITHUB_REPO }}"
-
-                git fetch origin main
-
-                git checkout -B main origin/main
-
+            # Keep the Git repository outside the public web root.
+            mkdir -p "$APP_ROOT"
+            if [ ! -d "$APP_ROOT/.git" ]; then
+              git clone --branch "$BRANCH" --single-branch "$REPOSITORY" "$APP_ROOT"
             else
-
-                echo "Updating repository..."
-
-                git fetch origin main
-
-                git reset --hard origin/main
-
+              git -C "$APP_ROOT" fetch --prune origin "$BRANCH"
+              git -C "$APP_ROOT" reset --hard "origin/$BRANCH"
+              git -C "$APP_ROOT" clean -fd
             fi
 
-
-            # ==================================================
-            # LARAVEL API
-            # ==================================================
-
-            echo "=========================================="
-            echo "Deploying PMUAPI"
-            echo "=========================================="
-
-
-            cd "$WEB_ROOT/PMUAPI"
-
-
-            echo "PHP version:"
-
-            php -v
-
-
-            echo "Composer version:"
-
-            composer --version
-
-
-            echo "Installing Laravel dependencies..."
-
-            composer install \
-                --no-dev \
-                --optimize-autoloader \
-                --no-interaction
-
-
-            echo "Running migrations..."
-
-            php artisan migrate \
-                --force \
-                --no-interaction
-
-
-            echo "Clearing Laravel cache..."
-
+            # Laravel backend
+            cd "$APP_ROOT/PMUAPI"
+            test -f artisan
+            composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+            php artisan migrate --force --no-interaction
             php artisan optimize:clear
-
-
-            echo "Rebuilding Laravel cache..."
-
             php artisan config:cache
-
             php artisan route:cache
-
             php artisan view:cache
 
-
-            echo "PMUAPI deployment completed!"
-
-
-            # ==================================================
-            # NUXT UI
-            # ==================================================
-
-            echo "=========================================="
-            echo "Deploying PMUUI"
-            echo "=========================================="
-
-
-            cd "$WEB_ROOT/PMUUI"
-
-
-            # ==================================================
-            # LOAD NVM
-            # ==================================================
-
-            echo "Loading Node.js..."
-
+            # Nuxt static frontend
             export NVM_DIR="$HOME/.nvm"
-
-
-            if [ -s "$NVM_DIR/nvm.sh" ]; then
-
-                source "$NVM_DIR/nvm.sh"
-
-            fi
-
-
-            echo "Node version:"
-
-            node -v
-
-
-            echo "NPM version:"
-
-            npm -v
-
-
-            # ==================================================
-            # INSTALL NPM DEPENDENCIES
-            # ==================================================
-
-            echo "Installing npm dependencies..."
-
+            if [ -s "$NVM_DIR/nvm.sh" ]; then . "$NVM_DIR/nvm.sh"; fi
+            cd "$APP_ROOT/PMUUI"
+            test -f package.json
             npm ci
-
-
-            # ==================================================
-            # GENERATE NUXT SPA
-            # ==================================================
-
-            echo "Generating Nuxt SPA..."
-
             npm run generate
+            test -f .output/public/index.html
 
+            # Publish Nuxt without deleting /api.
+            mkdir -p "$WEB_ROOT"
+            find "$WEB_ROOT" -mindepth 1 -maxdepth 1 \
+              ! -name api ! -name .well-known -exec rm -rf {} +
+            cp -a .output/public/. "$WEB_ROOT/"
 
-            # ==================================================
-            # DEPLOY NUXT STATIC FILES
-            # ==================================================
+            # Publish Laravel public assets under /api.
+            rm -rf "$WEB_ROOT/api"
+            mkdir -p "$WEB_ROOT/api"
+            cp -a "$APP_ROOT/PMUAPI/public/." "$WEB_ROOT/api/"
 
-            echo "=========================================="
-            echo "Publishing Nuxt"
-            echo "=========================================="
+            # Use a wrapper so Laravel resolves vendor/bootstrap from APP_ROOT.
+            cat > "$WEB_ROOT/api/index.php" <<PHP
+            <?php
+            require '$APP_ROOT/PMUAPI/public/index.php';
+            PHP
 
-
-            cd "$WEB_ROOT"
-
-
-            echo "Removing previous Nuxt build..."
-
-            rm -rf _nuxt
-
-            rm -f index.html
-
-
-            echo "Copying new Nuxt build..."
-
-            cp -r "$WEB_ROOT/PMUUI/.output/public/." "$WEB_ROOT/"
-
-
-            echo "PMUUI deployment completed!"
-
-
-            # ==================================================
-            # VERIFY
-            # ==================================================
-
-            echo "=========================================="
-            echo "Verifying deployment"
-            echo "=========================================="
-
+            cat > "$WEB_ROOT/api/.htaccess" <<'HTACCESS'
+            <IfModule mod_rewrite.c>
+                RewriteEngine On
+                RewriteBase /api/
+                RewriteCond %{REQUEST_FILENAME} !-f
+                RewriteCond %{REQUEST_FILENAME} !-d
+                RewriteRule ^ index.php [L]
+            </IfModule>
+            HTACCESS
 
             test -f "$WEB_ROOT/index.html"
-
-            test -f "$WEB_ROOT/PMUAPI/public/index.php"
-
+            test -f "$WEB_ROOT/api/index.php"
             test -d "$WEB_ROOT/_nuxt"
-
-
-            echo "Nuxt index.html: OK"
-
-            echo "Laravel index.php: OK"
-
-            echo "Nuxt _nuxt directory: OK"
-
-
-            echo "=========================================="
-            echo "PMU DEPLOYMENT SUCCESSFUL"
-            echo "=========================================="
+            echo 'Deployment completed successfully.'
