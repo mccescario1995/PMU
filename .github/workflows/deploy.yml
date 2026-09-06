@@ -43,11 +43,37 @@ jobs:
             composer --version | head -n 1
 
             echo "Preparing repository..."
-            mkdir -p "$APP_ROOT"
-            test -d "$APP_ROOT" || {
-              echo "Cannot create application directory: $APP_ROOT"
+
+            echo "Checking home directory permissions..."
+            id
+            ls -ld "$HOME"
+
+            echo "Creating application directory..."
+            mkdir -pv "$HOME/apps" || {
+              echo "Cannot create $HOME/apps"
               exit 1
             }
+
+            mkdir -pv "$HOME/apps/pmu" || {
+              echo "Cannot create $HOME/apps/pmu"
+              exit 1
+            }
+
+            APP_ROOT="$HOME/apps/pmu"
+
+            echo "Checking application directory..."
+            ls -ld "$APP_ROOT"
+            test -d "$APP_ROOT" || {
+              echo "Application directory does not exist: $APP_ROOT"
+              exit 1
+            }
+
+            echo "Testing write access..."
+            touch "$APP_ROOT/.deployment-test" || {
+              echo "Cannot write to $APP_ROOT"
+              exit 1
+            }
+            rm -f "$APP_ROOT/.deployment-test"
 
             if [ ! -d "$APP_ROOT/.git" ]; then
               echo "Cloning repository..."
