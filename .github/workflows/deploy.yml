@@ -11,6 +11,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Deploy on Hostinger
         uses: appleboy/ssh-action@v1.0.3
@@ -22,25 +23,50 @@ jobs:
           script_stop: true
           script: |
             set -Eeuo pipefail
+            trap 'status=$?; echo "FAILED at line $LINENO: $BASH_COMMAND (exit code $status)"; exit "$status"' ERR
 
             WEB_ROOT='${{ secrets.HOSTINGER_PUBLIC_HTML }}'
             APP_ROOT='${{ secrets.HOSTINGER_APP_ROOT }}'
             REPOSITORY='${{ secrets.HOSTINGER_GITHUB_REPO }}'
             BRANCH='main'
 
-            # Keep the Git repository outside the public web root.
+            echo "Starting deployment..."
+            echo "Home directory: $HOME"
+            echo "Web root: $WEB_ROOT"
+            echo "Application root: $APP_ROOT"
+
+            echo "Checking required server commands..."
+            command -v git
+            command -v php
+            command -v composer
+            php --version | head -n 1
+            composer --version | head -n 1
+
+            echo "Preparing repository..."
             mkdir -p "$APP_ROOT"
+
             if [ ! -d "$APP_ROOT/.git" ]; then
+              echo "Cloning repository..."
               git clone --branch "$BRANCH" --single-branch "$REPOSITORY" "$APP_ROOT"
             else
+              echo "Updating repository..."
               git -C "$APP_ROOT" fetch --prune origin "$BRANCH"
               git -C "$APP_ROOT" reset --hard "origin/$BRANCH"
               git -C "$APP_ROOT" clean -fd
             fi
 
-            # Laravel backend
+            echo "Checking repository structure..."
+            git -C "$APP_ROOT" rev-parse --short HEAD
+            test -d "$APP_ROOT/PMUAPI" || { echo "Missing PMUAPI directory"; exit 1; }
+            test -d "$APP_ROOT/PMUUI" || { echo "Missing PMUUI directory"; exit 1; }
+            test -f "$APP_ROOT/PMUAPI/artisan" || { echo "Missing Laravel artisan file"; exit 1; }
+            test -f "$APP_ROOT/PMUAPI/composer.json" || { echo "Missing Laravel composer.json"; exit 1; }
+            test -f "$APP_ROOT/PMUUI/package.json" || { echo "Missing Nuxt package.json"; exit 1; }
+            test -f "$APP_ROOT/PMUUI/package-lock.json" || { echo "Missing Nuxt package-lock.json; run npm install locally and commit it"; exit 1; }
+
+            echo "Deploying Laravel..."
             cd "$APP_ROOT/PMUAPI"
-            test -f artisan
+            test -f .env || { echo "Missing Laravel .env at $APP_ROOT/PMUAPI/.env"; exit 1; }
             composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
             php artisan migrate --force --no-interaction
             php artisan optimize:clear
@@ -48,44 +74,37 @@ jobs:
             php artisan route:cache
             php artisan view:cache
 
-            # Nuxt static frontend
+            echo "Loading Node.js..."
             export NVM_DIR="$HOME/.nvm"
-            
             if [ -s "$NVM_DIR/nvm.sh" ]; then
               . "$NVM_DIR/nvm.sh"
             fi
 
-            if ! command -v node >/dev/null 2>&1; then
-              echo "Node.js is not available in this SSH environment."
-              exit 127
-            fi
-
-            if ! command -v npm >/dev/null 2>&1; then
-              echo "npm is not available in this SSH environment."
-              exit 127
-            fi
-
+            command -v node || { echo "Node.js is not available in this SSH environment"; exit 127; }
+            command -v npm || { echo "npm is not available in this SSH environment"; exit 127; }
             node --version
             npm --version
 
+            echo "Building Nuxt..."
             cd "$APP_ROOT/PMUUI"
-            test -f package.json
             npm ci
             npm run generate
-            test -f .output/public/index.html
+            test -f .output/public/index.html || { echo "Nuxt output was not generated"; exit 1; }
 
-            # Publish Nuxt without deleting /api.
+            echo "Publishing Nuxt frontend..."
             mkdir -p "$WEB_ROOT"
             find "$WEB_ROOT" -mindepth 1 -maxdepth 1 \
-              ! -name api ! -name .well-known -exec rm -rf {} +
+              ! -name api \
+              ! -name .well-known \
+              -exec rm -rf {} +
             cp -a .output/public/. "$WEB_ROOT/"
 
-            # Publish Laravel public assets under /api.
+            echo "Publishing Laravel API..."
             rm -rf "$WEB_ROOT/api"
             mkdir -p "$WEB_ROOT/api"
             cp -a "$APP_ROOT/PMUAPI/public/." "$WEB_ROOT/api/"
 
-            # Use a wrapper so Laravel resolves vendor/bootstrap from APP_ROOT.
+            # This wrapper keeps Laravel's vendor and bootstrap directories private.
             cat > "$WEB_ROOT/api/index.php" <<PHP
             <?php
             require '$APP_ROOT/PMUAPI/public/index.php';
@@ -101,7 +120,8 @@ jobs:
             </IfModule>
             HTACCESS
 
+            echo "Running final checks..."
             test -f "$WEB_ROOT/index.html"
             test -f "$WEB_ROOT/api/index.php"
             test -d "$WEB_ROOT/_nuxt"
-            echo 'Deployment completed successfully.'
+            echo "Deployment completed successfully."
