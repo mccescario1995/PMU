@@ -69,11 +69,43 @@ jobs:
             }
 
             echo "Testing write access..."
-            touch "$APP_ROOT/.deployment-test" || {
+
+            TEST_FILE="$APP_ROOT/.deployment-test.$$"
+
+            if ! (umask 077 && printf 'deployment test\n' > "$TEST_FILE"); then
               echo "Cannot write to $APP_ROOT"
               exit 1
-            }
-            rm -f "$APP_ROOT/.deployment-test"
+            fi
+
+            echo "Write test succeeded"
+
+            if ! rm -f -- "$TEST_FILE"; then
+              echo "Cannot remove temporary test file: $TEST_FILE"
+              exit 1
+            fi
+
+            echo "Write test cleanup succeeded"
+
+            echo "Contents of application directory:"
+            ls -la "$APP_ROOT"
+
+            if [ -d "$APP_ROOT/.git" ]; then
+              echo "Existing Git repository found; updating..."
+              git -C "$APP_ROOT" fetch --prune origin "$BRANCH"
+              git -C "$APP_ROOT" reset --hard "origin/$BRANCH"
+              git -C "$APP_ROOT" clean -fd
+            else
+              echo "No Git repository found."
+
+              if find "$APP_ROOT" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
+                echo "Application directory is not empty and is not a Git repository."
+                echo "Move or remove its existing contents before cloning."
+                exit 1
+              fi
+
+              echo "Cloning repository..."
+              git clone --branch "$BRANCH" --single-branch "$REPOSITORY" "$APP_ROOT"
+            fi
 
             if [ ! -d "$APP_ROOT/.git" ]; then
               echo "Cloning repository..."
