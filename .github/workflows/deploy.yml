@@ -135,60 +135,26 @@ jobs:
             echo "Loading Node.js"
             echo "=========================================="
 
-            export NVM_DIR="$HOME/.nvm"
 
-            if [ -s "$NVM_DIR/nvm.sh" ]; then
-              echo "NVM detected."
-              source "$NVM_DIR/nvm.sh"
-            fi
+            NODE_BIN="/opt/alt/alt-nodejs22/root/usr/bin"
 
-            # Check normal PATH first
-            if command -v node >/dev/null 2>&1; then
-              echo "Node.js found in PATH."
-            else
-
-              echo "Node.js not currently in PATH."
-
-              # Try common Hostinger/NVM locations
-              for NODE_BIN in \
-                "$HOME/.nvm/versions/node/"*/bin \
-                "$HOME/.local/bin" \
-                "$HOME/bin"
-              do
-                if [ -x "$NODE_BIN/node" ]; then
-                  echo "Found Node.js at:"
-                  echo "$NODE_BIN"
-
-                  export PATH="$NODE_BIN:$PATH"
-
-                  break
-                fi
-              done
-            fi
-
-            if ! command -v node >/dev/null 2>&1; then
-              echo ""
-              echo "ERROR: Node.js could not be found."
-              echo ""
-              echo "PATH:"
-              echo "$PATH"
-              echo ""
-              echo "Searching for node:"
-              find "$HOME" -type f -name node -perm -111 2>/dev/null | head -20
+            if [ ! -x "$NODE_BIN/node" ]; then
+              echo "Node.js 22 was not found at: $NODE_BIN"
               exit 127
             fi
 
-            if ! command -v npm >/dev/null 2>&1; then
-              echo "ERROR: npm could not be found."
-              exit 127
-            fi
+            export PATH="$NODE_BIN:$PATH"
 
-            echo ""
-            echo "Node:"
+            echo "Node.js path:"
+            command -v node
+
+            echo "npm path:"
+            command -v npm
+
+            echo "Node version:"
             node --version
 
-            echo ""
-            echo "npm:"
+            echo "npm version:"
             npm --version
 
 
