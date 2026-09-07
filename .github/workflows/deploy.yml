@@ -2,7 +2,9 @@ name: Deploy PMU
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
   workflow_dispatch:
 
 permissions:
@@ -10,165 +12,576 @@ permissions:
 
 jobs:
   deploy:
+    name: Deploy PMU to Hostinger
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy on Hostinger
+
+      # ============================================================
+      # DEPLOY TO HOSTINGER
+      # ============================================================
+      - name: Deploy to Hostinger
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          HOSTINGER_PUBLIC_HTML: ${{ secrets.HOSTINGER_PUBLIC_HTML }}
+          HOSTINGER_GITHUB_REPO: ${{ secrets.HOSTINGER_GITHUB_REPO }}
+          HOSTINGER_ENV_B64: ${{ secrets.HOSTINGER_ENV_B64 }}
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
+
           script_stop: true
+
+          envs: HOSTINGER_PUBLIC_HTML,HOSTINGER_GITHUB_REPO,HOSTINGER_ENV_B64
+
+          command_timeout: 30m
+
           script: |
+            #!/usr/bin/env bash
+
             set -Eeuo pipefail
-            trap 'status=$?; echo "FAILED at line $LINENO: $BASH_COMMAND (exit code $status)"; exit "$status"' ERR
 
-            WEB_ROOT='${{ secrets.HOSTINGER_PUBLIC_HTML }}'
+            trap '
+              status=$?
+              echo ""
+              echo "=========================================="
+              echo "DEPLOYMENT FAILED"
+              echo "=========================================="
+              echo "Line: $LINENO"
+              echo "Command: $BASH_COMMAND"
+              echo "Exit code: $status"
+              echo "=========================================="
+              exit "$status"
+            ' ERR
+
+
+            # ========================================================
+            # CONFIGURATION
+            # ========================================================
+
+            BRANCH="main"
+
             APP_ROOT="$HOME/apps/pmu"
-            REPOSITORY='${{ secrets.HOSTINGER_GITHUB_REPO }}'
-            BRANCH='main'
 
-            echo "Starting deployment..."
-            echo "Home directory: $HOME"
-            echo "Web root: $WEB_ROOT"
-            echo "Application root: $APP_ROOT"
+            API_ROOT="$APP_ROOT/PMUAPI"
 
-            echo "Checking required server commands..."
+            UI_ROOT="$APP_ROOT/PMUUI"
+
+            WEB_ROOT="$HOSTINGER_PUBLIC_HTML"
+
+            ENV_FILE="$API_ROOT/.env"
+
+
+            echo ""
+            echo "=========================================="
+            echo "        PMU DEPLOYMENT"
+            echo "=========================================="
+            echo ""
+
+            echo "Home directory:"
+            echo "$HOME"
+
+            echo ""
+            echo "Application root:"
+            echo "$APP_ROOT"
+
+            echo ""
+            echo "Laravel:"
+            echo "$API_ROOT"
+
+            echo ""
+            echo "Nuxt:"
+            echo "$UI_ROOT"
+
+            echo ""
+            echo "Web root:"
+            echo "$WEB_ROOT"
+
+
+            # ========================================================
+            # CHECK SERVER
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Checking server"
+            echo "=========================================="
+
+            echo "User:"
+            whoami
+
+            echo ""
+            echo "Git:"
             command -v git
+            git --version
+
+            echo ""
+            echo "PHP:"
             command -v php
+            php -v | head -n 1
+
+            echo ""
+            echo "Composer:"
             command -v composer
-            php --version | head -n 1
             composer --version | head -n 1
 
-            echo "Preparing application directory..."
-            mkdir -pv "$HOME/apps"
-            mkdir -pv "$APP_ROOT"
-            test -d "$APP_ROOT"
 
-            echo "Testing write access..."
-            TEST_FILE="$APP_ROOT/.deployment-test.$$"
-            if ! (umask 077 && printf 'deployment test\n' > "$TEST_FILE"); then
-              echo "Cannot write to $APP_ROOT"
-              exit 1
-            fi
-            rm -f -- "$TEST_FILE"
+            # ========================================================
+            # NODE.JS
+            # ========================================================
 
-            echo "Synchronizing repository..."
-            if [ -d "$APP_ROOT/.git" ]; then
-              echo "Existing Git repository found; updating..."
-              git -C "$APP_ROOT" fetch --prune origin "$BRANCH"
-              git -C "$APP_ROOT" reset --hard "origin/$BRANCH"
-              echo "Repository reset completed."
-              git -C "$APP_ROOT" status --short
-            else
-              echo "No Git repository found."
-              if find "$APP_ROOT" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
-                echo "Application directory is not empty and is not a Git repository."
-                ls -la "$APP_ROOT"
-                exit 1
-              fi
-              echo "Cloning repository..."
-              git clone --branch "$BRANCH" --single-branch "$REPOSITORY" "$APP_ROOT"
-            fi
+            echo ""
+            echo "=========================================="
+            echo "Loading Node.js"
+            echo "=========================================="
 
-            echo "Checking repository structure..."
-            git -C "$APP_ROOT" rev-parse --short HEAD
-            test -d "$APP_ROOT/PMUAPI" || { echo "Missing PMUAPI directory"; exit 1; }
-            test -d "$APP_ROOT/PMUUI" || { echo "Missing PMUUI directory"; exit 1; }
-            test -f "$APP_ROOT/PMUAPI/artisan" || { echo "Missing Laravel artisan file"; exit 1; }
-            test -f "$APP_ROOT/PMUAPI/composer.json" || { echo "Missing Laravel composer.json"; exit 1; }
-            test -f "$APP_ROOT/PMUUI/package.json" || { echo "Missing Nuxt package.json"; exit 1; }
-            test -f "$APP_ROOT/PMUUI/package-lock.json" || { echo "Missing Nuxt package-lock.json"; exit 1; }
-
-            echo "Checking Laravel environment file..."
-            ENV_FILE="$APP_ROOT/PMUAPI/.env"
-            ENV_EXAMPLE="$APP_ROOT/PMUAPI/.env.example"
-
-            if [ ! -f "$ENV_FILE" ]; then
-              echo "Production .env does not exist."
-              test -f "$ENV_EXAMPLE" || {
-                echo "Missing .env.example"
-                exit 1
-              }
-              cp "$ENV_EXAMPLE" "$ENV_FILE"
-              chmod 600 "$ENV_FILE"
-              echo "Created $ENV_FILE from .env.example."
-              echo "Set APP_ENV, APP_DEBUG, APP_URL, APP_KEY, and database values, then rerun the workflow."
-              exit 1
-            fi
-
-            chmod 600 "$ENV_FILE"
-            grep -q '^APP_KEY=.' "$ENV_FILE" || {
-              echo "APP_KEY is missing or empty in $ENV_FILE"
-              exit 1
-            }
-            grep -q '^DB_DATABASE=.' "$ENV_FILE" || {
-              echo "DB_DATABASE is missing or empty in $ENV_FILE"
-              exit 1
-            }
-            grep -q '^DB_USERNAME=.' "$ENV_FILE" || {
-              echo "DB_USERNAME is missing or empty in $ENV_FILE"
-              exit 1
-            }
-
-            echo "Deploying Laravel..."
-            cd "$APP_ROOT/PMUAPI"
-            composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
-            php artisan migrate --force --no-interaction
-            php artisan optimize:clear
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-
-            echo "Loading Node.js..."
             export NVM_DIR="$HOME/.nvm"
+
             if [ -s "$NVM_DIR/nvm.sh" ]; then
-              . "$NVM_DIR/nvm.sh"
+              echo "NVM detected."
+              source "$NVM_DIR/nvm.sh"
             fi
-            command -v node || { echo "Node.js is not available"; exit 127; }
-            command -v npm || { echo "npm is not available"; exit 127; }
+
+            # Check normal PATH first
+            if command -v node >/dev/null 2>&1; then
+              echo "Node.js found in PATH."
+            else
+
+              echo "Node.js not currently in PATH."
+
+              # Try common Hostinger/NVM locations
+              for NODE_BIN in \
+                "$HOME/.nvm/versions/node/"*/bin \
+                "$HOME/.local/bin" \
+                "$HOME/bin"
+              do
+                if [ -x "$NODE_BIN/node" ]; then
+                  echo "Found Node.js at:"
+                  echo "$NODE_BIN"
+
+                  export PATH="$NODE_BIN:$PATH"
+
+                  break
+                fi
+              done
+            fi
+
+            if ! command -v node >/dev/null 2>&1; then
+              echo ""
+              echo "ERROR: Node.js could not be found."
+              echo ""
+              echo "PATH:"
+              echo "$PATH"
+              echo ""
+              echo "Searching for node:"
+              find "$HOME" -type f -name node -perm -111 2>/dev/null | head -20
+              exit 127
+            fi
+
+            if ! command -v npm >/dev/null 2>&1; then
+              echo "ERROR: npm could not be found."
+              exit 127
+            fi
+
+            echo ""
+            echo "Node:"
             node --version
+
+            echo ""
+            echo "npm:"
             npm --version
 
-            echo "Building Nuxt..."
-            cd "$APP_ROOT/PMUUI"
+
+            # ========================================================
+            # PREPARE DIRECTORIES
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Preparing directories"
+            echo "=========================================="
+
+            mkdir -p "$HOME/apps"
+
+            mkdir -p "$APP_ROOT"
+
+            test -d "$APP_ROOT"
+
+
+            # ========================================================
+            # GIT REPOSITORY
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Synchronizing Git repository"
+            echo "=========================================="
+
+            if [ -d "$APP_ROOT/.git" ]; then
+
+              echo "Existing repository found."
+
+              git -C "$APP_ROOT" fetch --prune origin "$BRANCH"
+
+              git -C "$APP_ROOT" reset --hard "origin/$BRANCH"
+
+              git -C "$APP_ROOT" clean -fd
+
+            else
+
+              echo "Repository does not exist."
+
+              if find "$APP_ROOT" \
+                -mindepth 1 \
+                -maxdepth 1 \
+                -print \
+                -quit | grep -q .
+              then
+
+                echo ""
+                echo "ERROR:"
+                echo "$APP_ROOT is not empty but is not a Git repository."
+
+                ls -la "$APP_ROOT"
+
+                exit 1
+              fi
+
+              echo "Cloning repository..."
+
+              git clone \
+                --branch "$BRANCH" \
+                --single-branch \
+                "$HOSTINGER_GITHUB_REPO" \
+                "$APP_ROOT"
+
+            fi
+
+
+            echo ""
+            echo "Current commit:"
+
+            git -C "$APP_ROOT" rev-parse --short HEAD
+
+            echo ""
+            echo "Git status:"
+
+            git -C "$APP_ROOT" status --short
+
+
+            # ========================================================
+            # VERIFY PROJECT STRUCTURE
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Checking project structure"
+            echo "=========================================="
+
+            test -d "$API_ROOT" || {
+              echo "PMUAPI directory missing."
+              exit 1
+            }
+
+            test -d "$UI_ROOT" || {
+              echo "PMUUI directory missing."
+              exit 1
+            }
+
+            test -f "$API_ROOT/artisan" || {
+              echo "Laravel artisan file missing."
+              exit 1
+            }
+
+            test -f "$API_ROOT/composer.json" || {
+              echo "Laravel composer.json missing."
+              exit 1
+            }
+
+            test -f "$UI_ROOT/package.json" || {
+              echo "Nuxt package.json missing."
+              exit 1
+            }
+
+            test -f "$UI_ROOT/package-lock.json" || {
+              echo "Nuxt package-lock.json missing."
+              exit 1
+            }
+
+
+            # ========================================================
+            # LARAVEL ENVIRONMENT
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Configuring Laravel environment"
+            echo "=========================================="
+
+            if [ -n "${HOSTINGER_ENV_B64:-}" ]; then
+
+              echo "Writing Laravel .env from base64 secret."
+
+              printf '%s' "$HOSTINGER_ENV_B64" | base64 --decode > "$ENV_FILE"
+
+              chmod 600 "$ENV_FILE"
+
+            elif [ ! -f "$ENV_FILE" ]; then
+
+              echo ""
+              echo "ERROR: Laravel .env does not exist."
+              echo ""
+              echo "Either:"
+              echo "1. Create $ENV_FILE manually on Hostinger"
+              echo "2. Configure HOSTINGER_ENV_B64 in GitHub Secrets"
+
+              exit 1
+
+            else
+
+              echo "Existing Laravel .env found."
+
+              chmod 600 "$ENV_FILE"
+
+            fi
+
+
+            # ========================================================
+            # VALIDATE ENVIRONMENT
+            # ========================================================
+
+            echo ""
+            echo "Validating Laravel environment..."
+
+            grep -q '^APP_KEY=.' "$ENV_FILE" || {
+              echo "ERROR: APP_KEY is missing."
+              exit 1
+            }
+
+            grep -q '^APP_URL=.' "$ENV_FILE" || {
+              echo "ERROR: APP_URL is missing."
+              exit 1
+            }
+
+            grep -q '^DB_DATABASE=.' "$ENV_FILE" || {
+              echo "ERROR: DB_DATABASE is missing."
+              exit 1
+            }
+
+            grep -q '^DB_USERNAME=.' "$ENV_FILE" || {
+              echo "ERROR: DB_USERNAME is missing."
+              exit 1
+            }
+
+
+            # ========================================================
+            # LARAVEL DEPLOYMENT
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Deploying Laravel API"
+            echo "=========================================="
+
+            cd "$API_ROOT"
+
+            echo ""
+            echo "Installing Composer dependencies..."
+
+            composer install \
+              --no-dev \
+              --prefer-dist \
+              --no-interaction \
+              --optimize-autoloader
+
+
+            echo ""
+            echo "Running migrations..."
+
+            php artisan migrate \
+              --force \
+              --no-interaction
+
+
+            echo ""
+            echo "Clearing Laravel cache..."
+
+            php artisan optimize:clear
+
+
+            echo ""
+            echo "Caching Laravel configuration..."
+
+            php artisan config:cache
+
+
+            echo ""
+            echo "Caching routes..."
+
+            php artisan route:cache
+
+
+            echo ""
+            echo "Caching views..."
+
+            php artisan view:cache
+
+
+            # ========================================================
+            # NUXT BUILD
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Building Nuxt frontend"
+            echo "=========================================="
+
+            cd "$UI_ROOT"
+
+            echo ""
+            echo "Installing npm dependencies..."
+
             npm ci
+
+
+            echo ""
+            echo "Generating Nuxt application..."
+
             npm run generate
-            test -f .output/public/index.html || { echo "Nuxt output was not generated"; exit 1; }
 
-            echo "Publishing Nuxt frontend..."
+
+            if [ ! -f ".output/public/index.html" ]; then
+
+              echo ""
+              echo "ERROR: Nuxt output was not generated."
+
+              echo ""
+              echo "Output directory:"
+
+              find .output -maxdepth 3 -type f 2>/dev/null | head -100
+
+              exit 1
+
+            fi
+
+
+            # ========================================================
+            # PUBLISH FRONTEND
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Publishing Nuxt frontend"
+            echo "=========================================="
+
             mkdir -p "$WEB_ROOT"
-            find "$WEB_ROOT" -mindepth 1 -maxdepth 1 \
-              ! -name api \
-              ! -name .well-known \
+
+            echo "Cleaning old frontend files..."
+
+            find "$WEB_ROOT" \
+              -mindepth 1 \
+              -maxdepth 1 \
+              ! -name "api" \
+              ! -name ".well-known" \
               -exec rm -rf {} +
-            cp -a .output/public/. "$WEB_ROOT/"
 
-            echo "Publishing Laravel API..."
+
+            echo "Copying Nuxt build..."
+
+            cp -a "$UI_ROOT/.output/public/." "$WEB_ROOT/"
+
+
+            # ========================================================
+            # PUBLISH API
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Publishing Laravel API"
+            echo "=========================================="
+
             rm -rf "$WEB_ROOT/api"
+
             mkdir -p "$WEB_ROOT/api"
-            cp -a "$APP_ROOT/PMUAPI/public/." "$WEB_ROOT/api/"
 
-            printf '%s\n' \
-              '<?php' \
-              "require '$APP_ROOT/PMUAPI/public/index.php';" \
-              > "$WEB_ROOT/api/index.php"
 
-            printf '%s\n' \
-              '<IfModule mod_rewrite.c>' \
-              '    RewriteEngine On' \
-              '    RewriteBase /api/' \
-              '    RewriteCond %{REQUEST_FILENAME} !-f' \
-              '    RewriteCond %{REQUEST_FILENAME} !-d' \
-              '    RewriteRule ^ index.php [L]' \
-              '</IfModule>' \
-              > "$WEB_ROOT/api/.htaccess"
+            echo "Copying Laravel public directory..."
 
-            echo "Running final checks..."
+            cp -a "$API_ROOT/public/." "$WEB_ROOT/api/"
+
+
+            # ========================================================
+            # API ENTRY POINT
+            # ========================================================
+
+            echo ""
+            echo "Creating API entry point..."
+
+            cat > "$WEB_ROOT/api/index.php" <<PHP
+            <?php
+
+            require '$API_ROOT/public/index.php';
+            PHP
+
+
+            # ========================================================
+            # API REWRITE
+            # ========================================================
+
+            echo "Creating API .htaccess..."
+
+            cat > "$WEB_ROOT/api/.htaccess" <<'HTACCESS'
+            <IfModule mod_rewrite.c>
+
+                RewriteEngine On
+
+                RewriteBase /api/
+
+                RewriteCond %{REQUEST_FILENAME} !-f
+                RewriteCond %{REQUEST_FILENAME} !-d
+
+                RewriteRule ^ index.php [L]
+
+            </IfModule>
+            HTACCESS
+
+
+            # ========================================================
+            # FINAL VERIFICATION
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Final verification"
+            echo "=========================================="
+
+            echo "Checking frontend..."
+
             test -f "$WEB_ROOT/index.html"
-            test -f "$WEB_ROOT/api/index.php"
-            test -f "$WEB_ROOT/api/.htaccess"
+
             test -d "$WEB_ROOT/_nuxt"
-            echo "Deployment completed successfully."
+
+
+            echo "Checking API..."
+
+            test -f "$WEB_ROOT/api/index.php"
+
+            test -f "$WEB_ROOT/api/.htaccess"
+
+
+            echo ""
+            echo "Frontend:"
+            ls -lah "$WEB_ROOT/index.html"
+
+
+            echo ""
+            echo "API:"
+            ls -lah "$WEB_ROOT/api/index.php"
+
+
+            echo ""
+            echo "=========================================="
+            echo "     DEPLOYMENT COMPLETED SUCCESSFULLY"
+            echo "=========================================="
