@@ -66,7 +66,6 @@ jobs:
               echo "No Git repository found."
               if find "$APP_ROOT" -mindepth 1 -maxdepth 1 -print -quit | grep -q .; then
                 echo "Application directory is not empty and is not a Git repository."
-                echo "Inspect and remove old deployment files before cloning."
                 ls -la "$APP_ROOT"
                 exit 1
               fi
@@ -83,9 +82,15 @@ jobs:
             test -f "$APP_ROOT/PMUUI/package.json" || { echo "Missing Nuxt package.json"; exit 1; }
             test -f "$APP_ROOT/PMUUI/package-lock.json" || { echo "Missing Nuxt package-lock.json"; exit 1; }
 
+            echo "Creating Laravel environment file..."
+            cat > "$APP_ROOT/PMUAPI/.env" <<'ENVFILE'
+            ${{ secrets.LARAVEL_ENV }}
+            ENVFILE
+            test -s "$APP_ROOT/PMUAPI/.env" || { echo "LARAVEL_ENV secret is empty"; exit 1; }
+            chmod 600 "$APP_ROOT/PMUAPI/.env"
+
             echo "Deploying Laravel..."
             cd "$APP_ROOT/PMUAPI"
-            test -f .env || { echo "Missing Laravel .env at $APP_ROOT/PMUAPI/.env"; exit 1; }
             composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
             php artisan migrate --force --no-interaction
             php artisan optimize:clear
