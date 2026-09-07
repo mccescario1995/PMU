@@ -21,7 +21,7 @@ jobs:
       # DEPLOY TO HOSTINGER
       # ============================================================
       - name: Deploy to Hostinger
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1
         env:
           HOSTINGER_PUBLIC_HTML: ${{ secrets.HOSTINGER_PUBLIC_HTML }}
           HOSTINGER_GITHUB_REPO: ${{ secrets.HOSTINGER_GITHUB_REPO }}
@@ -31,8 +31,6 @@ jobs:
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
-
-          script_stop: true
 
           envs: HOSTINGER_PUBLIC_HTML,HOSTINGER_GITHUB_REPO,HOSTINGER_ENV_B64
 
@@ -519,11 +517,11 @@ jobs:
             echo ""
             echo "Creating API entry point..."
 
-            cat > "$WEB_ROOT/api/index.php" <<PHP
-            <?php
-
-            require '$API_ROOT/public/index.php';
-            PHP
+            printf '%s\n' \
+            '<?php' \
+            "" \
+            "require '$API_ROOT/public/index.php';" \
+            > "$WEB_ROOT/api/index.php"
 
 
             # ========================================================
@@ -532,20 +530,15 @@ jobs:
 
             echo "Creating API .htaccess..."
 
-            cat > "$WEB_ROOT/api/.htaccess" <<'HTACCESS'
-            <IfModule mod_rewrite.c>
-
-                RewriteEngine On
-
-                RewriteBase /api/
-
-                RewriteCond %{REQUEST_FILENAME} !-f
-                RewriteCond %{REQUEST_FILENAME} !-d
-
-                RewriteRule ^ index.php [L]
-
-            </IfModule>
-            HTACCESS
+            printf '%s\n' \
+            '<IfModule mod_rewrite.c>' \
+            '    RewriteEngine On' \
+            '    RewriteBase /api/' \
+            '    RewriteCond %{REQUEST_FILENAME} !-f' \
+            '    RewriteCond %{REQUEST_FILENAME} !-d' \
+            '    RewriteRule ^ index.php [L]' \
+            '</IfModule>' \
+            > "$WEB_ROOT/api/.htaccess"
 
 
             # ========================================================
