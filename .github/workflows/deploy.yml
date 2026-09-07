@@ -82,12 +82,36 @@ jobs:
             test -f "$APP_ROOT/PMUUI/package.json" || { echo "Missing Nuxt package.json"; exit 1; }
             test -f "$APP_ROOT/PMUUI/package-lock.json" || { echo "Missing Nuxt package-lock.json"; exit 1; }
 
-            echo "Creating Laravel environment file..."
-            cat > "$APP_ROOT/PMUAPI/.env" <<'ENVFILE'
-            ${{ secrets.LARAVEL_ENV }}
-            ENVFILE
-            test -s "$APP_ROOT/PMUAPI/.env" || { echo "LARAVEL_ENV secret is empty"; exit 1; }
-            chmod 600 "$APP_ROOT/PMUAPI/.env"
+            echo "Checking Laravel environment file..."
+            ENV_FILE="$APP_ROOT/PMUAPI/.env"
+            ENV_EXAMPLE="$APP_ROOT/PMUAPI/.env.example"
+
+            if [ ! -f "$ENV_FILE" ]; then
+              echo "Production .env does not exist."
+              test -f "$ENV_EXAMPLE" || {
+                echo "Missing .env.example"
+                exit 1
+              }
+              cp "$ENV_EXAMPLE" "$ENV_FILE"
+              chmod 600 "$ENV_FILE"
+              echo "Created $ENV_FILE from .env.example."
+              echo "Set APP_ENV, APP_DEBUG, APP_URL, APP_KEY, and database values, then rerun the workflow."
+              exit 1
+            fi
+
+            chmod 600 "$ENV_FILE"
+            grep -q '^APP_KEY=.' "$ENV_FILE" || {
+              echo "APP_KEY is missing or empty in $ENV_FILE"
+              exit 1
+            }
+            grep -q '^DB_DATABASE=.' "$ENV_FILE" || {
+              echo "DB_DATABASE is missing or empty in $ENV_FILE"
+              exit 1
+            }
+            grep -q '^DB_USERNAME=.' "$ENV_FILE" || {
+              echo "DB_USERNAME is missing or empty in $ENV_FILE"
+              exit 1
+            }
 
             echo "Deploying Laravel..."
             cd "$APP_ROOT/PMUAPI"
@@ -127,23 +151,24 @@ jobs:
             mkdir -p "$WEB_ROOT/api"
             cp -a "$APP_ROOT/PMUAPI/public/." "$WEB_ROOT/api/"
 
-            cat > "$WEB_ROOT/api/index.php" <<PHP
-            <?php
-            require '$APP_ROOT/PMUAPI/public/index.php';
-            PHP
+            printf '%s\n' \
+              '<?php' \
+              "require '$APP_ROOT/PMUAPI/public/index.php';" \
+              > "$WEB_ROOT/api/index.php"
 
-            cat > "$WEB_ROOT/api/.htaccess" <<'HTACCESS'
-            <IfModule mod_rewrite.c>
-                RewriteEngine On
-                RewriteBase /api/
-                RewriteCond %{REQUEST_FILENAME} !-f
-                RewriteCond %{REQUEST_FILENAME} !-d
-                RewriteRule ^ index.php [L]
-            </IfModule>
-            HTACCESS
+            printf '%s\n' \
+              '<IfModule mod_rewrite.c>' \
+              '    RewriteEngine On' \
+              '    RewriteBase /api/' \
+              '    RewriteCond %{REQUEST_FILENAME} !-f' \
+              '    RewriteCond %{REQUEST_FILENAME} !-d' \
+              '    RewriteRule ^ index.php [L]' \
+              '</IfModule>' \
+              > "$WEB_ROOT/api/.htaccess"
 
             echo "Running final checks..."
             test -f "$WEB_ROOT/index.html"
             test -f "$WEB_ROOT/api/index.php"
+            test -f "$WEB_ROOT/api/.htaccess"
             test -d "$WEB_ROOT/_nuxt"
             echo "Deployment completed successfully."
