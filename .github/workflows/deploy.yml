@@ -407,7 +407,7 @@ jobs:
             echo ""
             echo "Installing npm dependencies..."
 
-            npm ci
+            npm install
 
 
             echo ""
