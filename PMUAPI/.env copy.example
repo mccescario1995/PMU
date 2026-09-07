@@ -2,7 +2,7 @@ APP_NAME=PMUAPI
 APP_ENV=production
 APP_KEY=base64:j1bRn6FCTcrDmkFPUaXmx7K3qzlEOPLxLTSRUWIAZK8=
 APP_DEBUG=false
-APP_URL=https://pmu-pasacao.com/
+APP_URL=https://pmu-pasacao.com/api
 
 APP_LOCALE=en
 APP_FALLBACK_LOCALE=en
