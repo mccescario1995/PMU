@@ -403,14 +403,18 @@ jobs:
 
             cd "$APP_ROOT/PMUUI"
 
+            # Constrain build to single thread / low memory for shared hosting
             export RAYON_NUM_THREADS=1
             export UV_THREADPOOL_SIZE=1
+            export NODE_OPTIONS="--max-old-space-size=512"
+            export TOKIO_WORKER_THREADS=1
+            export NITRO_PRESET=node
 
             echo "Installing npm dependencies..."
             npm install --ignore-scripts --no-audit --no-fund
 
             echo "Building Nuxt frontend..."
-            npm run generate
+            npx nuxt generate --no-parallel
 
             test -f .output/public/index.html || {
                 echo "ERROR: Nuxt output was not generated"
