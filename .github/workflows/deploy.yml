@@ -236,6 +236,39 @@ jobs:
 
 
             # ========================================================
+            # FETCH PRE-BUILT NUXT OUTPUT
+            # ========================================================
+
+            echo ""
+            echo "=========================================="
+            echo "Fetching pre-built Nuxt output"
+            echo "=========================================="
+
+            # Nuxt is pre-built on GitHub Actions (build.yml) because
+            # Hostinger shared hosting cannot run the build (OOM + thread limits).
+            # We fetch the nuxt-build branch and extract the built frontend.
+
+            NUXT_BUILD_BRANCH="nuxt-build"
+            UI_OUTPUT="$UI_ROOT/.output"
+
+            mkdir -p "$UI_OUTPUT/public"
+
+            if git -C "$APP_ROOT" fetch origin "$NUXT_BUILD_BRANCH" 2>/dev/null; then
+              echo "Fetched $NUXT_BUILD_BRANCH branch."
+
+              # Extract built files from the nuxt-build branch into .output/public
+              git -C "$APP_ROOT" archive "origin/$NUXT_BUILD_BRANCH" | tar -x -C "$UI_OUTPUT/public"
+
+              echo "Nuxt pre-built output extracted."
+            else
+              echo ""
+              echo "ERROR: Could not fetch $NUXT_BUILD_BRANCH branch."
+              echo "Ensure build.yml has run and pushed the nuxt-build branch."
+              exit 1
+            fi
+
+
+            # ========================================================
             # VERIFY PROJECT STRUCTURE
             # ========================================================
 
@@ -394,34 +427,26 @@ jobs:
 
 
             # ========================================================
-            # NUXT BUILD
+            # NUXT BUILD (prebuilt on GitHub Actions)
             # ========================================================
 
             echo "=========================================="
-            echo "  Building Nuxt frontend"
+            echo "  Nuxt frontend (pre-built)"
             echo "=========================================="
 
-            cd "$APP_ROOT/PMUUI"
+            # Nuxt is built on GitHub Actions (has ample memory).
+            # Hostinger shared hosting cannot run the build (OOM + thread limits),
+            # so we only verify the pre-built output exists.
 
-            # Constrain build to single thread / low memory for shared hosting
-            export RAYON_NUM_THREADS=1
-            export UV_THREADPOOL_SIZE=1
-            export NODE_OPTIONS="--max-old-space-size=512"
-            export TOKIO_WORKER_THREADS=1
-            export NITRO_PRESET=node
+            UI_OUTPUT="$UI_ROOT/.output/public"
 
-            echo "Installing npm dependencies..."
-            npm install --ignore-scripts --no-audit --no-fund
-
-            echo "Building Nuxt frontend..."
-            npx nuxt generate --no-parallel
-
-            test -f .output/public/index.html || {
-                echo "ERROR: Nuxt output was not generated"
+            test -f "$UI_OUTPUT/index.html" || {
+                echo "ERROR: Nuxt output was not generated."
+                echo "Run 'npm run generate' locally or on GitHub Actions."
                 exit 1
             }
 
-            echo "Nuxt build completed successfully."
+            echo "Nuxt pre-built output found."
 
 
             # ========================================================
