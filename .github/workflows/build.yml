@@ -10,16 +10,16 @@ on:
 
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build:
     name: Build Nuxt & publish to nuxt-build branch
-    runs-on: ubuntu-latest  # GitHub Actions has ~7GB RAM, unlike Hostinger shared hosting
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -29,39 +29,29 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies (PMUUI)
+      - name: Install dependencies
         run: |
           cd PMUUI
           npm install --no-audit --no-fund
 
-      - name: Generate Nuxt frontend
+      - name: Generate
         run: |
           cd PMUUI
           npm run generate
 
       - name: Verify build output
-        run: |
-          test -f PMUUI/.output/public/index.html
+        run: test -f PMUUI/.output/public/index.html
 
-      - name: Publish built frontend to nuxt-build branch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to nuxt-build branch
         run: |
-          # Configure git for the push
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Create orphan branch (no history) for the build output
           git checkout --orphan nuxt-build
           git rm -rf . || true
-
-          # Copy only the built frontend
           cp -a PMUUI/.output/public/. ./
-
-          # Stage everything
           git add -A
 
-          # Commit only if there are changes
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
