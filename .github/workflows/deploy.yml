@@ -62,10 +62,12 @@ jobs:
     needs: build
 
     steps:
+      - name: Deploy to Hostinger
         env:
           HOSTINGER_PUBLIC_HTML: ${{ secrets.HOSTINGER_PUBLIC_HTML }}
           HOSTINGER_GITHUB_REPO: ${{ secrets.HOSTINGER_GITHUB_REPO }}
           HOSTINGER_ENV_B64: ${{ secrets.HOSTINGER_ENV_B64 }}
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
