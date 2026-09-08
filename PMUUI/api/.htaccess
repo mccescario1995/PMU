@@ -1,0 +1,24 @@
+<IfModule mod_rewrite.c>
+
+    # --- URL Rewrite: /api -> /api/index.php ---
+    RewriteEngine On
+    RewriteBase /api/
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+
+    # --- Security: Block access to sensitive files/dirs in /api/pmuapi/ ---
+
+    # Block .env
+    RewriteCond %{REQUEST_URI} ^/api/pmuapi/\.env [NC]
+    RewriteRule ^ - [F,L]
+
+    # Block config, app, vendor, bootstrap, resources, routes, storage
+    RewriteCond %{REQUEST_URI} ^/api/pmuapi/(config|app|vendor|bootstrap|resources|routes|storage) [NC]
+    RewriteRule ^ - [F,L]
+
+    # Block hidden files/dirs (.git, .env, .vscode, etc.)
+    RewriteCond %{REQUEST_URI} /(^|/)\. [NC]
+    RewriteRule ^ - [F,L]
+</IfModule>

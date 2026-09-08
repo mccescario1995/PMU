@@ -1,0 +1,323 @@
+name: Deploy PMU
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Nuxt Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: |
+          cd PMUUI
+          npm install --no-audit --no-fund
+
+      - name: Generate
+        run: |
+          cd PMUUI
+          npm run generate
+
+      - name: Verify build output
+        run: test -f PMUUI/.output/public/index.html
+
+      - name: Publish to nuxt-build branch
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout --orphan nuxt-build
+          git rm -rf . || true
+          cp -a PMUUI/.output/public/. ./
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Build Nuxt frontend (commit ${{ github.sha }})"
+            git push origin nuxt-build --force
+          fi
+
+  deploy:
+    name: Deploy PMU to Hostinger
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to Hostinger
+        env:
+          HOSTINGER_PUBLIC_HTML: ${{ secrets.HOSTINGER_PUBLIC_HTML }}
+          HOSTINGER_GITHUB_REPO: ${{ secrets.HOSTINGER_GITHUB_REPO }}
+          HOSTINGER_ENV_B64: ${{ secrets.HOSTINGER_ENV_B64 }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_HOST }}
+          username: ${{ secrets.HOSTINGER_USERNAME }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: ${{ secrets.HOSTINGER_PORT }}
+
+          envs: HOSTINGER_PUBLIC_HTML,HOSTINGER_GITHUB_REPO,HOSTINGER_ENV_B64
+
+          command_timeout: 30m
+
+          script: |
+            #!/usr/bin/env bash
+
+            set -Eeuo pipefail
+
+            trap '
+              status=$?
+              echo ""
+              echo "=========================================="
+              echo "DEPLOYMENT FAILED"
+              echo "=========================================="
+              echo "Line: $LINENO"
+              echo "Command: $BASH_COMMAND"
+              echo "Exit code: $status"
+              echo "=========================================="
+              exit "$status"
+            ' ERR
+
+            # ========================================================
+            # CONFIGURATION
+            # ========================================================
+
+            BRANCH="main"
+
+            APP_ROOT="$HOME/apps/pmu"
+
+            API_ROOT="$APP_ROOT/PMUAPI"
+
+            UI_ROOT="$APP_ROOT/PMUUI"
+
+            WEB_ROOT="$HOSTINGER_PUBLIC_HTML"
+
+            ENV_FILE="$API_ROOT/.env"
+
+            echo ""
+            echo "=========================================="
+            echo "        PMU DEPLOYMENT"
+            echo "=========================================="
+            echo ""
+
+            echo "Application root: $APP_ROOT"
+            echo "Laravel API:     $API_ROOT"
+            echo "Nuxt UI:         $UI_ROOT"
+            echo "Web root:        $WEB_ROOT"
+
+
+            # ========================================================
+            # PREPARE DIRECTORIES
+            # ========================================================
+
+            mkdir -p "$HOME/apps"
+            mkdir -p "$APP_ROOT"
+
+
+            # ========================================================
+            # GIT REPOSITORY
+            # ========================================================
+
+            echo ""
+            echo "Synchronizing Git repository..."
+
+            if [ -d "$APP_ROOT/.git" ]; then
+              echo "Existing repository found."
+              git -C "$APP_ROOT" fetch --prune origin "$BRANCH"
+              git -C "$APP_ROOT" reset --hard "origin/$BRANCH"
+              git -C "$APP_ROOT" clean -fd
+            else
+              echo "Cloning repository..."
+              git clone \
+                --branch "$BRANCH" \
+                --single-branch \
+                "$HOSTINGER_GITHUB_REPO" \
+                "$APP_ROOT"
+            fi
+
+            echo "Current commit: $(git -C "$APP_ROOT" rev-parse --short HEAD)"
+
+
+            # ========================================================
+            # FETCH PRE-BUILT NUXT OUTPUT
+            # ========================================================
+
+            echo ""
+            echo "Fetching pre-built Nuxt output..."
+
+            # Nuxt is pre-built on GitHub Actions (build.yml) because
+            # Hostinger shared hosting cannot run the build (OOM + thread limits).
+            # The built files live in the nuxt-build branch.
+
+            NUXT_BUILD_BRANCH="nuxt-build"
+            UI_OUTPUT="$UI_ROOT/.output"
+
+            mkdir -p "$UI_OUTPUT/public"
+
+            git -C "$APP_ROOT" fetch origin "$NUXT_BUILD_BRANCH"
+
+            # Use FETCH_HEAD instead of origin/$NUXT_BUILD_BRANCH because
+            # the repo was cloned with --single-branch (only main is tracked).
+            git -C "$APP_ROOT" archive FETCH_HEAD | tar -x -C "$UI_OUTPUT/public"
+
+            echo "Nuxt pre-built output extracted."
+
+
+            # ========================================================
+            # VERIFY PROJECT STRUCTURE
+            # ========================================================
+
+            echo ""
+            echo "Verifying project structure..."
+
+            test -d "$API_ROOT" || { echo "ERROR: PMUAPI directory missing."; exit 1; }
+            test -d "$UI_ROOT"  || { echo "ERROR: PMUUI directory missing.";  exit 1; }
+            test -f "$API_ROOT/artisan" || { echo "ERROR: artisan file missing."; exit 1; }
+            test -f "$API_ROOT/composer.json" || { echo "ERROR: composer.json missing."; exit 1; }
+            test -f "$UI_ROOT/package.json" || { echo "ERROR: package.json missing."; exit 1; }
+            test -f "$UI_ROOT/package-lock.json" || { echo "ERROR: package-lock.json missing."; exit 1; }
+
+
+            # ========================================================
+            # LARAVEL ENVIRONMENT
+            # ========================================================
+
+            echo ""
+            echo "Configuring Laravel environment..."
+
+            if [ -n "${HOSTINGER_ENV_B64:-}" ]; then
+              echo "Writing Laravel .env from base64 secret."
+              printf '%s' "$HOSTINGER_ENV_B64" | base64 --decode > "$ENV_FILE"
+              chmod 600 "$ENV_FILE"
+            elif [ ! -f "$ENV_FILE" ]; then
+              echo ""
+              echo "ERROR: Laravel .env does not exist."
+              echo "Configure HOSTINGER_ENV_B64 in GitHub Secrets."
+              exit 1
+            else
+              echo "Existing Laravel .env found."
+              chmod 600 "$ENV_FILE"
+            fi
+
+
+            # ========================================================
+            # VALIDATE ENVIRONMENT
+            # ========================================================
+
+            echo "Validating Laravel environment..."
+
+            grep -q '^APP_KEY=.' "$ENV_FILE" || { echo "ERROR: APP_KEY is missing."; exit 1; }
+            grep -q '^APP_URL=.' "$ENV_FILE" || { echo "ERROR: APP_URL is missing."; exit 1; }
+            grep -q '^DB_DATABASE=.' "$ENV_FILE" || { echo "ERROR: DB_DATABASE is missing."; exit 1; }
+            grep -q '^DB_USERNAME=.' "$ENV_FILE" || { echo "ERROR: DB_USERNAME is missing."; exit 1; }
+
+
+            # ========================================================
+            # LARAVEL DEPLOYMENT
+            # ========================================================
+
+            echo ""
+            echo "Deploying Laravel API..."
+
+            cd "$API_ROOT"
+
+            composer install \
+              --no-dev \
+              --prefer-dist \
+              --no-interaction \
+              --optimize-autoloader
+
+            php artisan migrate --force --no-interaction
+
+            php artisan optimize:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+
+            # ========================================================
+            # PUBLISH FRONTEND (pre-built)
+            # ========================================================
+
+            echo ""
+            echo "Publishing Nuxt frontend..."
+
+            mkdir -p "$WEB_ROOT"
+
+            find "$WEB_ROOT" \
+              -mindepth 1 \
+              -maxdepth 1 \
+              ! -name "api" \
+              ! -name ".well-known" \
+              -exec rm -rf {} +
+
+            cp -a "$UI_ROOT/.output/public/." "$WEB_ROOT/"
+
+
+            # ========================================================
+            # PUBLISH API
+            # ========================================================
+
+            echo ""
+            echo "Publishing Laravel API..."
+
+            rm -rf "$WEB_ROOT/api"
+            mkdir -p "$WEB_ROOT/api"
+
+            cp -a "$API_ROOT/public/." "$WEB_ROOT/api/"
+
+            printf '%s\n' \
+              '<?php' \
+              "" \
+              "require '$API_ROOT/public/index.php';" \
+              > "$WEB_ROOT/api/index.php"
+
+            printf '%s\n' \
+              '<IfModule mod_rewrite.c>' \
+              '    RewriteEngine On' \
+              '    RewriteBase /api/' \
+              '    RewriteCond %{REQUEST_FILENAME} !-f' \
+              '    RewriteCond %{REQUEST_FILENAME} !-d' \
+              '    RewriteRule ^ index.php [L]' \
+              '</IfModule>' \
+              > "$WEB_ROOT/api/.htaccess"
+
+
+            # ========================================================
+            # FINAL VERIFICATION
+            # ========================================================
+
+            echo ""
+            echo "Final verification..."
+
+            test -f "$WEB_ROOT/index.html"
+            test -d "$WEB_ROOT/_nuxt"
+            test -f "$WEB_ROOT/api/index.php"
+            test -f "$WEB_ROOT/api/.htaccess"
+
+            echo ""
+            echo "Frontend: $(ls -lah "$WEB_ROOT/index.html" | awk '{print $9, $5}')"
+            echo "API:      $(ls -lah "$WEB_ROOT/api/index.php" | awk '{print $9, $5}')"
+
+            echo ""
+            echo "=========================================="
+            echo "     DEPLOYMENT COMPLETED SUCCESSFULLY"
+            echo "=========================================="

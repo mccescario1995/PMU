@@ -1,0 +1,15 @@
+# Laravel
+.env
+.env.backup
+.env.production
+vendor/
+node_modules/
+storage/*.key
+public/build/
+public/hot/
+public/storage/
+public/fonts-manifest.dev.json
+.phpunit.result.cache
+.phpunit.cache
+_ide_helper.php
+auth.json

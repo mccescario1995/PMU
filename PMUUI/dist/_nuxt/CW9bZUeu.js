@@ -1,0 +1,1 @@
+import{ae as s,r as a}from"./BpXJdpqi.js";function u(n){const o=a(!1);function e(){o.value=!0}function t(i){s(()=>{o.value=!1,n?.(i)})}return{isComposing:o,handleCompositionStart:e,handleCompositionEnd:t}}export{u};

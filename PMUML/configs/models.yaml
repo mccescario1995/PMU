@@ -1,0 +1,21 @@
+linear_regression:
+  model_type: linear
+  alpha: 1.0
+  fit_intercept: true
+
+amira:
+  model_type: arima
+  p: 1
+  d: 1
+  q: 1
+
+samira:
+  model_type: sarimax
+  p: 1
+  d: 1
+  q: 1
+  P: 1
+  D: 1
+  Q: 1
+  m: 12
+  exog: true

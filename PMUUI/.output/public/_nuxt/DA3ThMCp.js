@@ -1,0 +1,1 @@
+import{b9 as i,C as o}from"./BpXJdpqi.js";function c(){const{user:n}=i(),r=o(()=>new Set(n.value?.all_permissions??[])),e=o(()=>new Set(n.value?.roles??[]));function t(s){return r.value.has(s)}function u(s){return e.value.has(s)}function a(){return e.value.has("Port Manager")}return{can:t,hasRole:u,isPortManager:a,permissions:r,roles:e}}export{c as u};
