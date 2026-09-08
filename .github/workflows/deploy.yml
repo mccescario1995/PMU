@@ -120,6 +120,29 @@ jobs:
 
 
             # ========================================================
+            # FETCH PRE-BUILT NUXT OUTPUT
+            # ========================================================
+
+            echo ""
+            echo "Fetching pre-built Nuxt output..."
+
+            # Nuxt is pre-built on GitHub Actions (build.yml) because
+            # Hostinger shared hosting cannot run the build (OOM + thread limits).
+            # The built files live in the nuxt-build branch.
+
+            NUXT_BUILD_BRANCH="nuxt-build"
+            UI_OUTPUT="$UI_ROOT/.output"
+
+            mkdir -p "$UI_OUTPUT/public"
+
+            git -C "$APP_ROOT" fetch origin "$NUXT_BUILD_BRANCH"
+
+            git -C "$APP_ROOT" archive "origin/$NUXT_BUILD_BRANCH" | tar -x -C "$UI_OUTPUT/public"
+
+            echo "Nuxt pre-built output extracted."
+
+
+            # ========================================================
             # VERIFY PROJECT STRUCTURE
             # ========================================================
 
