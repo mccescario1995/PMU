@@ -246,26 +246,37 @@ jobs:
 
             # Nuxt is pre-built on GitHub Actions (build.yml) because
             # Hostinger shared hosting cannot run the build (OOM + thread limits).
-            # We fetch the nuxt-build branch and extract the built frontend.
+            # The build workflow runs concurrently with deploy, so we retry
+            # until the nuxt-build branch is available.
 
             NUXT_BUILD_BRANCH="nuxt-build"
             UI_OUTPUT="$UI_ROOT/.output"
 
             mkdir -p "$UI_OUTPUT/public"
 
-            if git -C "$APP_ROOT" fetch origin "$NUXT_BUILD_BRANCH" 2>/dev/null; then
-              echo "Fetched $NUXT_BUILD_BRANCH branch."
+            MAX_RETRIES=10
+            RETRY_COUNT=0
 
-              # Extract built files from the nuxt-build branch into .output/public
-              git -C "$APP_ROOT" archive "origin/$NUXT_BUILD_BRANCH" | tar -x -C "$UI_OUTPUT/public"
+            while ! git -C "$APP_ROOT" fetch origin "$NUXT_BUILD_BRANCH" 2>/dev/null; do
+              RETRY_COUNT=$((RETRY_COUNT + 1))
 
-              echo "Nuxt pre-built output extracted."
-            else
-              echo ""
-              echo "ERROR: Could not fetch $NUXT_BUILD_BRANCH branch."
-              echo "Ensure build.yml has run and pushed the nuxt-build branch."
-              exit 1
-            fi
+              if [ "$RETRY_COUNT" -ge "$MAX_RETRIES" ]; then
+                echo ""
+                echo "ERROR: Could not fetch $NUXT_BUILD_BRANCH branch after $MAX_RETRIES attempts."
+                echo "Ensure build.yml has run and pushed the nuxt-build branch."
+                exit 1
+              fi
+
+              echo "Branch not ready yet (attempt $RETRY_COUNT/$MAX_RETRIES). Waiting 15s..."
+              sleep 15
+            done
+
+            echo "Fetched $NUXT_BUILD_BRANCH branch."
+
+            # Extract built files from the nuxt-build branch into .output/public
+            git -C "$APP_ROOT" archive "origin/$NUXT_BUILD_BRANCH" | tar -x -C "$UI_OUTPUT/public"
+
+            echo "Nuxt pre-built output extracted."
 
 
             # ========================================================
