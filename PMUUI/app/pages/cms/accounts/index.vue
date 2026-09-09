@@ -62,7 +62,7 @@ const userForm = reactive({
   email: "",
   password: "",
   status: "active",
-  roles: [] as number[],
+  roles: [] as string[],
 });
 
 function toArray(r: any): any[] {
@@ -175,7 +175,7 @@ function openCreateUser() {
     (role) => role.name === "Port Manager",
   );
 
-  userForm.roles = portManager ? [portManager.id] : [];
+  userForm.roles = portManager ? [portManager.name] : [];
 
   showUserModal.value = true;
 }
@@ -534,7 +534,7 @@ const userStatus = ref<SelectItem[]>([
                   class="w-full"
                   v-model="userForm.roles"
                   :items="roleOptions"
-                  value-key="id"
+                  value-key="name"
                   label-key="name"
                   multiple
                   :disabled="viewingUser"

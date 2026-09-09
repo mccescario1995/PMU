@@ -186,6 +186,14 @@ class DatabaseSeeder extends Seeder
         ]);
         $user->assignRole('Port Manager');
 
+        $userStat = User::create([
+            'name' => 'Statistician',
+            'email' => 'stat@pmu.gov.ph',
+            'password' => Hash::make('password'),
+            'status' => 'active',
+        ]);
+        $userStat->assignRole('Statistician');
+
         // $feeTypes = [
         //     ['fee_name' => 'Fish Landing', 'base_rate' => 30.00, 'unit' => 'kg'],
         //     ['fee_name' => 'Fish Unloading', 'base_rate' => 50.00, 'unit' => 'kg'],
