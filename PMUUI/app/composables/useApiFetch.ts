@@ -21,7 +21,7 @@ export async function apiFetch<T = any>(
   init: ApiFetchOptions = {},
 ): Promise<Response | T> {
   const config = useRuntimeConfig();
-  const baseURL = config.public.apiBase as string;
+  const baseURL = config.public.apiBase + "/api" as string;
 
   const { timeout = 30000, parseJson, throwOnError, ...fetchInit } = init;
 

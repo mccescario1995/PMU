@@ -27,6 +27,7 @@ const {
   data,
   totalItems,
   loading,
+  refresh,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
     const result = await apiFetch(
@@ -191,6 +192,7 @@ async function save() {
       color: "error",
     });
   } finally {
+    refresh();
     saving.value = false;
   }
 }
@@ -233,7 +235,7 @@ async function remove(row: any) {
           class="me-2"
           v-if="can('edit inventory')"
           size="xs"
-          color="secondary"
+          color="info"
           @click="openEdit(row.original)"
           icon="i-lucide-edit"
         ></UButton>

@@ -3,8 +3,22 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
 
+@theme static {
+  --color-brand-50: #eef4f9;
+  --color-brand-100: #d3e3ee;
+  --color-brand-200: #a7c7dd;
+  --color-brand-300: #7babcc;
+  --color-brand-400: #4f8fbb;
+  --color-brand-500: #2e6f9e;
+  --color-brand-600: #1f537a;
+  --color-brand-700: #17395C;
+  --color-brand-800: #112a44;
+  --color-brand-900: #0b1c2d;
+  --color-brand-950: #050e17;
+}
 
 /* Override the default sans font family */
 :root {
   --font-sans: 'Poppins', sans-serif;
+  --ui-success: #17395C;
 }

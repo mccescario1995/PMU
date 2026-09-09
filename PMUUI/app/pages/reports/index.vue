@@ -21,11 +21,11 @@ const reports = [
       <UCard
         v-for="report in reports"
         :key="report.to"
-        class="cursor-pointer transition hover:ring-2 hover:ring-primary"
+        class="cursor-pointer transition hover:ring-2 hover:ring-[#031120] hover:shadow-lg"
         :to="report.to"
       >
         <div class="flex items-start gap-4">
-          <UIcon :name="report.icon" class="size-8 text-primary" />
+          <UIcon :name="report.icon" class="size-8 text-[#2E4C6C]" />
           <div>
             <h2 class="font-semibold">{{ report.title }}</h2>
             <p class="text-sm text-slate-500">{{ report.description }}</p>
