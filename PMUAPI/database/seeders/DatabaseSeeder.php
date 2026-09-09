@@ -181,7 +181,7 @@ class DatabaseSeeder extends Seeder
         $user = User::create([
             'name' => 'Port Manager',
             'email' => 'admin@pmu.gov.ph',
-            'password' => Hash::make('password'),
+            'password' => Hash::make('PMUmanager1'),
             'status' => 'active',
         ]);
         $user->assignRole('Port Manager');
@@ -189,7 +189,7 @@ class DatabaseSeeder extends Seeder
         $userStat = User::create([
             'name' => 'Statistician',
             'email' => 'stat@pmu.gov.ph',
-            'password' => Hash::make('password'),
+            'password' => Hash::make('PMUstatistician1'),
             'status' => 'active',
         ]);
         $userStat->assignRole('Statistician');
