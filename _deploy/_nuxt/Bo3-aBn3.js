@@ -1,0 +1,1 @@
+import{a1 as o,r as n,C as s,X as d}from"./DQy8aMFs.js";function a(r){const e=o({dir:n("ltr")});return s(()=>r?.value||e.dir?.value||"ltr")}function c(r,e="reka"){let t;const i=o({useId:void 0});return i.useId?t=i.useId():t=d?.(),e?`${e}-${t}`:t}export{c as a,a as u};

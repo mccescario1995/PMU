@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@nuxtjs/color-mode'],
   runtimeConfig: {
     public: {
-      apiBase: process.env.API_BASE_URL || '/api',
+      apiBase: process.env.API_BASE_URL,
     },
   },
 
