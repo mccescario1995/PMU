@@ -1,62 +1,277 @@
 import os
 import sys
-import json
-from datetime import date, timedelta
 
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+try:
+    from dotenv import load_dotenv
+    env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+    load_dotenv(env_path)
+except Exception:
+    pass
+
+import pandas as pd
 from flask import Flask, request, jsonify
-from dotenv import load_dotenv
-import yaml
 from flask_cors import CORS
+from sqlalchemy import create_engine
+from sqlalchemy.pool import QueuePool
 
-load_dotenv()
+from src.pmu_client import PMUClient
+from src.config import Config
+from src.logger import logger
+from src.forecaster import Forecaster, ForecastResult
 
-from pmu_client import PMUClient
-from evaluation import run_linear, run_amira, run_samira
+config = Config()
+engine = create_engine(
+    config.db_url,
+    poolclass=QueuePool,
+    pool_size=5,
+    max_overflow=10,
+    pool_timeout=30,
+    pool_recycle=3600,
+)
 
 app = Flask(__name__)
 CORS(app)
 
-MODELS = {
-    "linear_regression": run_linear,
-    "amira": run_amira,
-    "samira": run_samira,
-}
+pmu_client = PMUClient(
+    base_url=config.pmu_api_url,
+    token=config.pmu_api_token,
+) if config.pmu_api_token else None
+
+forecaster = Forecaster(config=config, client=pmu_client)
+
+if os.path.exists("outputs/models/amira.joblib"):
+    try:
+        forecaster.load_all()
+        logger.info("Loaded cached models on startup")
+    except Exception as e:
+        logger.warning(f"Failed to load cached models: {e}")
 
 
+def get_historical_features() -> pd.DataFrame:
+    df = pd.read_sql(
+        """
+        SELECT report_date, year_num, month_num, day_num, day_of_week, quarter_num,
+               is_weekend, is_month_start, is_month_end, revenue_target, log_revenue,
+               revenue_lag_1d, revenue_lag_7d, revenue_lag_365d,
+               revenue_rolling_7d_mean, revenue_rolling_30d_mean,
+               summary_metric_col17, is_missing_date
+        FROM ml_features
+        ORDER BY report_date ASC
+    """,
+        con=engine,
+    )
+    if "report_date" in df.columns and not df.empty:
+        df["report_date"] = df["report_date"].astype(str)
+    return df
+
+
+@app.route("/", methods=["GET"])
 @app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok"})
+def health_check():
+    return jsonify({
+        "status": "online",
+        "service": "PMU Revenue ML Forecast API",
+        "version": "1.0.0",
+    })
 
 
 @app.route("/forecast", methods=["POST"])
 def forecast():
-    data = request.get_json(force=True)
+    data = request.get_json(force=True) or {}
     model_name = data.get("model", "amira")
-    days = int(data.get("days", 30))
-
-    if model_name not in MODELS:
-        return jsonify({"error": f"Unknown model: {model_name}"}), 400
-
-    client = PMUClient(
-        base_url=os.getenv("PMU_API_URL", "http://localhost:8000"),
-        token=os.getenv("PMU_API_TOKEN", ""),
-    )
-
+    days = int(data.get("days", config.forecast_days))
+    post_to_api = data.get("post_to_api", True)
     try:
-        result = MODELS[model_name](client)
-        result["forecasts"] = result["forecasts"][:days]
-        return jsonify(result)
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
+        result = forecaster.train_model(
+            model_name, days=days, post_to_api=post_to_api,
+        )
+        if result is None or result.error:
+            return jsonify({"error": result.error if result else "Unknown model"}), 500
+        forecasts = [
+            {"date": fc["date"], "predicted_revenue": fc.get("predicted_revenue", 0.0)}
+            for fc in result.forecasts
+        ]
         return jsonify({
-            "error": str(e),
-            "pmu_api_url": os.getenv("PMU_API_URL", "NOT SET"),
-            "hint": "Set PMU_API_URL to your deployed Laravel URL, not localhost"
-        }), 500
+            "forecasts": forecasts,
+            "metrics": result.metrics,
+        })
+    except Exception as e:
+        logger.error(f"forecast error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/train", methods=["POST"])
+def train():
+    data = request.get_json(force=True) or {}
+    models = data.get("models", ["amira", "samira", "linear_regression"])
+    days = int(data.get("days", config.forecast_days))
+    post_to_api = data.get("post_to_api", True)
+    try:
+        results = forecaster.train_all(
+            days=days, post_to_api=post_to_api,
+        )
+        output = {}
+        for name, result in results.items():
+            output[name] = {
+                "forecasts": [
+                    {"date": fc["date"], "predicted_revenue": fc.get("predicted_revenue", 0.0)}
+                    for fc in result.forecasts
+                ],
+                "metrics": result.metrics,
+                "error": result.error,
+            }
+        return jsonify({"status": "success", "results": output})
+    except Exception as e:
+        logger.error(f"train error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/weather/backfill", methods=["POST"])
+def weather_backfill():
+    try:
+        df = get_historical_features()
+        if df.empty:
+            return jsonify({"error": "No records in ml_features"}), 404
+        dates = df["report_date"].tolist()
+        result = forecaster.weather_manager.backfill(dates)
+        return jsonify({
+            "status": "success",
+            "dates_backfilled": len(result),
+            "total_dates": len(dates),
+        })
+    except Exception as e:
+        logger.error(f"weather backfill error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/weather/sync", methods=["POST"])
+def weather_sync():
+    data = request.get_json(force=True) or {}
+    date_str = data.get("date")
+    if not date_str:
+        return jsonify({"error": "date required"}), 400
+    try:
+        from datetime import date as date_cls
+        d = date_cls.fromisoformat(date_str)
+        success = forecaster.weather_manager.sync_weather_for_date(d)
+        if success:
+            return jsonify({"status": "success", "date": date_str})
+        return jsonify({"status": "failed", "date": date_str}), 500
+    except Exception as e:
+        logger.error(f"weather sync error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/weather/status", methods=["GET"])
+def weather_status():
+    try:
+        status = forecaster.weather_manager.get_backfill_status()
+        cached = forecaster.weather_manager.get_cached_weather()
+        return jsonify({
+            "status": "success",
+            "backfill": status,
+            "cached_dates": list(cached.keys())[:50],
+            "cached_count": len(cached),
+        })
+    except Exception as e:
+        logger.error(f"weather status error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/predict/all", methods=["GET", "POST"])
+def predict_all():
+    days = int(request.args.get("days", config.forecast_days))
+    try:
+        df = get_historical_features()
+        if df.empty:
+            return jsonify({"error": "No records found in ml_features"}), 404
+
+        results = forecaster.forecast(
+            models=["amira", "samira", "linear_regression"],
+            days=days,
+            use_weather=True,
+            concurrent=True,
+        )
+
+        predictions = []
+        n = min(days, _max_forecast_length(results))
+        for i in range(n):
+            entry = {"date": _get_date(results, i)}
+            for model_name, result in results.items():
+                if result.error:
+                    entry[f"{model_name}_error"] = result.error
+                elif i < len(result.forecasts):
+                    fc = result.forecasts[i]
+                    entry[f"{model_name}_predicted_revenue"] = fc.get("predicted_revenue", 0.0)
+                else:
+                    entry[f"{model_name}_predicted_revenue"] = 0.0
+            predictions.append(entry)
+
+        return jsonify({
+            "status": "success",
+            "forecast_horizon_days": days,
+            "models": list(results.keys()),
+            "predictions": predictions,
+        })
+    except Exception as e:
+        logger.error(f"predict_all error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/predict/<model_name>", methods=["GET", "POST"])
+def predict_single(model_name):
+    days = int(request.args.get("days", config.forecast_days))
+    try:
+        df = get_historical_features()
+        if df.empty:
+            return jsonify({"error": "No records found in ml_features"}), 404
+
+        results = forecaster.forecast(
+            models=[model_name],
+            days=days,
+            use_weather=True,
+        )
+
+        if model_name not in results:
+            return jsonify({"error": f"Unknown model: {model_name}"}), 400
+
+        result = results[model_name]
+        if result.error:
+            return jsonify({"error": result.error}), 500
+
+        predictions = []
+        for i, fc in enumerate(result.forecasts[:days]):
+            entry = dict(fc)
+            predictions.append(entry)
+
+        return jsonify({
+            "status": "success",
+            "model": model_name,
+            "forecast_horizon_days": len(predictions),
+            "metrics": result.metrics,
+            "predictions": predictions,
+        })
+    except Exception as e:
+        logger.error(f"predict_single error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+def _max_forecast_length(results: dict) -> int:
+    max_len = 0
+    for result in results.values():
+        if not result.error:
+            max_len = max(max_len, len(result.forecasts))
+    return max_len
+
+
+def _get_date(results: dict, index: int) -> str:
+    for result in results.values():
+        if not result.error and index < len(result.forecasts):
+            return result.forecasts[index].get("date", "")
+    return ""
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+    app.run(host="0.0.0.0", port=config.port)

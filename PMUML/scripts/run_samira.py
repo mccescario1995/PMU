@@ -1,7 +1,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     from dotenv import load_dotenv
@@ -10,25 +10,38 @@ try:
 except Exception:
     pass
 
-from pmu_client import PMUClient
-from evaluation import run_samira
+from src.pmu_client import PMUClient
+from src.forecaster import Forecaster, Config
 
 
-def main():
+def run_model(model_name: str):
     client = PMUClient(
         base_url=os.getenv("PMU_API_URL", "http://localhost:8000"),
         token=os.getenv("PMU_API_TOKEN", ""),
     )
-    model_version = os.getenv("MODEL_VERSION", "samira-v1")
+    config = Config()
+    forecaster = Forecaster(config=config, client=client)
+    days = config.forecast_days
 
-    result = run_samira(client)
-    print("Metrics:", result["metrics"])
-    print("CSV:", result["csv_path"])
-    print("Plot:", result["plot_path"])
+    result = forecaster.forecast(models=[model_name], days=days, client=client)
+    forecast = result.get(model_name)
 
-    posted = client.post_forecast_batch(result["forecasts"], model_version=model_version)
-    print(f"Posted {len(posted)} forecasts to PMUAPI.")
+    if forecast is None or forecast.error:
+        print(f"[ERROR] {model_name} forecast failed: {forecast.error if forecast else 'Unknown'}")
+        return
+
+    print(f"Metrics: {forecast.metrics}")
+    print(f"Forecasts: {len(forecast.forecasts)} entries")
+
+    forecaster.save_all()
+    print(f"Models saved to outputs/models/")
+
+    model_version = os.getenv("MODEL_VERSION", f"{model_name}-v1")
+    if forecast.forecasts:
+        posted = client.post_forecast_batch(forecast.forecasts, model_version=model_version)
+        print(f"Posted {len(posted)} forecasts to PMUAPI.")
 
 
 if __name__ == "__main__":
-    main()
+    model = sys.argv[1] if len(sys.argv) > 1 else "samira"
+    run_model(model)

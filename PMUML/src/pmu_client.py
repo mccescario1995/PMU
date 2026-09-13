@@ -1,5 +1,7 @@
-from typing import Optional
+import os
 from datetime import date
+from typing import Optional
+
 import httpx
 
 
@@ -7,21 +9,22 @@ class PMUClient:
     def __init__(self, base_url: str, token: str):
         self.base_url = base_url.rstrip("/")
         self.headers = {"Authorization": f"Bearer {token}"}
+        self._timeout = int(os.getenv("HTTP_TIMEOUT", "60"))
 
     def _get(self, path: str, params: Optional[dict] = None) -> dict:
-        with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=30) as client:
+        with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=self._timeout) as client:
             r = client.get(path, params=params)
             r.raise_for_status()
             return r.json()
 
     def _post(self, path: str, payload: dict) -> dict:
-        with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=30) as client:
+        with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=self._timeout) as client:
             r = client.post(path, json=payload)
             r.raise_for_status()
             return r.json()
 
     def get_transactions(self, start: date, end: date) -> list[dict]:
-        with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=60) as client:
+        with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=self._timeout) as client:
             r = client.get("/v1/transactions")
             r.raise_for_status()
             data = r.json()
@@ -33,7 +36,7 @@ class PMUClient:
         ]
 
     def get_weather(self, start: date, end: date) -> list[dict]:
-        with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=60) as client:
+        with httpx.Client(base_url=self.base_url, headers=self.headers, timeout=self._timeout) as client:
             r = client.get("/v1/weather")
             r.raise_for_status()
             data = r.json()

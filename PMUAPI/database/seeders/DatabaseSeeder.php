@@ -57,10 +57,10 @@ class DatabaseSeeder extends Seeder
             'edit statuses',
             'delete statuses',
             // Transactions
-            // 'view transactions',
-            // 'create transactions',
-            // 'edit transactions',
-            // 'delete transactions',
+            'view transactions',
+            'create transactions',
+            'edit transactions',
+            'delete transactions',
             // Inventory
             'view inventory',
             'create inventory',
@@ -127,10 +127,10 @@ class DatabaseSeeder extends Seeder
                 'edit statuses',
                 'delete statuses',
                 // Transactions
-                'view transactions',
-                'create transactions',
-                'edit transactions',
-                'delete transactions',
+                // 'view transactions',
+                // 'create transactions',
+                // 'edit transactions',
+                // 'delete transactions',
                 // Inventory
                 'view inventory',
                 'create inventory',
@@ -248,5 +248,6 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(RevenueHistorySeeder::class);
+        $this->call(MlFeatureSeeder::class);
     }
 }

@@ -3,7 +3,10 @@ from typing import Optional
 
 import pandas as pd
 
-from pmu_client import PMUClient
+try:
+    from src.pmu_client import PMUClient
+except ImportError:
+    from pmu_client import PMUClient
 
 
 def load_transactions(client: PMUClient, start: date, end: date) -> pd.DataFrame:
@@ -25,6 +28,7 @@ def load_weather(client: PMUClient, start: date, end: date) -> pd.DataFrame:
 
     df = pd.DataFrame(data)
     df["date"] = pd.to_datetime(df["weather_date"]).dt.date
+    df = df.rename(columns={"rainfall_mm": "rainfall"})
     return df[["date", "temperature", "rainfall"]].sort_values("date").reset_index(drop=True)
 
 

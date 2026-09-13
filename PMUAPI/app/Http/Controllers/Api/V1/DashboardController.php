@@ -14,6 +14,10 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $latestWeather = DB::table('weather_data')
+            ->orderByDesc('weather_date')
+            ->first(['weather_date', 'temperature', 'rainfall_mm', 'wind_speed']);
+
         return response()->json([
             'total_revenue' => (float) RevenueHistory::sum('total_revenue'),
             'transactions_today' => Transaction::whereDate('transaction_date', today())->count(),
@@ -21,13 +25,23 @@ class DashboardController extends Controller
             'low_stock_items' => InventoryItem::where('status', 'low_stock')
                 ->orWhere('quantity', '<=', 0)
                 ->count(),
+            'latest_weather' => $latestWeather ? [
+                'weather_date' => $latestWeather->weather_date,
+                'temperature' => (float) $latestWeather->temperature,
+                'rainfall_mm' => (float) $latestWeather->rainfall_mm,
+                'wind_speed' => (float) $latestWeather->wind_speed,
+            ] : null,
         ]);
     }
 
-    public function revenueTrend()
+    public function revenueTrend(Request $request)
     {
+        $limit = (int) $request->query('limit', 500);
+        $limit = min($limit, 1000);
+
         return response()->json(
             RevenueHistory::orderBy('revenue_date')
+                ->take($limit)
                 ->get(['revenue_date', 'total_revenue', 'transaction_count'])
         );
     }
@@ -89,11 +103,11 @@ class DashboardController extends Controller
         );
 
         return response()->json([
-            'data' => $correlations,
             'correlations' => [
                 'rainfall' => round($rainCorr, 4),
                 'temperature' => round($tempCorr, 4),
                 'wind_speed' => round($windCorr, 4),
+                'data_points' => $pairs->count(),
             ],
         ]);
     }
