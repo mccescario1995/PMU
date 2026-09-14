@@ -222,7 +222,168 @@ class DatabaseSeeder extends Seeder
         // InventoryItem::create(['item_name' => 'Plastic Crates', 'category' => 'Containers', 'quantity' => 100, 'unit' => 'pcs', 'status' => 'available']);
         // InventoryItem::create(['item_name' => 'Fishing Net', 'category' => 'Gear', 'quantity' => 8, 'unit' => 'pcs', 'status' => 'low_stock']);
         // InventoryItem::create(['item_name' => 'Life Vest', 'category' => 'Safety', 'quantity' => 0, 'unit' => 'pcs', 'status' => 'damaged']);
-        // InventoryItem::create(['item_name' => 'Cold Storage Pump', 'category' => 'Machinery', 'quantity' => 5, 'unit' => 'pcs', 'status' => 'available']);
+        InventoryItem::create(
+            [
+                'item_name' => 'Log books',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Long bond Paper',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            // Add more items as needed
+            [
+                'item_name' => 'Envelopes (long)',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Staplers',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Scissors',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Folders',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Printer Ink',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Pens',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Calculator',
+                'category' => 'Office Supplies',
+                'quantity' => 0,
+                'unit' => '',
+            ],
+            
+            // Materials
+            [
+                'item_name' => 'Cleaning Hoses',
+                'category' => 'Materials',
+                'quantity' => 0,
+                'unit' => 'meters',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Utility Buckets',
+                'category' => 'Materials',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Mop',
+                'category' => 'Materials',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Brooms',
+                'category' => 'Materials',
+                'quantity' => 0,
+                'unit' => '',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Cleaning Agent',
+                'category' => 'Materials',
+                'quantity' => 0,
+                'unit' => 'liters',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Dustpan',
+                'category' => 'Materials',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+
+            // Equipment
+            [
+                'item_name' => 'Power Generator',
+                'category' => 'Equipment',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Weightened Scale',
+                'category' => 'Equipment',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Trolley',
+                'category' => 'Equipment',
+                'quantity' => 0,
+                'unit' => '',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Submersible Water Pump',
+                'category' => 'Equipment',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Ladder',
+                'category' => 'Equipment',
+                'quantity' => 0,
+                'unit' => '',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'Flashlights',
+                'category' => 'Equipment',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ],
+            [
+                'item_name' => 'SSSSSSS',
+                'category' => 'Equipment',
+                'quantity' => 0,
+                'unit' => 'pcs',
+                'status' => 'available'
+            ]
+
+
+        );
 
         $settings = [
             ['key' => 'low_stock_threshold', 'value' => '10', 'type' => 'number', 'description' => 'Minimum quantity before item is marked low stock'],
