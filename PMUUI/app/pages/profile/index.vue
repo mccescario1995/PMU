@@ -197,7 +197,7 @@ async function handleProfilePictureUpload(event: Event) {
                     size="xl"
                     class="ring-4 ring-primary/10"
                 />
-                <div class="flex gap-2">
+<div class="flex gap-2">
                     <input
                         type="file"
                         id="profile-picture-input"
@@ -210,7 +210,7 @@ async function handleProfilePictureUpload(event: Event) {
                         color="neutral"
                         icon="i-lucide-camera"
                         :loading="uploading"
-                        @click="document.getElementById('profile-picture-input')?.click()"
+                        @click="typeof document !== 'undefined' && document.getElementById('profile-picture-input')?.click()"
                     >
                         {{ uploading ? 'Uploading...' : 'Change Photo' }}
                     </UButton>
