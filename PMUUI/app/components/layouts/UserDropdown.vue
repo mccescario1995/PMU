@@ -33,8 +33,9 @@ const dropdownItems = [
   >
     <UButton variant="ghost" color="neutral">
       <UAvatar
+        :src="user?.profile_picture || undefined"
         :name="user?.name || 'User'"
-        :src="undefined"
+        size="md"
       />
 
       <div class="ml-3 text-left">

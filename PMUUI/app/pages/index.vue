@@ -14,10 +14,10 @@ const login = (role: string) => {
       <!-- LEFT IMAGE -->
       <div class="hidden lg:block relative">
         <img
-          src="#"
+          src="/assets/images/pmu-login.png"
           class="absolute inset-0 h-full w-full object-cover"
         />
-        <!-- src="/images/port.jpg" -->
+        <!-- src="/assets/images/pmu-login.png" -->
 
         <div class="absolute inset-0 bg-black/10" />
       </div>

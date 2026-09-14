@@ -8,6 +8,7 @@ const toast = useToast();
 
 const isEditing = ref(false);
 const loading = ref(false);
+const uploading = ref(false);
 const fetching = ref(true);
 
 const form = reactive({
@@ -28,6 +29,11 @@ const originalForm = reactive({
 
 // Helper to unwrap the API response
 const unwrap = (response: any) => response?.data || response;
+
+// Computed for profile picture URL
+const profilePictureUrl = computed(() => {
+    return user.value?.profile_picture || undefined;
+});
 
 onMounted(async () => {
     try {
@@ -97,8 +103,8 @@ async function saveProfile() {
 
         // Sync the global auth state so UserDropdown updates immediately
         if (user.value) {
-            user.value.data.name = form.name;
-            user.value.data.email = form.email;
+            user.value.name = form.name;
+            user.value.email = form.email;
         }
 
         originalForm.name = form.name;
@@ -118,6 +124,46 @@ async function saveProfile() {
         });
     } finally {
         loading.value = false;
+    }
+}
+
+async function handleProfilePictureUpload(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append("profile_picture", file);
+
+    uploading.value = true;
+    try {
+        const response = await apiFetch("/v1/auth/profile-picture", {
+            method: "POST",
+            body: formData,
+            parseJson: true,
+            throwOnError: true,
+        }) as { message: string; user: any };
+
+        // Update the global auth state
+        if (user.value && response.user) {
+            user.value.profile_picture = response.user.profile_picture;
+        }
+
+        toast.add({
+            title: "Success",
+            description: response.message || "Profile picture updated successfully.",
+            color: "success",
+        });
+    } catch (err: any) {
+        toast.add({
+            title: "Upload failed",
+            description: err?.body?.message || err?.message || "Failed to upload profile picture.",
+            color: "error",
+        });
+    } finally {
+        uploading.value = false;
+        // Reset the input so the same file can be selected again
+        input.value = "";
     }
 }
 </script>
@@ -144,7 +190,34 @@ async function saveProfile() {
                 </div>
             </template>
 
-            <UForm :state="form" @submit="saveProfile" class="space-y-4">
+            <div class="flex flex-col items-center space-y-4 pb-4 border-b border-slate-200">
+                <UAvatar
+                    :src="profilePictureUrl"
+                    :name="form.name || 'User'"
+                    size="xl"
+                    class="ring-4 ring-primary/10"
+                />
+                <div class="flex gap-2">
+                    <input
+                        type="file"
+                        id="profile-picture-input"
+                        class="hidden"
+                        accept="image/*"
+                        @change="handleProfilePictureUpload"
+                    />
+                    <UButton
+                        variant="ghost"
+                        color="neutral"
+                        icon="i-lucide-camera"
+                        :loading="uploading"
+                        @click="document.getElementById('profile-picture-input')?.click()"
+                    >
+                        {{ uploading ? 'Uploading...' : 'Change Photo' }}
+                    </UButton>
+                </div>
+            </div>
+
+            <UForm :state="form" @submit="saveProfile" class="space-y-4 pt-4">
                 <UFormField label="Full Name" name="name">
                     <UInput v-model="form.name" :disabled="!isEditing" />
                 </UFormField>
@@ -152,7 +225,7 @@ async function saveProfile() {
                 <UFormField label="Email" name="email">
                     <UInput v-model="form.email" type="email" :disabled="!isEditing" />
                 </UFormField>
-                
+
                 <div v-if="originalForm.role || originalForm.status" class="text-sm text-slate-500 space-y-1 pt-4 border-t border-slate-200">
                     <p><strong class="text-slate-700">Role:</strong> {{ originalForm.role || "N/A" }}</p>
                     <p><strong class="text-slate-700">Status:</strong> {{ originalForm.status || "N/A" }}</p>

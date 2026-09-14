@@ -40,7 +40,7 @@ export async function apiFetch<T = any>(
       headers.set("Accept", "application/json");
     }
 
-    if (fetchInit.body && !headers.has("Content-Type")) {
+    if (fetchInit.body && !headers.has("Content-Type") && !(fetchInit.body instanceof FormData)) {
       headers.set("Content-Type", "application/json");
     }
 
