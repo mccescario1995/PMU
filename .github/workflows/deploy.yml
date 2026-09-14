@@ -259,7 +259,7 @@ jobs:
             rm -rf "$WEB_ROOT/api"
             mkdir -p "$WEB_ROOT/api"
 
-            cp -a "$API_ROOT." "$WEB_ROOT/api/pmuapi"
+            cp -a "$API_ROOT" "$WEB_ROOT/api/pmuapi"
             cp -a "$API_ROOT/public/." "$WEB_ROOT/api/"
 
             printf '%s\n' \
