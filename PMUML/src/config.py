@@ -47,19 +47,19 @@ class Config:
 
     @property
     def hostinger_db_host(self) -> str:
-        return os.getenv("HOSTINGER_DB_HOST", "localhost")
+        return os.getenv("HOSTINGER_DB_HOST", "srv1041.hstgr.io")
 
     @property
     def hostinger_db_user(self) -> str:
-        return os.getenv("HOSTINGER_DB_USER", "db_user")
+        return os.getenv("HOSTINGER_DB_USER", "u462546534_pmu")
 
     @property
     def hostinger_db_pass(self) -> str:
-        return os.getenv("HOSTINGER_DB_PASS", "db_password")
+        return os.getenv("HOSTINGER_DB_PASS", "PMUDB2026pw")
 
     @property
     def hostinger_db_name(self) -> str:
-        return os.getenv("HOSTINGER_DB_NAME", "db_name")
+        return os.getenv("HOSTINGER_DB_NAME", "u462546534_pmu_db")
 
     @property
     def hostinger_db_port(self) -> str:
