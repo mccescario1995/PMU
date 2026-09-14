@@ -118,19 +118,17 @@ class Forecaster:
         concurrent: bool = False,
     ) -> Dict[str, ForecastResult]:
         # Load historical data first
-        historical_df = self.get_historical_df(client=client)
+        df = self.get_historical_df(client=client)
         
         # If no historical data is available, skip training
-        if historical_df.empty:
-            logger.warning("No historical data available. Using pre-trained models if available.")
-            # If we have pre-trained models, use them; otherwise, return empty results
-            if self._models:
-                return self._models_to_forecast()
-            else:
-                return {}
-        
+        if df.empty:
+            logger.warning("No historical data available. Skipping model training.")
+            return {}
+
         if models is None:
-            models = list(self._models.keys())
+            models = ["amira", "samira", "linear_regression"]
+
+        results: Dict[str, ForecastResult] = {}
 
         if concurrent:
             with ThreadPoolExecutor(max_workers=len(models)) as executor:
@@ -226,18 +224,6 @@ class Forecaster:
                 logger.info(f"Loaded {model_name} from {path}")
                 loaded = True
         return loaded
-
-    def _models_to_forecast(self) -> Dict[str, ForecastResult]:
-        """Generate forecasts from pre-trained models."""
-        results = {}
-        for model_name in self._models:
-            try:
-                result = self.forecast(models=[model_name], days=self.config.forecast_days, client=self.client)
-                results[model_name] = result
-            except Exception as e:
-                logger.error(f"Error generating forecast for {model_name}: {e}")
-                results[model_name] = {"error": str(e)}
-        return results
 
     def train_all(self, days: Optional[int] = None, client=None, use_weather: bool = True,
                   post_to_api: bool = True) -> Dict[str, ForecastResult]:
