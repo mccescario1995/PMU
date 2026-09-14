@@ -63,18 +63,17 @@ jobs:
 
     steps:
       - name: Deploy to Hostinger
+        uses: appleboy/ssh-action@v1.0.3
         env:
           HOSTINGER_PUBLIC_HTML: ${{ secrets.HOSTINGER_PUBLIC_HTML }}
           HOSTINGER_GITHUB_REPO: ${{ secrets.HOSTINGER_GITHUB_REPO }}
-          HOSTINGER_ENV_B64: ${{ secrets.HOSTINGER_ENV_B64 }}
-        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOSTINGER_HOST }}
           username: ${{ secrets.HOSTINGER_USERNAME }}
           key: ${{ secrets.HOSTINGER_SSH_KEY }}
           port: ${{ secrets.HOSTINGER_PORT }}
 
-          envs: HOSTINGER_PUBLIC_HTML,HOSTINGER_GITHUB_REPO,HOSTINGER_ENV_B64
+          envs: HOSTINGER_PUBLIC_HTML,HOSTINGER_GITHUB_REPO
 
           command_timeout: 30m
 
@@ -194,28 +193,6 @@ jobs:
             test -f "$API_ROOT/composer.json" || { echo "ERROR: composer.json missing."; exit 1; }
             test -f "$UI_ROOT/package.json" || { echo "ERROR: package.json missing."; exit 1; }
             test -f "$UI_ROOT/package-lock.json" || { echo "ERROR: package-lock.json missing."; exit 1; }
-
-
-            # ========================================================
-            # LARAVEL ENVIRONMENT
-            # ========================================================
-
-            echo ""
-            echo "Configuring Laravel environment..."
-
-            if [ -n "${HOSTINGER_ENV_B64:-}" ]; then
-              echo "Writing Laravel .env from base64 secret."
-              printf '%s' "$HOSTINGER_ENV_B64" | base64 --decode > "$ENV_FILE"
-              chmod 600 "$ENV_FILE"
-            elif [ ! -f "$ENV_FILE" ]; then
-              echo ""
-              echo "ERROR: Laravel .env does not exist."
-              echo "Configure HOSTINGER_ENV_B64 in GitHub Secrets."
-              exit 1
-            else
-              echo "Existing Laravel .env found."
-              chmod 600 "$ENV_FILE"
-            fi
 
 
             # ========================================================
