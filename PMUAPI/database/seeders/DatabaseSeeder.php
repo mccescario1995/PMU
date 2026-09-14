@@ -219,10 +219,9 @@ class DatabaseSeeder extends Seeder
 
         $this->call(StakeholderTypeSeeder::class);
 
-        // InventoryItem::create(['item_name' => 'Plastic Crates', 'category' => 'Containers', 'quantity' => 100, 'unit' => 'pcs', 'status' => 'available']);
-        // InventoryItem::create(['item_name' => 'Fishing Net', 'category' => 'Gear', 'quantity' => 8, 'unit' => 'pcs', 'status' => 'low_stock']);
-        // InventoryItem::create(['item_name' => 'Life Vest', 'category' => 'Safety', 'quantity' => 0, 'unit' => 'pcs', 'status' => 'damaged']);
-        InventoryItem::create(
+        // InventoryItem seed data
+        $inventoryItems = [
+            // Office Supplies
             [
                 'item_name' => 'Log books',
                 'category' => 'Office Supplies',
@@ -237,7 +236,6 @@ class DatabaseSeeder extends Seeder
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
-            // Add more items as needed
             [
                 'item_name' => 'Envelopes (long)',
                 'category' => 'Office Supplies',
@@ -280,11 +278,13 @@ class DatabaseSeeder extends Seeder
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
+            // Calculator - fixed empty unit
             [
                 'item_name' => 'Calculator',
                 'category' => 'Office Supplies',
                 'quantity' => 0,
-                'unit' => '',
+                'unit' => 'pcs',
+                'status' => 'available'
             ],
             
             // Materials
@@ -309,11 +309,12 @@ class DatabaseSeeder extends Seeder
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
+            // Brooms - fixed empty unit
             [
                 'item_name' => 'Brooms',
                 'category' => 'Materials',
                 'quantity' => 0,
-                'unit' => '',
+                'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
@@ -346,11 +347,12 @@ class DatabaseSeeder extends Seeder
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
+            // Trolley - fixed empty unit
             [
                 'item_name' => 'Trolley',
                 'category' => 'Equipment',
                 'quantity' => 0,
-                'unit' => '',
+                'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
@@ -360,11 +362,12 @@ class DatabaseSeeder extends Seeder
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
+            // Ladder - fixed empty unit
             [
                 'item_name' => 'Ladder',
                 'category' => 'Equipment',
                 'quantity' => 0,
-                'unit' => '',
+                'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
@@ -375,15 +378,17 @@ class DatabaseSeeder extends Seeder
                 'status' => 'available'
             ],
             [
-                'item_name' => 'SSSSSSS',
+                'item_name' => 'Rubber Boots',
                 'category' => 'Equipment',
                 'quantity' => 0,
                 'unit' => 'pcs',
                 'status' => 'available'
             ]
+        ];
 
-
-        );
+        foreach ($inventoryItems as $item) {
+            InventoryItem::create($item);
+        }
 
         $settings = [
             ['key' => 'low_stock_threshold', 'value' => '10', 'type' => 'number', 'description' => 'Minimum quantity before item is marked low stock'],
