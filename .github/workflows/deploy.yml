@@ -260,6 +260,7 @@ jobs:
             mkdir -p "$WEB_ROOT/api"
 
             cp -a "$API_ROOT" "$WEB_ROOT/api/pmuapi"
+            cp -a "$WEB_ROOT/api/pmuapi/.env.example" "$WEB_ROOT/api/pmuapi/.env"
             cp -a "$API_ROOT/public/." "$WEB_ROOT/api/"
 
             printf '%s\n' \

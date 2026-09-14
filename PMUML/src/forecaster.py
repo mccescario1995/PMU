@@ -128,6 +128,13 @@ class Forecaster:
         if models is None:
             models = ["amira", "samira", "linear_regression"]
 
+        wm = self.weather_manager if use_weather else None
+        weather_df = None
+        if wm is not None:
+            from datetime import date as date_cls, timedelta
+            last_date = pd.to_datetime(df["report_date"]).max().date() if not df.empty else date_cls.today()
+            weather_df = wm.get_forecast_weather(last_date, days)
+
         results: Dict[str, ForecastResult] = {}
 
         if concurrent:
