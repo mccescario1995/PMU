@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 // v1 Controllers
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DropdownController;
 use App\Http\Controllers\Api\V1\FeeTypeController;
 use App\Http\Controllers\Api\V1\ForecastController;
 use App\Http\Controllers\Api\V1\ImportController;
@@ -56,6 +57,11 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/profile-picture', [AuthController::class, 'uploadProfilePicture']);
+
+        Route::get('dropdowns/stakeholders', [DropdownController::class, 'stakeholders']);
+        Route::get('dropdowns/stakeholder-types', [DropdownController::class, 'stakeholderTypes']);
+        Route::get('dropdowns/fee-types', [DropdownController::class, 'feeTypes']);
+        Route::get('dropdowns/roles', [DropdownController::class, 'roles']);
 
         /*
         |--------------------------------------------------------------------------
