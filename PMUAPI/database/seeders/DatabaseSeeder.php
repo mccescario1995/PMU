@@ -169,7 +169,7 @@ class DatabaseSeeder extends Seeder
                 'view reports',
                 'view inventory planning',
                 'view weather',
-                'view fee types',
+                'view fee types',// 'view fee types',
             ],
 
         ];
