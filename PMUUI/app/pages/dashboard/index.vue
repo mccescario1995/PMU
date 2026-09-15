@@ -33,6 +33,12 @@ onMounted(async () => {
 
 const currency = (v: number) =>
   new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(v);
+
+const isToday = (date: string) => {
+  const d = new Date(date);
+  const t = new Date();
+  return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
+};
 </script>
 
 <template>
@@ -96,7 +102,7 @@ const currency = (v: number) =>
         </div>
         <div v-else-if="weatherError" class="text-sm text-red-500">{{ weatherError }}</div>
         <div v-else-if="weatherDaily.length" class="space-y-2">
-          <div v-for="d in weatherDaily" :key="d.date" class="flex items-center justify-between py-1 border-b border-gray-100 last:border-0">
+          <div v-for="d in weatherDaily" :key="d.date" :class="['flex items-center justify-between py-1 border-b border-gray-100 last:border-0', isToday(d.date) ? 'font-bold' : '']">
             <span class="text-xs text-slate-500">{{ new Date(d.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) }}</span>
             <span class="text-xs font-medium">{{ d.tempMax !== null ? `🌡 ${d.tempMax}°C` : "—" }}</span>
             <span class="text-xs text-slate-400">{{ d.precipitation !== null && d.precipitation > 0 ? `🌧 ${d.precipitation}mm` : (d.windSpeed !== null ? `💨 ${d.windSpeed}km/h` : "☀") }}</span>
