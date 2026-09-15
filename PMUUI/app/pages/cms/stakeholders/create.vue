@@ -22,7 +22,7 @@ const typesLoaded = ref(false)
 
 async function loadTypes() {
   if (typesLoaded.value) return;
-  const fetched = ((await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any).data;
+  const fetched = ((await apiFetch('/v1/dropdowns/stakeholder-types', { parseJson: true })) as any).data;
   const existing = new Map(types.value.map((t: any) => [t.id, t]));
   for (const t of fetched) {
     if (!existing.has(t.id)) {
