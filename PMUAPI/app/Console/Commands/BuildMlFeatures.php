@@ -20,6 +20,7 @@ class BuildMlFeatures extends Command
 
         // Step 1: Upsert into transaction_revenue from revenue_histories + weather_data
         $query = DB::table('revenue_histories as rh')
+            ->leftjoin('weather_data as wd', 'wd.weather_date', '=', 'rh.revenue_date')
             ->select([
                 'rh.revenue_date',
                 'rh.total_revenue as revenue_target',
