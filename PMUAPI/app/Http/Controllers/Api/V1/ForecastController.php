@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\RevenueForecast;
+use App\Models\RevenueForecastAmira;
+use App\Models\RevenueForecastLinearRegression;
+use App\Models\RevenueForecastSamira;
 use App\Models\WeatherData;
 use App\Services\WeatherService;
 use Carbon\Carbon;
@@ -172,14 +175,22 @@ class ForecastController extends Controller
         ], 201);
     }
 
-    public function runModel(Request $request, WeatherService $weather)
+    public function runModel(Request $request, WeatherService $weather, ?string $model = null)
     {
+        // Use route default if not provided in body
+        if (! $model) {
+            $model = $request->input('model');
+        }
+
         $data = $request->validate([
-            'model' => 'required|string|in:linear_regression,amira,samira',
+            'model' => 'nullable|string|in:linear_regression,amira,samira',
             'days' => 'nullable|integer|min:1|max:90',
         ]);
 
-        $model = $data['model'];
+        if (! $model) {
+            return response()->json(['error' => 'Model is required'], 400);
+        }
+
         $days = $data['days'] ?? 30;
 
         $pmumlUrl = rtrim(env('PMUML_URL', ''), '/');
@@ -232,6 +243,8 @@ class ForecastController extends Controller
             return response()->json(['error' => 'Invalid PMUML response', 'details' => $result], 502);
         }
 
+        $peakMonths = RevenueForecast::computePeakMonths();
+
         $saved = [];
         foreach ($result['forecasts'] as $item) {
             $forecastDate = $item['date'] ?? null;
@@ -242,9 +255,11 @@ class ForecastController extends Controller
             }
 
             $month = (int) date('n', strtotime($forecastDate));
-            $season = $month >= 1 && $month <= 6 ? 'Peak' : 'Off-Peak';
+            $season = in_array($month, $peakMonths) ? 'Peak' : 'Off-Peak';
 
-            $forecast = RevenueForecast::create([
+            // Save to model-specific table
+            $forecastClass = $this->getModelClass($model);
+            $forecast = $forecastClass::create([
                 'forecast_date' => $forecastDate,
                 'predicted_revenue' => $predicted,
                 'season' => $season,
@@ -269,5 +284,49 @@ class ForecastController extends Controller
             'metrics' => $result['metrics'] ?? [],
             'saved_forecasts' => $saved,
         ], 201);
+    }
+
+    /**
+     * Map model name to its dedicated forecast model class.
+     */
+    protected function getModelClass(string $model): string
+    {
+        return match ($model) {
+            'amira' => RevenueForecastAmira::class,
+            'samira' => RevenueForecastSamira::class,
+            'linear_regression' => RevenueForecastLinearRegression::class,
+            default => RevenueForecast::class,
+        };
+    }
+
+    /**
+     * List forecasts for a specific model.
+     */
+    public function byModel(string $model, WeatherService $weather)
+    {
+        $class = $this->getModelClass($model);
+        $query = $class::orderBy('forecast_date');
+
+        if (request()->has('page')) {
+            $forecasts = $query->paginate(request('per_page', 10));
+        } else {
+            $forecasts = $query->get();
+        }
+
+        $dates = $forecasts->pluck('forecast_date')->map(fn ($d) => $d->toDateString())->unique();
+        $weather->ensureWeatherForDates($dates->toArray());
+
+        $weatherMap = WeatherData::whereIn('weather_date', $dates)
+            ->get()
+            ->keyBy('weather_date');
+
+        if (request()->has('page')) {
+            $forecasts->getCollection()->transform(fn ($f) => $this->toRow($f, $weatherMap));
+            return response()->json($forecasts);
+        }
+
+        return response()->json(
+            $forecasts->map(fn ($f) => $this->toRow($f, $weatherMap))
+        );
     }
 }

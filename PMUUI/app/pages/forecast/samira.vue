@@ -34,7 +34,7 @@ const {
   columns,
   can,
   load,
-} = useForecast()
+} = useForecast('/v1/forecasts/model/samira', '/v1/forecasts/train/samira')
 
 const model = 'samira'
 const modelLabel = 'SAMIRA'

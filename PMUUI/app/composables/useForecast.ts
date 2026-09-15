@@ -4,7 +4,7 @@ import { onMounted, watch, ref, reactive, computed } from 'vue'
 import { usePermissions } from '~/composables/usePermissions'
 import { useToast } from '#imports'
 
-export function useForecast() {
+export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: string = '/v1/forecasts/run-model') {
   const { can } = usePermissions()
   const toast = useToast()
 
@@ -33,7 +33,7 @@ export function useForecast() {
   async function load() {
     loading.value = true
     try {
-      forecasts.value = (await apiFetch('/v1/forecasts', { parseJson: true })) as any[]
+      forecasts.value = (await apiFetch(endpoint, { parseJson: true })) as any[]
     } finally {
       loading.value = false
     }
@@ -152,25 +152,25 @@ function clearProgress() {
 }
 
 async function runModel(model: string) {
-  modelLoading.value = true
-  modelError.value = ""
-  clearProgress()
-  showProgressModal.value = true
+    modelLoading.value = true
+    modelError.value = ""
+    clearProgress()
+    showProgressModal.value = true
 
-  addProgressStep(`Initializing ${model} model...`)
+    addProgressStep(`Initializing ${model} model...`)
 
-  try {
-    addProgressStep("Fetching historical data...")
-    addProgressStep("Training model...")
-    addProgressStep("Generating forecasts...")
+    try {
+      addProgressStep("Fetching historical data...")
+      addProgressStep("Training model...")
+      addProgressStep("Generating forecasts...")
 
-    const response = await apiFetch(`/v1/forecasts/run-model`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, days: 30 }),
-      parseJson: true,
-      throwOnError: true,
-    }) as any
+      const response = await apiFetch(trainEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, days: 30 }),
+        parseJson: true,
+        throwOnError: true,
+      }) as any
 
     addProgressStep(`Model ${model} trained successfully!`)
     addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
@@ -273,5 +273,6 @@ async function runModel(model: string) {
     columns,
     can,
     load,
+    trainEndpoint,
   }
 }

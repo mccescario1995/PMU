@@ -204,6 +204,16 @@ Route::prefix('v1')->group(function () {
 
             Route::post('/generate', [ForecastController::class, 'generate'])->middleware('can:create forecasts');
             Route::post('/run-model', [ForecastController::class, 'runModel'])->middleware('can:create forecasts');
+
+            // Per-model endpoints for comparison
+            Route::get('/model/amira', [ForecastController::class, 'byModel'])->middleware('can:view forecasts')->defaults('model', 'amira');
+            Route::get('/model/samira', [ForecastController::class, 'byModel'])->middleware('can:view forecasts')->defaults('model', 'samira');
+            Route::get('/model/linear-regression', [ForecastController::class, 'byModel'])->middleware('can:view forecasts')->defaults('model', 'linear_regression');
+
+            // Per-model training endpoints
+            Route::post('/train/amira', [ForecastController::class, 'runModel'])->middleware('can:create forecasts')->defaults('model', 'amira');
+            Route::post('/train/samira', [ForecastController::class, 'runModel'])->middleware('can:create forecasts')->defaults('model', 'samira');
+            Route::post('/train/linear-regression', [ForecastController::class, 'runModel'])->middleware('can:create forecasts')->defaults('model', 'linear_regression');
         });
 
         /*
