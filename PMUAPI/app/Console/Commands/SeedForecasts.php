@@ -72,7 +72,8 @@ class SeedForecasts extends Command
         $targetClass = $this->getModelClass($model);
         $targetClass::insertOrIgnore($batch);
 
-        $this->info('Inserted ' . count($batch) . ' forecasts into ' . $targetClass::getTable());
+        $tableName = (new $targetClass)->getTable();
+        $this->info('Inserted ' . count($batch) . ' forecasts into ' . $tableName);
 
         try {
             $weather->ensureWeatherForDates(collect($batch)->pluck('forecast_date')->toArray());
