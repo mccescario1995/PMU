@@ -159,6 +159,7 @@ class DatabaseSeeder extends Seeder
                 'create stakeholders',
                 'edit stakeholders',
                 'delete stakeholders',
+                'view stakeholder types',
                 'view transactions',
                 'create transactions',
                 'edit transactions',
