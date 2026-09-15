@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { apiFetch } from "~/composables/useApiFetch";
+import { useWeatherForecast } from "~/composables/useWeatherForecast";
 import { computed, onMounted, ref } from "vue";
 
 definePageMeta({
@@ -13,6 +14,8 @@ const stats = ref({
   low_stock_items: 0,
   latest_weather: null as any,
 });
+
+const { daily: weatherDaily, loading: weatherLoading, error: weatherError } = useWeatherForecast();
 
 // const correlations = ref<{ rainfall: number; temperature: number; wind_speed: number; data_points: number } | null>(null);
 const forecastData = ref<any[]>([]);
@@ -63,13 +66,13 @@ const currency = (v: number) =>
     </div>
 
     <!-- Weather -->
-    <div v-if="stats.latest_weather" class="flex items-center gap-4 bg-gray-50 rounded-lg px-4 py-2 ">
+    <!-- <div v-if="stats.latest_weather" class="flex items-center gap-4 bg-gray-50 rounded-lg px-4 py-2 ">
       <span class="text-sm text-slate-500">Weather Today: </span>
       <span class="text-sm font-medium">{{ stats.latest_weather.temperature }}°C</span>
       <span class="text-sm text-slate-400">{{ stats.latest_weather.rainfall_mm }}mm</span>
       <span class="text-sm text-slate-400">{{ stats.latest_weather.wind_speed }}km/h</span>
       <span class="text-xs text-slate-300 ml-auto">{{ stats.latest_weather.weather_date }}</span>
-    </div>
+    </div> -->
 
     <!-- Revenue Forecast -->
     <div class="grid gap-6 xl:grid-cols-3">
@@ -86,7 +89,21 @@ const currency = (v: number) =>
         </div>
         <p class="text-xs text-gray-400 mt-1">{{ forecastData.length }} forecast periods</p>
       </UCard>
-      <DashboardForecastCard />
+      <UCard>
+        <template #header>This Week Weather</template>
+        <div v-if="weatherLoading" class="space-y-2">
+          <div v-for="i in 4" :key="i" class="h-8 bg-gray-200 rounded animate-pulse" />
+        </div>
+        <div v-else-if="weatherError" class="text-sm text-red-500">{{ weatherError }}</div>
+        <div v-else-if="weatherDaily.length" class="space-y-2">
+          <div v-for="d in weatherDaily" :key="d.date" class="flex items-center justify-between py-1 border-b border-gray-100 last:border-0">
+            <span class="text-xs text-slate-500">{{ new Date(d.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) }}</span>
+            <span class="text-xs font-medium">{{ d.tempMax !== null ? `🌡 ${d.tempMax}°C` : "—" }}</span>
+            <span class="text-xs text-slate-400">{{ d.precipitation !== null && d.precipitation > 0 ? `🌧 ${d.precipitation}mm` : (d.windSpeed !== null ? `💨 ${d.windSpeed}km/h` : "☀") }}</span>
+          </div>
+        </div>
+        <p v-else class="text-sm text-gray-400">No forecast available.</p>
+      </UCard>
     </div>
 
     <!-- Weather-Revenue Correlation -->
