@@ -56,13 +56,13 @@ class RevenueHistorySeeder extends Seeder
                 ['total_revenue' => $row['total']]
             );
 
-            $transaction = Transaction::create([
-                'stakeholder_id' => $stakeholder?->id,
-                'total_amount' => $row['total'],
-                'transaction_date' => $row['date'],
-                'recorded_by' => $user?->id,
-                'remarks' => 'Imported from historical PMU report',
-            ]);
+            // $transaction = Transaction::create([
+            //     'stakeholder_id' => $stakeholder?->id,
+            //     'total_amount' => $row['total'],
+            //     'transaction_date' => $row['date'],
+            //     'recorded_by' => $user?->id,
+            //     'remarks' => 'Imported from historical PMU report',
+            // ]);
 
             $feeTypeMap = [
                 'Usage' => $row['fees'][0] ?? 0,
@@ -89,13 +89,13 @@ class RevenueHistorySeeder extends Seeder
                     continue;
                 }
 
-                TransactionItem::create([
-                    'transaction_id' => $transaction->id,
-                    'fee_type_id' => $feeType->id,
-                    'quantity' => 1,
-                    'unit_price' => $amount,
-                    'subtotal' => $amount,
-                ]);
+                // TransactionItem::create([
+                //     'transaction_id' => $transaction->id,
+                //     'fee_type_id' => $feeType->id,
+                //     'quantity' => 1,
+                //     'unit_price' => $amount,
+                //     'subtotal' => $amount,
+                // ]);
             }
         }
 

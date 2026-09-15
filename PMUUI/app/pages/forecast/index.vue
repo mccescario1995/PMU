@@ -71,7 +71,6 @@ const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPag
         >
           Run SAMIRA
         </UButton>
-        <UButton v-if="can('create forecasts')" icon="i-lucide-plus" @click="openCreate"> Add Forecast </UButton>
       </div>
     </div>
 

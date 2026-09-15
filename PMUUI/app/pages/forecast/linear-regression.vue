@@ -69,7 +69,6 @@ const UBadge = resolveComponent('UBadge')
         >
           Run {{ modelLabel }}
         </UButton>
-        <UButton v-if="can('create forecasts')" icon="i-lucide-plus" @click="openCreate"> Add Forecast </UButton>
       </div>
     </div>
 
