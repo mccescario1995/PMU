@@ -43,5 +43,5 @@ def run_model(model_name: str):
 
 
 if __name__ == "__main__":
-    model = sys.argv[1] if len(sys.argv) > 1 else "samira"
+    model = sys.argv[1] if len(sys.argv) > 1 else "arima"
     run_model(model)

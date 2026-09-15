@@ -40,7 +40,7 @@ onMounted(async () => {
     types.value = [{ id: s.stakeholder_type.id, name: s.stakeholder_type.name }];
   }
 
-  const allTypes = ((await apiFetch('/v1/stakeholder-types', { parseJson: true })) as any).data;
+  const allTypes = ((await apiFetch('/v1/dropdowns/stakeholder-types', { parseJson: true })) as any).data;
   const existing = new Map(types.value.map((t: any) => [t.id, t]));
   for (const t of allTypes) {
     if (!existing.has(t.id)) {

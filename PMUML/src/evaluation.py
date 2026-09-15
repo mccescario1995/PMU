@@ -18,33 +18,33 @@ def run_linear(client=None, config=None):
     return {"model": "linear_regression", "metrics": {}, "forecasts": [], "csv_path": "", "plot_path": ""}
 
 
-def run_amira(client=None, config=None):
+def run_arima(client=None, config=None):
     forecaster = Forecaster(config=config or Config())
     days = int(config or Config().forecast_days) if config else 30
-    results = forecaster.forecast(models=["amira"], days=days, client=client)
-    result = results.get("amira")
+    results = forecaster.forecast(models=["arima"], days=days, client=client)
+    result = results.get("arima")
     if result:
         return {
-            "model": "amira",
+            "model": "arima",
             "metrics": result.metrics,
             "forecasts": result.forecasts,
             "csv_path": "",
             "plot_path": "",
         }
-    return {"model": "amira", "metrics": {}, "forecasts": [], "csv_path": "", "plot_path": ""}
+    return {"model": "arima", "metrics": {}, "forecasts": [], "csv_path": "", "plot_path": ""}
 
 
-def run_samira(client=None, config=None):
+def run_sarima(client=None, config=None):
     forecaster = Forecaster(config=config or Config())
     days = int(config or Config().forecast_days) if config else 30
-    results = forecaster.forecast(models=["samira"], days=days, client=client)
-    result = results.get("samira")
+    results = forecaster.forecast(models=["sarima"], days=days, client=client)
+    result = results.get("sarima")
     if result:
         return {
-            "model": "samira",
+            "model": "sarima",
             "metrics": result.metrics,
             "forecasts": result.forecasts,
             "csv_path": "",
             "plot_path": "",
         }
-    return {"model": "samira", "metrics": {}, "forecasts": [], "csv_path": "", "plot_path": ""}
+    return {"model": "sarima", "metrics": {}, "forecasts": [], "csv_path": "", "plot_path": ""}

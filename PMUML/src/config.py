@@ -43,7 +43,7 @@ class Config:
 
     @property
     def model_version(self) -> str:
-        return os.getenv("MODEL_VERSION", "amira-v1")
+        return os.getenv("MODEL_VERSION", "arima-v1")
 
     @property
     def hostinger_db_host(self) -> str:

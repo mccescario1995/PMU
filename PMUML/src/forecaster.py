@@ -13,8 +13,8 @@ from src.features import prepare_dataset, generate_future_features
 from src.logger import logger
 from src.weather_service import WeatherManager
 
-from src.models.amira import AMIRAModel
-from src.models.samira import SAMIRAModel
+from src.models.arima import ARIMAModel
+from src.models.sarima import SARIMAModel
 from src.models.linear_regression import LinearRegressionModel
 
 
@@ -50,16 +50,16 @@ class Forecaster:
 
     def get_model(self, model_name: str):
         if model_name not in self._models:
-            if model_name == "amira":
-                cfg = self.config.get_model_config("amira")
-                self._models[model_name] = AMIRAModel(
+            if model_name == "arima":
+                cfg = self.config.get_model_config("arima")
+                self._models[model_name] = ARIMAModel(
                     order=(cfg.get("p", 1), cfg.get("d", 1), cfg.get("q", 1))
                 )
-            elif model_name == "samira":
-                cfg = self.config.get_model_config("samira")
+            elif model_name == "sarima":
+                cfg = self.config.get_model_config("sarima")
                 p, d, q = cfg.get("p", 1), cfg.get("d", 1), cfg.get("q", 1)
                 m = cfg.get("m", 7)
-                self._models[model_name] = SAMIRAModel(
+                self._models[model_name] = SARIMAModel(
                     order=(p, d, q),
                     seasonal_order=(1, d, 1, m),
                 )
@@ -129,7 +129,7 @@ class Forecaster:
             return {}
 
         if models is None:
-            models = ["amira", "samira", "linear_regression"]
+            models = ["arima", "sarima", "linear_regression"]
 
         wm = self.weather_manager if use_weather else None
         weather_df = None
@@ -177,8 +177,8 @@ class Forecaster:
                     df.iloc[-1], steps=days, weather_df=weather_df
                 )
                 forecasts = model.predict(df, steps=days, future_features=future_df)
-            elif model_name == "samira":
-                cfg = self.config.get_model_config("samira")
+            elif model_name == "sarima":
+                cfg = self.config.get_model_config("sarima")
                 exog_col = None
                 if cfg.get("exog"):
                     if wm is not None and "temp_celsius" in df.columns:
@@ -256,12 +256,12 @@ class Forecaster:
         return result
 
     def _post_results_to_api(self, results: Dict[str, ForecastResult], client):
-        model_version = os.getenv("MODEL_VERSION", "amira-v1")
         for model_name, result in results.items():
             if result.error or not result.forecasts:
                 logger.warning(f"Skipping API post for {model_name}: {result.error or 'no forecasts'}")
                 continue
             try:
+                model_version = os.getenv("MODEL_VERSION", f"{model_name}-v1")
                 posted = client.post_forecast_batch(result.forecasts, model_version=model_version)
                 logger.info(f"Posted {len(posted)} forecasts for {model_name}")
             except Exception as e:

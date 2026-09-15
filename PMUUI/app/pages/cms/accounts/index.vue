@@ -18,6 +18,7 @@ const toast = useToast();
 const tab = ref<"roles" | "users">("roles");
 
 const roles = ref<any[]>([]);
+const roleDropdown = ref<any[]>([]);
 const {
   page: rolePage,
   pageSize: rolePageSize,
@@ -38,7 +39,7 @@ const {
 const permissionGroups = ref<any[]>([]);
 
 const roleOptions = computed(() =>
-  roles.value.map((role) => ({
+  roleDropdown.value.map((role) => ({
     id: role.id,
     name: role.name,
   })),
@@ -83,6 +84,16 @@ async function load() {
   } catch (e) {
     // Silently handle errors during SSR (user not authenticated yet)
     console.error("Failed to load accounts data:", e);
+  }
+
+  try {
+    const dropdown = await apiFetch("/v1/dropdowns/roles", {
+      parseJson: true,
+      throwOnError: false,
+    });
+    roleDropdown.value = toArray(dropdown as any);
+  } catch (e) {
+    console.error("Failed to load role options:", e);
   } finally {
     loading.value = false;
   }

@@ -123,30 +123,30 @@ class DatabaseSeeder extends Seeder
                 'delete settings',
                 // Statuses
                 'view statuses',
-                'create statuses',
-                'edit statuses',
-                'delete statuses',
+                // 'create statuses',
+                // 'edit statuses',
+                // 'delete statuses',
                 // Transactions
-                // 'view transactions',
+                'view transactions',
                 // 'create transactions',
                 // 'edit transactions',
                 // 'delete transactions',
                 // Inventory
                 'view inventory',
-                'create inventory',
-                'edit inventory',
-                'delete inventory',
+                // 'create inventory',
+                // 'edit inventory',
+                // 'delete inventory',
                 'view inventory planning',
                 // Weather
                 'view weather',
-                'create weather',
-                'edit weather',
-                'delete weather',
+                // 'create weather',
+                // 'edit weather',
+                // 'delete weather',
                 // Imports
                 'create imports',
                 // Forecasts
                 'view forecasts',
-                'create forecasts',
+                // 'create forecasts',
                 // Dashboard
                 'view dashboard',
                 // Reports
@@ -163,11 +163,14 @@ class DatabaseSeeder extends Seeder
                 'view transactions',
                 'create transactions',
                 'edit transactions',
-                'delete transactions',
+                // 'delete transactions',
                 'view dashboard',
                 'view forecasts',
-                'create forecasts',
-                'view reports',
+                // 'create forecasts',
+                // 'view reports',
+                'create inventory',
+                'edit inventory',
+                'delete inventory',
                 'view inventory planning',
                 'view weather',
                 'view fee types',// 'view fee types',
@@ -196,23 +199,24 @@ class DatabaseSeeder extends Seeder
         ]);
         $userStat->assignRole('Statistician');
 
-        // $feeTypes = [
-        //     ['fee_name' => 'Fish Landing', 'base_rate' => 30.00, 'unit' => 'kg'],
-        //     ['fee_name' => 'Fish Unloading', 'base_rate' => 50.00, 'unit' => 'kg'],
-        //     ['fee_name' => 'Wharfage', 'base_rate' => 20.00, 'unit' => 'trip'],
-        //     ['fee_name' => 'Parking', 'base_rate' => 15.00, 'unit' => 'day'],
-        //     ['fee_name' => 'Storage', 'base_rate' => 25.00, 'unit' => 'day'],
-        //     ['fee_name' => 'Rental', 'base_rate' => 100.00, 'unit' => 'month'],
-        //     ['fee_name' => 'Accreditation', 'base_rate' => 250.00, 'unit' => 'head'],
-        //     ['fee_name' => 'Auxiliary Invoice', 'base_rate' => 40.00, 'unit' => 'item'],
-        //     ['fee_name' => 'Entrance', 'base_rate' => 10.00, 'unit' => 'head'],
-        //     ['fee_name' => 'Usage', 'base_rate' => 15.00, 'unit' => 'hour'],
-        //     ['fee_name' => 'Inspection', 'base_rate' => 150.00, 'unit' => 'unit'],
-        //     ['fee_name' => 'Regulatory', 'base_rate' => 200.00, 'unit' => 'transaction'],
-        // ];
-        // foreach ($feeTypes as $fee) {
-        //     FeeType::create($fee);
-        // }
+        $feeTypes = [
+            ['fee_name' => 'Fish Landing', 'base_rate' => 30.00, 'unit' => 'kg'],
+            ['fee_name' => 'Fish Unloading', 'base_rate' => 50.00, 'unit' => 'kg'],
+            ['fee_name' => 'Wharfage', 'base_rate' => 20.00, 'unit' => 'trip'],
+            ['fee_name' => 'Parking', 'base_rate' => 15.00, 'unit' => 'day'],
+            ['fee_name' => 'Storage', 'base_rate' => 25.00, 'unit' => 'day'],
+            ['fee_name' => 'Rental', 'base_rate' => 100.00, 'unit' => 'month'],
+            ['fee_name' => 'Accreditation', 'base_rate' => 250.00, 'unit' => 'head'],
+            ['fee_name' => 'Auxiliary Invoice', 'base_rate' => 40.00, 'unit' => 'item'],
+            ['fee_name' => 'Entrance', 'base_rate' => 10.00, 'unit' => 'head'],
+            ['fee_name' => 'Usage', 'base_rate' => 15.00, 'unit' => 'hour'],
+            ['fee_name' => 'Inspection', 'base_rate' => 150.00, 'unit' => 'unit'],
+            ['fee_name' => 'Regulatory', 'base_rate' => 200.00, 'unit' => 'transaction'],
+        ];
+
+        foreach ($feeTypes as $fee) {
+            FeeType::firstOrCreate(['fee_name' => $fee['fee_name']], $fee);
+        }
 
         // Stakeholder::create(['name' => 'Juan Dela Cruz', 'type' => 'buyer', 'contact_no' => '09123456789', 'email' => 'juan@example.com', 'address' => 'Pasacao, Camarines Sur', 'status' => 'active']);
         // Stakeholder::create(['name' => 'Pedro Santos', 'type' => 'broker', 'contact_no' => '09987654321', 'email' => 'pedro@example.com', 'address' => 'Pasacao, Camarines Sur', 'status' => 'active']);
@@ -227,56 +231,56 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Log books',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Long bond Paper',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Envelopes (long)',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Staplers',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Scissors',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Folders',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Printer Ink',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Pens',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -284,30 +288,30 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Calculator',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
-            
+
             // Materials
             [
                 'item_name' => 'Cleaning Hoses',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'meters',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Utility Buckets',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Mop',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -315,21 +319,21 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Brooms',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Cleaning Agent',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'liters',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Dustpan',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -338,14 +342,14 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Power Generator',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Weightened Scale',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -353,14 +357,14 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Trolley',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Submersible Water Pump',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -368,21 +372,21 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Ladder',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Flashlights',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Rubber Boots',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ]

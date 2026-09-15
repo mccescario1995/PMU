@@ -183,7 +183,7 @@ class ForecastController extends Controller
         }
 
         $data = $request->validate([
-            'model' => 'nullable|string|in:linear_regression,amira,samira',
+            'model' => 'required|string|in:linear_regression,arima,sarima',
             'days' => 'nullable|integer|min:1|max:90',
         ]);
 

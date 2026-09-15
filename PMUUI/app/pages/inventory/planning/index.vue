@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted, ref, computed, watch, h } from 'vue'
+import { onMounted, ref, computed, h } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
 
@@ -11,33 +11,53 @@ definePageMeta({
 
 const planning = ref<any>(null)
 const { page: overviewPage, pageSize: overviewPageSize, goToPageInput: overviewGoToPageInput, tablePagination: overviewTablePagination, totalPages: overviewTotalPages, handleGoToPage: overviewHandleGoToPage } = useTablePagination(() => Array.isArray(planning.value?.recommended_stock) ? planning.value.recommended_stock.length : 0)
-const { page: planPage, pageSize: planPageSize, goToPageInput: planGoToPageInput, tablePagination: planTablePagination, totalPages: planTotalPages, handleGoToPage: planHandleGoToPage } = useTablePagination(() => planning.value?.items?.filter((i: any) => i.needs_reorder)?.length ?? 0)
 const loading = ref(true)
 
 const currency = (v: number) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(v)
 
-const activeTab = ref<'overview' | 'planning'>('overview')
-
 onMounted(async () => {
   loading.value = true
-  planning.value = (await apiFetch('/v1/inventory/planning', { parseJson: true })) as any
+  const [overview, view] = await Promise.all([
+    apiFetch('/v1/inventory/planning', { parseJson: true }),
+    apiFetch('/v1/inventory/planning/view', { parseJson: true }),
+  ])
+
+  planning.value = {
+    ...overview,
+    low_stock_items: view.low_stock_items ?? [],
+    forecasts: view.forecasts ?? [],
+  } as any
   loading.value = false
 })
 
-const peakRevenue = computed(() => planning.value?.peak_season?.total_revenue ?? 0)
 const offPeakRevenue = computed(() => planning.value?.off_peak_season?.total_revenue ?? 0)
 const totalItems = computed(() => planning.value?.inventory_summary?.total_items ?? 0)
 const lowStockCount = computed(() => planning.value?.inventory_summary?.low_stock_items ?? 0)
 const totalQuantity = computed(() => planning.value?.inventory_summary?.total_quantity ?? 0)
-
-const budgetGuidance = computed(() => planning.value?.budget_guidance ?? {})
+// const forecastOverview = computed(() =>
+//   (planning.value?.forecasts ?? [])
+//     .filter((forecast: any) => {
+//       const month = Number(String(forecast.forecast_date).slice(5, 7))
+//       return month >= 7 && month <= 12
+//     })
+//     .slice(0, 6)
+// )
 
 const categoryTypeColors: Record<string, string> = {
   equipment: 'primary',
   materials: 'success',
   supplies: 'warning',
 }
+
+const categoryTypes = computed(() =>
+  Object.entries(planning.value?.inventory_summary?.by_category_type ?? {}).map(([type, data]: [string, any]) => ({
+    type,
+    totalItems: data.total_items ?? 0,
+    totalQuantity: data.total_quantity ?? 0,
+    lowStockCount: data.low_stock_count ?? 0,
+  }))
+)
 
 const statusColor: Record<string, string> = {
   available: 'success',
@@ -61,14 +81,6 @@ const columns: TableColumn<any>[] = [
     return row.getValue('needs_reorder') ? 'Yes' : 'No'
   }},
 ]
-
-const planColumns: TableColumn<any>[] = [
-  { accessorKey: 'item_name', header: 'Item Name' },
-  { accessorKey: 'category_type', header: 'Type' },
-  { accessorKey: 'current_quantity', header: 'Current Qty' },
-  { accessorKey: 'recommended_min', header: 'Recommended Min' },
-  { accessorKey: 'needs_reorder', header: 'Needs Reorder?' },
-]
 </script>
 
 <template>
@@ -76,171 +88,105 @@ const planColumns: TableColumn<any>[] = [
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold">Inventory Planning</h1>
-        <p class="text-slate-500">Budgeting and resource planning for peak and off-peak seasons.</p>
+        <p class="text-slate-500">Inventory and resource planning based on current stock and revenue forecasts.</p>
       </div>
       <UButton icon="i-lucide-refresh-cw" :loading="loading" @click="() => window.location.reload()">
         Refresh
       </UButton>
     </div>
 
-    <UTabs v-model="activeTab" :items="[
-      { label: 'Overview', value: 'overview' },
-      { label: 'Planning View', value: 'planning' },
-    ]" />
-
     <div v-if="loading" class="flex items-center justify-center py-20">
       <span class="text-slate-400">Loading planning data...</span>
     </div>
 
     <template v-else-if="planning">
-      <!-- Overview Tab -->
-      <div v-show="activeTab === 'overview'" class="space-y-6">
-        <!-- Season Summary Cards -->
-        <div class="grid gap-6 md:grid-cols-2">
-          <UCard>
-            <template #header>Peak Season (Jan – Jun)</template>
-            <div class="space-y-2">
-              <p class="text-2xl font-bold text-primary">{{ currency(peakRevenue) }}</p>
-              <p class="text-sm text-slate-500">{{ planning.peak_season.forecast_count }} forecast period(s)</p>
+      <!-- Inventory Summary -->
+      <UCard>
+        <template #header>Inventory Summary</template>
+        <div class="grid gap-4 sm:grid-cols-4">
+          <div>
+            <p class="text-sm text-slate-500">Total Items</p>
+            <p class="text-xl font-bold">{{ totalItems }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-slate-500">Total Quantity</p>
+            <p class="text-xl font-bold">{{ totalQuantity }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-slate-500">Low Stock</p>
+            <p class="text-xl font-bold text-warning">{{ lowStockCount }}</p>
+          </div>
+        </div>
+      </UCard>
+
+      <!-- Recommended Stock Levels -->
+      <UCard>
+        <template #header>Recommended Stock Levels</template>
+        <UTable :data="Array.isArray(planning.recommended_stock) ? planning.recommended_stock : []" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="overviewTablePagination" />
+
+        <div class="flex items-center justify-between mt-4">
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-slate-500">Rows per page:</span>
+            <USelect v-model="overviewPageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-slate-500">Go to page:</span>
+            <UInput v-model="overviewGoToPageInput" type="number" :min="1" :max="overviewTotalPages" class="w-16" @keyup.enter="overviewHandleGoToPage" />
+            <UButton size="sm" @click="overviewHandleGoToPage">Go</UButton>
+          </div>
+          <UPagination :total="Array.isArray(planning.recommended_stock) ? planning.recommended_stock.length : 0" v-model:page="overviewPage" :items-per-page="overviewPageSize" />
+        </div>
+      </UCard>
+
+      <UCard v-if="categoryTypes.length">
+        <template #header>Inventory by Category Type</template>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div
+            v-for="category in categoryTypes"
+            :key="category.type"
+            class="rounded-lg border p-4"
+            :style="{ borderLeftColor: categoryTypeColors[category.type] ? `var(--color-${categoryTypeColors[category.type]})` : 'var(--color-neutral)', borderLeftStyle: 'solid', borderLeftWidth: '4px' }"
+          >
+            <p class="text-sm font-semibold capitalize">{{ category.type.replace(/_/g, ' ') }}</p>
+            <p class="text-2xl font-bold">{{ category.totalItems }} items</p>
+            <p class="text-sm text-slate-500">{{ category.totalQuantity }} total qty</p>
+            <p class="text-sm text-warning">{{ category.lowStockCount }} low stock</p>
+          </div>
+        </div>
+      </UCard>
+
+      <!-- Low Stock Alerts -->
+      <UCard>
+        <template #header>Low Stock Alerts</template>
+        <div v-if="planning.low_stock_items?.length" class="space-y-3">
+          <div v-for="item in planning.low_stock_items" :key="item.id" class="flex items-center justify-between py-2 border-b last:border-0">
+            <div>
+              <p class="text-sm font-medium">{{ item.item_name }}</p>
+              <p class="text-xs text-slate-500 capitalize">{{ item.category_type }} • {{ item.category }}</p>
             </div>
-          </UCard>
-          <UCard>
-            <template #header>Off-Peak Season (Jul – Dec)</template>
-            <div class="space-y-2">
-              <p class="text-2xl font-bold text-success">{{ currency(offPeakRevenue) }}</p>
-              <p class="text-sm text-slate-500">{{ planning.off_peak_season.forecast_count }} forecast period(s)</p>
+            <UBadge :color="item.status === 'damaged' ? 'error' : 'warning'" variant="subtle">
+              {{ item.quantity }} left
+            </UBadge>
+          </div>
+        </div>
+        <p v-else class="text-sm text-slate-400">All inventory levels are healthy.</p>
+      </UCard>
+
+      <!-- Forecast Overview -->
+      <!-- <UCard>
+        <template #header>Forecast Overview</template>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <UCard v-for="f in forecastOverview" :key="f.id" size="sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium">{{ new Date(f.forecast_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) }}</p>
+                <p class="text-xs text-slate-500">{{ f.season ?? '—' }}</p>
+              </div>
+              <span class="text-sm font-semibold text-primary">{{ currency(f.predicted_revenue) }}</span>
             </div>
           </UCard>
         </div>
-
-        <!-- Inventory Summary -->
-        <UCard>
-          <template #header>Inventory Summary</template>
-          <div class="grid gap-4 sm:grid-cols-4">
-            <div>
-              <p class="text-sm text-slate-500">Total Items</p>
-              <p class="text-xl font-bold">{{ totalItems }}</p>
-            </div>
-            <div>
-              <p class="text-sm text-slate-500">Total Quantity</p>
-              <p class="text-xl font-bold">{{ totalQuantity }}</p>
-            </div>
-            <div>
-              <p class="text-sm text-slate-500">Low Stock</p>
-              <p class="text-xl font-bold text-warning">{{ lowStockCount }}</p>
-            </div>
-          </div>
-        </UCard>
-
-        <!-- Budget Guidance -->
-        <UCard v-if="budgetGuidance.peak_budget_allocation">
-          <template #header>Budget Allocation Guidance</template>
-          <div class="grid gap-6 md:grid-cols-2">
-            <div>
-              <h3 class="font-semibold mb-3">Peak Season Budget</h3>
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between"><span>Equipment</span><span class="font-mono">{{ currency(budgetGuidance.peak_budget_allocation.equipment) }}</span></div>
-                <div class="flex justify-between"><span>Materials</span><span class="font-mono">{{ currency(budgetGuidance.peak_budget_allocation.materials) }}</span></div>
-                <div class="flex justify-between"><span>Supplies</span><span class="font-mono">{{ currency(budgetGuidance.peak_budget_allocation.supplies) }}</span></div>
-              </div>
-            </div>
-            <div>
-              <h3 class="font-semibold mb-3">Off-Peak Season Budget</h3>
-              <div class="space-y-2 text-sm">
-                <div class="flex justify-between"><span>Equipment</span><span class="font-mono">{{ currency(budgetGuidance.off_peak_budget_allocation.equipment) }}</span></div>
-                <div class="flex justify-between"><span>Materials</span><span class="font-mono">{{ currency(budgetGuidance.off_peak_budget_allocation.materials) }}</span></div>
-                <div class="flex justify-between"><span>Supplies</span><span class="font-mono">{{ currency(budgetGuidance.off_peak_budget_allocation.supplies) }}</span></div>
-              </div>
-            </div>
-          </div>
-        </UCard>
-
-        <!-- Recommended Stock Levels -->
-        <UCard>
-          <template #header>Recommended Stock Levels</template>
-          <UTable :data="Array.isArray(planning.recommended_stock) ? planning.recommended_stock : []" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="overviewTablePagination" />
-
-          <div class="flex items-center justify-between mt-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-slate-500">Rows per page:</span>
-              <USelect v-model="overviewPageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-slate-500">Go to page:</span>
-              <UInput v-model="overviewGoToPageInput" type="number" :min="1" :max="overviewTotalPages" class="w-16" @keyup.enter="overviewHandleGoToPage" />
-              <UButton size="sm" @click="overviewHandleGoToPage">Go</UButton>
-            </div>
-            <UPagination :total="Array.isArray(planning.recommended_stock) ? planning.recommended_stock.length : 0" v-model:page="overviewPage" :items-per-page="overviewPageSize" />
-          </div>
-        </UCard>
-
-        <!-- Inventory by Category Type -->
-        <UCard v-if="planning.inventory_summary?.by_category_type">
-          <template #header>Inventory by Category Type</template>
-          <div class="grid gap-4 sm:grid-cols-3">
-            <UCard v-for="(data, type) in planning.inventory_summary.by_category_type" :key="type" :style="{ borderLeftColor: type === 'equipment' ? 'var(--color-primary)' : type === 'materials' ? 'var(--color-success)' : 'var(--color-warning)' }" style="border-left: 4px solid;">
-              <p class="text-sm font-semibold capitalize">{{ type }}</p>
-              <p class="text-2xl font-bold">{{ data.total_items }} items</p>
-              <p class="text-sm text-slate-500">{{ data.total_quantity }} total qty</p>
-              <p class="text-sm text-warning">{{ data.low_stock_count }} low stock</p>
-            </UCard>
-          </div>
-        </UCard>
-      </div>
-
-      <!-- Planning View Tab -->
-      <div v-show="activeTab === 'planning'" class="space-y-6">
-        <UCard>
-          <template #header>Peak Season Items (Jan – Jun)</template>
-          <p class="text-sm text-slate-500 mb-4">Items requiring attention during peak season for resource planning and LGU budget preparation.</p>
-          <UTable :data="planning.items?.filter((i: any) => i.needs_reorder) ?? []" :columns="planColumns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="planTablePagination" />
-          <p v-if="!planning.items?.filter((i: any) => i.needs_reorder)?.length" class="text-sm text-slate-400 py-4">No items need reordering during peak season.</p>
-
-          <div class="flex items-center justify-between mt-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-slate-500">Rows per page:</span>
-              <USelect v-model="planPageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-slate-500">Go to page:</span>
-              <UInput v-model="planGoToPageInput" type="number" :min="1" :max="planTotalPages" class="w-16" @keyup.enter="planHandleGoToPage" />
-              <UButton size="sm" @click="planHandleGoToPage">Go</UButton>
-            </div>
-            <UPagination :total="planning.items?.filter((i: any) => i.needs_reorder)?.length ?? 0" v-model:page="planPage" :items-per-page="planPageSize" />
-          </div>
-        </UCard>
-
-        <UCard>
-          <template #header>Low Stock Alerts</template>
-          <div v-if="planning.low_stock_items?.length" class="space-y-3">
-            <div v-for="item in planning.low_stock_items" :key="item.id" class="flex items-center justify-between py-2 border-b last:border-0">
-              <div>
-                <p class="text-sm font-medium">{{ item.item_name }}</p>
-                <p class="text-xs text-slate-500 capitalize">{{ item.category_type }} • {{ item.category }}</p>
-              </div>
-              <UBadge :color="item.status === 'damaged' ? 'error' : 'warning'" variant="subtle">
-                {{ item.quantity }} left
-              </UBadge>
-            </div>
-          </div>
-          <p v-else class="text-sm text-slate-400">All inventory levels are healthy.</p>
-        </UCard>
-
-        <UCard>
-          <template #header>Forecast Overview</template>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <UCard v-for="f in planning.forecasts?.slice(0, 6) ?? []" :key="f.id" size="sm">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p class="text-sm font-medium">{{ new Date(f.forecast_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) }}</p>
-                  <p class="text-xs text-slate-500">{{ f.season ?? '—' }}</p>
-                </div>
-                <span class="text-sm font-semibold text-primary">{{ currency(f.predicted_revenue) }}</span>
-              </div>
-            </UCard>
-          </div>
-        </UCard>
-      </div>
+      </UCard> -->
     </template>
   </div>
 </template>

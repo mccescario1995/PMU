@@ -63,13 +63,13 @@ onMounted(async () => {
 
 async function loadStakeholders() {
   if (stakeholdersLoaded.value) return;
-  stakeholders.value = ((await apiFetch('/v1/stakeholders', { parseJson: true })) as any).data;
+  stakeholders.value = ((await apiFetch('/v1/dropdowns/stakeholders', { parseJson: true })) as any).data;
   stakeholdersLoaded.value = true;
 }
 
 async function loadFeeTypes() {
   if (feeTypesLoaded.value) return;
-  feeTypes.value = ((await apiFetch('/v1/fee-types', { parseJson: true })) as any).data;
+  feeTypes.value = ((await apiFetch('/v1/dropdowns/fee-types', { parseJson: true })) as any).data;
   feeTypesLoaded.value = true;
 }
 

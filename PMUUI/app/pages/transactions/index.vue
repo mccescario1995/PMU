@@ -44,6 +44,9 @@ const stakeholders = ref<any[]>([]);
 const feeTypes = ref<any[]>([]);
 const stakeholdersLoaded = ref(false);
 const feeTypesLoaded = ref(false);
+const transactionRevenue = ref<any[]>([]);
+const transactionRevenueFeatures = ref<any[]>([]);
+const revenueLoading = ref(false);
 
 const form = reactive({
   stakeholder_id: null as number | null,
@@ -67,7 +70,7 @@ const statusOptions: SelectItem[] = [
 async function loadStakeholders() {
   if (stakeholdersLoaded.value) return;
   stakeholders.value = (
-    (await apiFetch("/v1/stakeholders", { parseJson: true })) as any
+    (await apiFetch("/v1/dropdowns/stakeholders", { parseJson: true })) as any
   ).data;
   stakeholdersLoaded.value = true;
 }
@@ -75,7 +78,7 @@ async function loadStakeholders() {
 async function loadFeeTypes() {
   if (feeTypesLoaded.value) return;
   feeTypes.value = (
-    (await apiFetch("/v1/fee-types", { parseJson: true })) as any
+    (await apiFetch("/v1/dropdowns/fee-types", { parseJson: true })) as any
   ).data;
   feeTypesLoaded.value = true;
   form.items.forEach((item) => {
@@ -84,6 +87,31 @@ async function loadFeeTypes() {
       item.unit_price = feeType.base_rate;
     }
   });
+}
+
+async function loadTransactionRevenue() {
+  revenueLoading.value = true;
+  try {
+    transactionRevenue.value = (await apiFetch(
+      "/v1/transaction-revenue?per_page=100",
+      { parseJson: true },
+    )) as any[];
+  } catch {
+    // silent
+  } finally {
+    revenueLoading.value = false;
+  }
+}
+
+async function loadTransactionRevenueFeatures() {
+  try {
+    transactionRevenueFeatures.value = (await apiFetch(
+      "/v1/transaction-revenue-features?per_page=100",
+      { parseJson: true },
+    )) as any[];
+  } catch {
+    // silent
+  }
 }
 
 function openCreate() {
@@ -214,6 +242,8 @@ async function save() {
 
     showModal.value = false;
     refresh();
+    loadTransactionRevenue();
+    loadTransactionRevenueFeatures();
   } catch (e: any) {
     toast.add({
       title: modalMode.value === "edit" ? "Failed to update transaction" : "Failed to create transaction",
@@ -288,6 +318,21 @@ const columns: TableColumn<Transactions>[] = [
     },
   },
   {
+    accessorKey: "revenue_impact",
+    header: "Revenue Impact",
+    cell: ({ row }) => {
+      const tx = data.value.find((t: any) => t.id === row.getValue("id"));
+      if (!tx) return "-";
+      if (tx.status === "completed") {
+        return h("span", { class: "text-sm font-semibold text-success" }, "● Revenue Active");
+      }
+      if (tx.status === "cancelled") {
+        return h("span", { class: "text-sm font-semibold text-error" }, "● Revenue Reversed");
+      }
+      return h("span", { class: "text-sm font-semibold text-slate-400" }, "● Pending");
+    },
+  },
+  {
     accessorKey: "transaction_date",
     header: "Date",
     cell: ({ row }) => {
@@ -307,6 +352,8 @@ const columns: TableColumn<Transactions>[] = [
 onMounted(() => {
   loadStakeholders();
   loadFeeTypes();
+  loadTransactionRevenue();
+  loadTransactionRevenueFeatures();
 })
 </script>
 

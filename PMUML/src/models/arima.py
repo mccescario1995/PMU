@@ -11,9 +11,9 @@ except ImportError:
     from base_model import BaseModel
 
 
-class AMIRAModel(BaseModel):
+class ARIMAModel(BaseModel):
     def __init__(self, order: tuple = (1, 1, 1), **kwargs):
-        super().__init__(model_name="amira")
+        super().__init__(model_name="arima")
         self.order = order
 
     def fit(

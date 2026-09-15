@@ -75,7 +75,7 @@ const form = reactive({
 async function loadTypes() {
   if (typesLoaded.value) return;
   const allTypes = (
-    (await apiFetch("/v1/stakeholder-types", { parseJson: true })) as any
+    (await apiFetch("/v1/dropdowns/stakeholder-types", { parseJson: true })) as any
   ).data;
   const existing = new Map(types.value.map((t: any) => [t.id, t]));
   for (const t of allTypes) {

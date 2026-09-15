@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 // v1 Controllers
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DropdownController;
 use App\Http\Controllers\Api\V1\FeeTypeController;
 use App\Http\Controllers\Api\V1\ForecastController;
 use App\Http\Controllers\Api\V1\ImportController;
@@ -18,6 +19,8 @@ use App\Http\Controllers\Api\V1\StakeholderController;
 use App\Http\Controllers\Api\V1\StakeholderTypeController;
 use App\Http\Controllers\Api\V1\StatusesController;
 use App\Http\Controllers\Api\V1\TransactionController;
+use App\Http\Controllers\Api\V1\TransactionRevenueController;
+use App\Http\Controllers\Api\V1\TransactionRevenueFeatureController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WeatherController;
 use Illuminate\Http\Request;
@@ -56,6 +59,11 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::post('/auth/profile-picture', [AuthController::class, 'uploadProfilePicture']);
+
+        Route::get('dropdowns/stakeholders', [DropdownController::class, 'stakeholders']);
+        Route::get('dropdowns/stakeholder-types', [DropdownController::class, 'stakeholderTypes']);
+        Route::get('dropdowns/fee-types', [DropdownController::class, 'feeTypes']);
+        Route::get('dropdowns/roles', [DropdownController::class, 'roles']);
 
         /*
         |--------------------------------------------------------------------------
@@ -135,6 +143,22 @@ Route::prefix('v1')->group(function () {
         Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->middleware('can:view transactions');
         Route::put('transactions/{transaction}', [TransactionController::class, 'update'])->middleware('can:edit transactions');
         Route::delete('transactions/{transaction}', [TransactionController::class, 'destroy'])->middleware('can:delete transactions');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Transaction Revenue (ML/Forecasting)
+        |--------------------------------------------------------------------------
+        */
+
+        Route::prefix('transaction-revenue')->group(function () {
+            Route::get('/', [TransactionRevenueController::class, 'index']);
+            Route::get('/{date}', [TransactionRevenueController::class, 'show']);
+        });
+
+        Route::prefix('transaction-revenue-features')->group(function () {
+            Route::get('/', [TransactionRevenueFeatureController::class, 'index']);
+            Route::get('/{date}', [TransactionRevenueFeatureController::class, 'show']);
+        });
 
         /*
         |--------------------------------------------------------------------------

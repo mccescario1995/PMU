@@ -34,10 +34,10 @@ const {
   columns,
   can,
   load,
-} = useForecast('/v1/forecasts/model/amira', '/v1/forecasts/train/amira')
+} = useForecast('/v1/forecasts/model/samira', '/v1/forecasts/train/samira')
 
-const model = 'amira'
-const modelLabel = 'AMIRA'
+const model = 'sarima'
+const modelLabel = 'SARIMA'
 
 const filteredForecasts = computed(() =>
   forecasts.value.filter((f: any) => {
@@ -62,13 +62,13 @@ const UBadge = resolveComponent('UBadge')
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold">{{ modelLabel }}</h1>
-        <p class="text-slate-500">Revenue projection using AMIRA model.</p>
+        <p class="text-slate-500">Revenue projection using SARIMA model.</p>
       </div>
       <div class="flex gap-2">
         <UButton
-          icon="i-lucide-brain"
+          icon="i-lucide-wand-2"
           :loading="modelLoading"
-          @click="runModel('amira')"
+          @click="runModel('sarima')"
         >
           Run {{ modelLabel }}
         </UButton>
@@ -80,7 +80,7 @@ const UBadge = resolveComponent('UBadge')
     <UModal v-model:open="showProgressModal" :dismissible="false">
       <template #header>
         <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-brain" class="w-5 h-5 text-primary" />
+          <UIcon name="i-lucide-wand-2" class="w-5 h-5 text-primary" />
           <span>Training {{ modelLabel }} Model</span>
         </div>
       </template>
