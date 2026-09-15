@@ -31,7 +31,7 @@ const {
   columns,
   can,
   load,
-} = useForecast('/v1/forecasts/model/linear-regression', '/v1/forecasts/train/linear-regression')
+} = useForecast('/v1/forecasts/model/linear-regression', '/v1/forecasts/train/linear-regression', 'linear_regression')
 
 const model = 'linear_regression'
 const modelLabel = 'Linear Regression'

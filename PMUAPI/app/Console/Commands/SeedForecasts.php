@@ -3,6 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\RevenueForecast;
+use App\Models\RevenueForecastAmira;
+use App\Models\RevenueForecastLinearRegression;
+use App\Models\RevenueForecastSamira;
 use App\Models\RevenueHistory;
 use App\Services\WeatherService;
 use Carbon\Carbon;
@@ -11,13 +14,15 @@ use Illuminate\Support\Facades\DB;
 
 class SeedForecasts extends Command
 {
-    protected $signature = 'forecast:seed {--days=30 : Forecast days}';
+    protected $signature = 'forecast:seed {--days=30 : Forecast days} {--model=linear_regression : Target model (arima, sarima, linear_regression)}';
 
     protected $description = 'Generate revenue forecasts from historical data';
 
     public function handle(): int
     {
         $days = (int) $this->option('days');
+        $model = $this->option('model');
+
         $history = RevenueHistory::orderByDesc('revenue_date')
             ->take(30)
             ->get(['revenue_date', 'total_revenue'])
@@ -57,15 +62,17 @@ class SeedForecasts extends Command
                 'forecast_date' => $dateStr,
                 'predicted_revenue' => $predicted,
                 'season' => $season,
-                'model_version' => 'linear-regression-v1',
+                'model_version' => $model.'-v1',
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
         }
 
-        RevenueForecast::insertOrIgnore($batch);
+        // Save to model-specific table
+        $targetClass = $this->getModelClass($model);
+        $targetClass::insertOrIgnore($batch);
 
-        $this->info('Inserted ' . count($batch) . ' forecasts');
+        $this->info('Inserted ' . count($batch) . ' forecasts into ' . $targetClass::getTable());
 
         try {
             $weather->ensureWeatherForDates(collect($batch)->pluck('forecast_date')->toArray());
@@ -154,5 +161,18 @@ class SeedForecasts extends Command
         }
 
         return $peak;
+    }
+
+    /**
+     * Map model name to its dedicated forecast model class.
+     */
+    private function getModelClass(string $model): string
+    {
+        return match ($model) {
+            'amira', 'arima' => RevenueForecastAmira::class,
+            'samira', 'sarima' => RevenueForecastSamira::class,
+            'linear_regression' => RevenueForecastLinearRegression::class,
+            default => RevenueForecast::class,
+        };
     }
 }

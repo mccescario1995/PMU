@@ -4,7 +4,7 @@ import { onMounted, watch, ref, reactive, computed } from 'vue'
 import { usePermissions } from '~/composables/usePermissions'
 import { useToast } from '#imports'
 
-export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: string = '/v1/forecasts/run-model') {
+export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: string = '/v1/forecasts/run-model', model: string = '') {
   const { can } = usePermissions()
   const toast = useToast()
 
@@ -198,7 +198,10 @@ async function runModel(model: string) {
 
   async function remove(row: any) {
     if (!confirm('Delete this forecast?')) return
-    await apiFetch(`/v1/forecasts/${row.id}`, { method: 'DELETE' })
+    const deleteUrl = model
+      ? `/v1/forecasts/${row.id}?model=${model}`
+      : `/v1/forecasts/${row.id}`
+    await apiFetch(deleteUrl, { method: 'DELETE' })
     forecasts.value = forecasts.value.filter((f: any) => f.id !== row.id)
     toast.add({ title: 'Forecast deleted', color: 'success' })
   }

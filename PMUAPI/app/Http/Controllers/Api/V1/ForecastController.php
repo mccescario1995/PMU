@@ -83,7 +83,7 @@ class ForecastController extends Controller
         );
     }
 
-    protected function toRow(RevenueForecast $f, \Illuminate\Support\Collection $weatherMap): array
+    protected function toRow($f, \Illuminate\Support\Collection $weatherMap): array
     {
         return [
             'id' => $f->id,
@@ -104,23 +104,48 @@ class ForecastController extends Controller
         );
     }
 
-    public function show(RevenueForecast $forecast, WeatherService $weather)
+    public function show(Request $request, $forecast, WeatherService $weather)
     {
-        $weather->ensureWeatherForDates([$forecast->forecast_date->toDateString()]);
-        $weatherData = WeatherData::where('weather_date', $forecast->forecast_date->toDateString())->first();
+        $model = $request->query('model');
+        if ($model) {
+            $class = $this->getModelClass($model);
+            $record = $class::find($forecast);
+            if (! $record) {
+                return response()->json(['error' => 'Forecast not found'], 404);
+            }
+            $weather->ensureWeatherForDates([$record->forecast_date->toDateString()]);
+            $weatherData = WeatherData::where('weather_date', $record->forecast_date->toDateString())->first();
+            return response()->json([
+                'id' => $record->id,
+                'forecast_date' => $record->forecast_date,
+                'predicted_revenue' => $record->predicted_revenue,
+                'season' => $record->season,
+                'model_version' => $record->model_version,
+                'weather' => $weatherData,
+            ]);
+        }
+
+        // Default: look up in revenue_forecasts table
+        $record = RevenueForecast::find($forecast);
+        if (! $record) {
+            return response()->json(['error' => 'Forecast not found'], 404);
+        }
+        $weather->ensureWeatherForDates([$record->forecast_date->toDateString()]);
+        $weatherData = WeatherData::where('weather_date', $record->forecast_date->toDateString())->first();
 
         return response()->json([
-            'id' => $forecast->id,
-            'forecast_date' => $forecast->forecast_date,
-            'predicted_revenue' => $forecast->predicted_revenue,
-            'season' => $forecast->season,
-            'model_version' => $forecast->model_version,
+            'id' => $record->id,
+            'forecast_date' => $record->forecast_date,
+            'predicted_revenue' => $record->predicted_revenue,
+            'season' => $record->season,
+            'model_version' => $record->model_version,
             'weather' => $weatherData,
         ]);
     }
 
-    public function update(Request $request, RevenueForecast $forecast)
+    public function update(Request $request, $forecast)
     {
+        $model = $request->query('model');
         $data = $request->validate([
             'forecast_date' => 'sometimes|required|date',
             'predicted_revenue' => 'sometimes|required|numeric|min:0',
@@ -128,21 +153,51 @@ class ForecastController extends Controller
             'model_version' => 'nullable|string',
         ]);
 
-        $oldValues = $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']);
+        if ($model) {
+            $class = $this->getModelClass($model);
+            $record = $class::find($forecast);
+            if (! $record) {
+                return response()->json(['error' => 'Forecast not found'], 404);
+            }
+            $oldValues = $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']);
+            $record->update($data);
+            $this->logAudit('update', $class::getTable(), $record->id, $oldValues, $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
+            return response()->json($record);
+        }
 
-        $forecast->update($data);
-
-        $this->logAudit('update', 'revenue_forecasts', $forecast->id, $oldValues, $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
-
-        return response()->json($forecast);
+        // Default: look up in revenue_forecasts table
+        $record = RevenueForecast::find($forecast);
+        if (! $record) {
+            return response()->json(['error' => 'Forecast not found'], 404);
+        }
+        $oldValues = $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']);
+        $record->update($data);
+        $this->logAudit('update', 'revenue_forecasts', $record->id, $oldValues, $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
+        return response()->json($record);
     }
 
-    public function destroy(RevenueForecast $forecast)
+    public function destroy(Request $request, $forecast)
     {
-        $this->logAudit('delete', 'revenue_forecasts', $forecast->id, $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']), null);
+        $model = $request->query('model');
 
-        $forecast->delete();
+        if ($model) {
+            $class = $this->getModelClass($model);
+            $record = $class::find($forecast);
+            if (! $record) {
+                return response()->json(['error' => 'Forecast not found'], 404);
+            }
+            $this->logAudit('delete', $class::getTable(), $record->id, $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']), null);
+            $record->delete();
+            return response()->noContent();
+        }
 
+        // Default: look up in revenue_forecasts table
+        $record = RevenueForecast::find($forecast);
+        if (! $record) {
+            return response()->json(['error' => 'Forecast not found'], 404);
+        }
+        $this->logAudit('delete', 'revenue_forecasts', $record->id, $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']), null);
+        $record->delete();
         return response()->noContent();
     }
 
@@ -157,7 +212,8 @@ class ForecastController extends Controller
 
         if (empty($data['season'])) {
             $month = (int) date('n', strtotime($data['forecast_date']));
-            $data['season'] = $month >= 1 && $month <= 6 ? 'Peak' : 'Off-Peak';
+            $peakMonths = RevenueForecast::computePeakMonths();
+            $data['season'] = in_array($month, $peakMonths) ? 'Peak' : 'Off-Peak';
         }
 
         $forecast = RevenueForecast::create($data);
@@ -183,7 +239,7 @@ class ForecastController extends Controller
         }
 
         $data = $request->validate([
-            'model' => 'required|string|in:linear_regression,arima,sarima',
+            'model' => 'nullable|string|in:linear_regression,arima,sarima',
             'days' => 'nullable|integer|min:1|max:90',
         ]);
 
@@ -199,8 +255,15 @@ class ForecastController extends Controller
             return response()->json(['error' => 'PMUML_URL not configured'], 500);
         }
 
+        // Map frontend model names to PMUML model names
+        $pmuModel = match ($model) {
+            'arima' => 'amira',
+            'sarima' => 'samira',
+            default => $model,
+        };
+
         $url = $pmumlUrl.'/forecast';
-        $payload = json_encode(['model' => $model, 'days' => $days]);
+        $payload = json_encode(['model' => $pmuModel, 'days' => $days]);
 
         Log::info('PMUML request starting', [
             'url' => $url,
@@ -292,8 +355,8 @@ class ForecastController extends Controller
     protected function getModelClass(string $model): string
     {
         return match ($model) {
-            'amira' => RevenueForecastAmira::class,
-            'samira' => RevenueForecastSamira::class,
+            'amira', 'arima' => RevenueForecastAmira::class,
+            'samira', 'sarima' => RevenueForecastSamira::class,
             'linear_regression' => RevenueForecastLinearRegression::class,
             default => RevenueForecast::class,
         };
