@@ -36,8 +36,8 @@ const {
   load,
 } = useForecast()
 
-const model = 'amira'
-const modelLabel = 'AMIRA'
+const model = 'sarima'
+const modelLabel = 'sarima'
 
 const filteredForecasts = computed(() =>
   forecasts.value.filter((f: any) => {
@@ -62,13 +62,13 @@ const UBadge = resolveComponent('UBadge')
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold">{{ modelLabel }}</h1>
-        <p class="text-slate-500">Revenue projection using AMIRA model.</p>
+        <p class="text-slate-500">Revenue projection using sarima model.</p>
       </div>
       <div class="flex gap-2">
         <UButton
-          icon="i-lucide-brain"
+          icon="i-lucide-wand-2"
           :loading="modelLoading"
-          @click="runModel('amira')"
+          @click="runModel('sarima')"
         >
           Run {{ modelLabel }}
         </UButton>
@@ -80,7 +80,7 @@ const UBadge = resolveComponent('UBadge')
     <UModal v-model:open="showProgressModal" :dismissible="false">
       <template #header>
         <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-brain" class="w-5 h-5 text-primary" />
+          <UIcon name="i-lucide-wand-2" class="w-5 h-5 text-primary" />
           <span>Training {{ modelLabel }} Model</span>
         </div>
       </template>
