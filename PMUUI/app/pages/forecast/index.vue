@@ -60,16 +60,16 @@ const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPag
         <UButton
           icon="i-lucide-brain"
           :loading="modelLoading"
-          @click="runModel('amira')"
+          @click="runModel('arima')"
         >
-          Run AMIRA
+          Run ARIMA
         </UButton>
         <UButton
           icon="i-lucide-wand-2"
           :loading="modelLoading"
-          @click="runModel('samira')"
+          @click="runModel('sarima')"
         >
-          Run SAMIRA
+          Run SARIMA
         </UButton>
       </div>
     </div>

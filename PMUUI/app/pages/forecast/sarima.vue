@@ -37,7 +37,7 @@ const {
 } = useForecast()
 
 const model = 'sarima'
-const modelLabel = 'sarima'
+const modelLabel = 'SARIMA'
 
 const filteredForecasts = computed(() =>
   forecasts.value.filter((f: any) => {
@@ -62,7 +62,7 @@ const UBadge = resolveComponent('UBadge')
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold">{{ modelLabel }}</h1>
-        <p class="text-slate-500">Revenue projection using sarima model.</p>
+        <p class="text-slate-500">Revenue projection using SARIMA model.</p>
       </div>
       <div class="flex gap-2">
         <UButton

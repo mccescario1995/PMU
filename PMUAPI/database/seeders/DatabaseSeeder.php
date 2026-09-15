@@ -228,56 +228,56 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Log books',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Long bond Paper',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Envelopes (long)',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Staplers',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Scissors',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Folders',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Printer Ink',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Pens',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -285,7 +285,7 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Calculator',
                 'category' => 'Office Supplies',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -294,21 +294,21 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Cleaning Hoses',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'meters',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Utility Buckets',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Mop',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -316,21 +316,21 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Brooms',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Cleaning Agent',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'liters',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Dustpan',
                 'category' => 'Materials',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -339,14 +339,14 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Power Generator',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Weightened Scale',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -354,14 +354,14 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Trolley',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Submersible Water Pump',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
@@ -369,21 +369,21 @@ class DatabaseSeeder extends Seeder
             [
                 'item_name' => 'Ladder',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Flashlights',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
             [
                 'item_name' => 'Rubber Boots',
                 'category' => 'Equipment',
-                'quantity' => 0,
+                'quantity' => 20,
                 'unit' => 'pcs',
                 'status' => 'available'
             ]

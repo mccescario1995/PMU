@@ -11,9 +11,9 @@ except ImportError:
     from base_model import BaseModel
 
 
-class SAMIRAModel(BaseModel):
+class SARIMAModel(BaseModel):
     def __init__(self, order: tuple = (1, 1, 1), seasonal_order: tuple = (1, 1, 1, 7), **kwargs):
-        super().__init__(model_name="samira")
+        super().__init__(model_name="sarima")
         self.order = order
         self.seasonal_order = seasonal_order
         self._SARIMAX = None

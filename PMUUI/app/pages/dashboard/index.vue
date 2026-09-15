@@ -14,14 +14,14 @@ const stats = ref({
   latest_weather: null as any,
 });
 
-const correlations = ref<{ rainfall: number; temperature: number; wind_speed: number; data_points: number } | null>(null);
+// const correlations = ref<{ rainfall: number; temperature: number; wind_speed: number; data_points: number } | null>(null);
 const forecastData = ref<any[]>([]);
 const maxForecast = computed(() => Math.max(...forecastData.value.map((f) => Number(f.predicted_revenue) || 0), 1));
 
 onMounted(async () => {
   try {
     stats.value = (await apiFetch("/v1/dashboard", { parseJson: true })) as any;
-    correlations.value = (await apiFetch("/v1/dashboard/weather-revenue-correlation", { parseJson: true })) as any;
+    // correlations.value = (await apiFetch("/v1/dashboard/weather-revenue-correlation", { parseJson: true })) as any;
     forecastData.value = (await apiFetch("/v1/forecasts/chart", { parseJson: true })) as any[];
   } catch {
     // silent
@@ -90,7 +90,7 @@ const currency = (v: number) =>
     </div>
 
     <!-- Weather-Revenue Correlation -->
-    <UCard v-if="correlations">
+    <!-- <UCard v-if="correlations">
       <template #header>Weather-Revenue Correlation</template>
       <div class="grid gap-4 sm:grid-cols-3">
         <div>
@@ -107,7 +107,7 @@ const currency = (v: number) =>
         </div>
       </div>
       <p class="text-xs text-slate-400 mt-2">{{ correlations.data_points }} data points</p>
-    </UCard>
+    </UCard> -->
 
     <!-- Bottom -->
     <div class="grid gap-6 lg:grid-cols-2 mt-6">

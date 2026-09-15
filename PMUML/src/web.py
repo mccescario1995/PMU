@@ -41,7 +41,7 @@ pmu_client = PMUClient(
 
 forecaster = Forecaster(config=config, client=pmu_client)
 
-if os.path.exists("outputs/models/amira.joblib"):
+if os.path.exists("outputs/models/arima.joblib"):
     try:
         forecaster.load_all()
         logger.info("Loaded cached models on startup")
@@ -83,7 +83,7 @@ def health_check():
 @app.route("/forecast", methods=["POST"])
 def forecast():
     data = request.get_json(force=True) or {}
-    model_name = data.get("model", "amira")
+    model_name = data.get("model", "arima")
     days = int(data.get("days", config.forecast_days))
     post_to_api = data.get("post_to_api", True)
     try:
@@ -108,7 +108,7 @@ def forecast():
 @app.route("/train", methods=["POST"])
 def train():
     data = request.get_json(force=True) or {}
-    models = data.get("models", ["amira", "samira", "linear_regression"])
+    models = data.get("models", ["arima", "sarima", "linear_regression"])
     days = int(data.get("days", config.forecast_days))
     post_to_api = data.get("post_to_api", True)
     try:
@@ -192,7 +192,7 @@ def predict_all():
             return jsonify({"error": "No records found in transaction_revenue"}), 404
 
         results = forecaster.forecast(
-            models=["amira", "samira", "linear_regression"],
+            models=["arima", "sarima", "linear_regression"],
             days=days,
             use_weather=True,
             concurrent=True,

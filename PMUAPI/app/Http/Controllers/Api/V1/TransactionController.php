@@ -160,6 +160,7 @@ class TransactionController extends Controller
 
         $newTotal = (float) $transaction->total_amount;
         $newDate = $transaction->transaction_date->toDateString();
+        $newStatus = $data['status'] ?? $transaction->status;
 
         if ($oldDate !== $newDate) {
             $this->adjustRevenueHistory($oldDate, -$oldTotal);
@@ -171,11 +172,153 @@ class TransactionController extends Controller
             $this->adjustRevenueHistory($newDate, $newTotal - $oldTotal);
         }
 
+        if ($oldValues['status'] !== $newStatus) {
+            $this->syncRevenueOnStatusChange($transaction, $oldValues['status'], $newStatus);
+        }
+
         $this->logAudit('update', 'transactions', $transaction->id, $oldValues, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']));
 
         return new TransactionResource(
             $transaction->load(['stakeholder', 'items.feeType', 'recordedBy'])
         );
+    }
+
+    protected function syncRevenueOnStatusChange(Transaction $transaction, string $oldStatus, string $newStatus)
+    {
+        $date = $transaction->transaction_date->toDateString();
+        $amount = (float) $transaction->total_amount;
+
+        if ($oldStatus === 'completed') {
+            $this->adjustRevenueHistory($date, -$amount);
+        }
+
+        if ($newStatus === 'completed') {
+            $this->updateRevenueHistory($date, $amount);
+        }
+
+        $this->syncTransactionRevenue($transaction);
+        $this->regenerateFeaturesForDate($date);
+    }
+
+    protected function syncTransactionRevenue(Transaction $transaction)
+    {
+        $reportDate = $transaction->transaction_date->toDateString();
+        $completedTotal = Transaction::whereDate('transaction_date', $reportDate)
+            ->where('status', 'completed')
+            ->sum('total_amount');
+
+        $weather = $this->getWeatherForDate($reportDate);
+
+        if ($completedTotal > 0) {
+            \App\Models\TransactionRevenue::updateOrInsert(
+                ['report_date' => $reportDate],
+                [
+                    'revenue_target' => $completedTotal,
+                    'log_revenue' => log($completedTotal + 1),
+                    'temp_celsius' => $weather['temperature'] ?? null,
+                    'precipitation_mm' => $weather['rainfall'] ?? null,
+                    'wind_speed' => $weather['wind'] ?? null,
+                    'year_num' => (int) date('Y', strtotime($reportDate)),
+                    'month_num' => (int) date('n', strtotime($reportDate)),
+                    'day_num' => (int) date('j', strtotime($reportDate)),
+                    'day_of_week' => (int) date('N', strtotime($reportDate)),
+                    'quarter_num' => (int) ceil(date('n', strtotime($reportDate)) / 3),
+                    'is_weekend' => in_array((int) date('N', strtotime($reportDate)), [6, 7]),
+                    'is_month_start' => date('j', strtotime($reportDate)) === 1,
+                    'is_month_end' => date('j', strtotime($reportDate)) === date('t', strtotime($reportDate)),
+                ]
+            );
+        }
+    }
+
+    protected function getWeatherForDate(string $date): array
+    {
+        $weather = \App\Models\WeatherData::where('weather_date', $date)->first();
+        if ($weather) {
+            return [
+                'temperature' => $weather->temperature,
+                'rainfall' => $weather->rainfall_mm,
+                'wind' => $weather->wind_speed,
+            ];
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(30)->get(
+                'https://archive-api.open-meteo.com/v1/archive',
+                [
+                    'latitude' => 13.5049,
+                    'longitude' => 123.0434,
+                    'start_date' => $date,
+                    'end_date' => $date,
+                    'daily' => 'temperature_2m_mean,precipitation_sum,wind_speed_10m_max',
+                    'temperature_unit' => 'celsius',
+                    'wind_speed_unit' => 'kmh',
+                    'precipitation_unit' => 'mm',
+                    'timezone' => 'Asia/Manila',
+                ]
+            );
+
+            if ($response->successful()) {
+                $daily = $response->json('daily');
+                if (!empty($daily['time'][0])) {
+                    return [
+                        'temperature' => isset($daily['temperature_2m_mean'][0]) ? round((float) $daily['temperature_2m_mean'][0], 2) : null,
+                        'rainfall' => isset($daily['precipitation_sum'][0]) ? round((float) $daily['precipitation_sum'][0], 2) : null,
+                        'wind' => isset($daily['wind_speed_10m_max'][0]) ? round((float) $daily['wind_speed_10m_max'][0], 2) : null,
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Open-Meteo fetch failed', [
+                'date' => $date,
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        return [];
+    }
+
+    protected function regenerateFeaturesForDate(string $reportDate)
+    {
+        $startDate = \Carbon\Carbon::parse($reportDate)->subDays(365)->toDateString();
+        $endDate = \Carbon\Carbon::parse($reportDate)->addDays(30)->toDateString();
+
+        $dates = \App\Models\TransactionRevenue::whereBetween('report_date', [$startDate, $endDate])
+            ->orderBy('report_date')
+            ->get(['report_date']);
+
+        $revenues = $dates->mapWithKeys(fn ($d) => [
+            $d->report_date => \App\Models\TransactionRevenue::where('report_date', $d->report_date)->value('revenue_target') ?? 0,
+        ]);
+
+        $dates->each(function ($d) use ($revenues) {
+            $date = $d->report_date;
+            $lag1 = $revenues[$date] ?? null;
+            $lag7 = $revenues[\Carbon\Carbon::parse($date)->subDays(7)->toDateString()] ?? null;
+            $lag365 = $revenues[\Carbon\Carbon::parse($date)->subDays(365)->toDateString()] ?? null;
+            $roll7 = null;
+            $roll30 = null;
+
+            $keys = array_keys($revenues->toArray());
+            $idx = array_search($date, $keys);
+            if ($idx !== false) {
+                $slice7 = array_slice($revenues->toArray(), max(0, $idx - 6), 7, true);
+                $slice30 = array_slice($revenues->toArray(), max(0, $idx - 29), 30, true);
+                $roll7 = count($slice7) > 0 ? array_sum($slice7) / count($slice7) : null;
+                $roll30 = count($slice30) > 0 ? array_sum($slice30) / count($slice30) : null;
+            }
+
+            \App\Models\TransactionRevenueFeature::updateOrInsert(
+                ['report_date' => $date],
+                [
+                    'revenue_lag_1d' => $lag1,
+                    'revenue_lag_7d' => $lag7,
+                    'revenue_lag_365d' => $lag365,
+                    'revenue_rolling_7d_mean' => $roll7,
+                    'revenue_rolling_30d_mean' => $roll30,
+                ]
+            );
+        });
     }
 
     protected function adjustRevenueHistory($date, $amountDelta)

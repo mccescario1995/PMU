@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 from src.features import prepare_dataset, generate_future_features
-from src.models.amira import AMIRAModel
-from src.models.samira import SAMIRAModel
+from src.models.arima import ARIMAModel
+from src.models.sarima import SARIMAModel
 from src.models.linear_regression import LinearRegressionModel
 from src.pmu_client import PMUClient
 from src.forecaster import Forecaster, ForecastResult, Config
@@ -63,12 +63,12 @@ def test_generate_future_features():
     print("PASS: test_generate_future_features")
 
 
-def test_amira_model():
+def test_arima_model():
     df = pd.DataFrame({
         "report_date": pd.date_range("2024-01-01", periods=50, freq="D"),
         "revenue_target": np.random.randn(50).cumsum() + 100,
     })
-    model = AMIRAModel(order=(1, 1, 1))
+    model = ARIMAModel(order=(1, 1, 1))
     model.fit(df, target="revenue_target")
     preds = model.predict(steps=5)
     assert len(preds) == 5
@@ -77,23 +77,23 @@ def test_amira_model():
     metrics = model.evaluate()
     assert "rmse" in metrics
     assert "mae" in metrics
-    print("PASS: test_amira_model")
+    print("PASS: test_arima_model")
 
 
-def test_samira_model():
+def test_sarima_model():
     df = pd.DataFrame({
         "report_date": pd.date_range("2024-01-01", periods=60, freq="D"),
         "revenue_target": np.random.randn(60).cumsum() + 100,
         "temp_celsius": 25 + np.random.randn(60) * 3,
     })
-    model = SAMIRAModel(order=(1, 1, 1), seasonal_order=(1, 1, 1, 7))
+    model = SARIMAModel(order=(1, 1, 1), seasonal_order=(1, 1, 1, 7))
     model.fit(df, target="revenue_target", exog_col="temp_celsius")
     preds = model.predict(steps=5)
     assert len(preds) == 5
     metrics = model.evaluate()
     assert "rmse" in metrics
     assert "mae" in metrics
-    print("PASS: test_samira_model")
+    print("PASS: test_sarima_model")
 
 
 def test_linear_regression_model():
@@ -144,13 +144,13 @@ def test_weather_manager_no_client():
 
 
 def test_forecast_result():
-    result = ForecastResult("amira", [{"date": "2024-01-01", "predicted_revenue": 100.0}], metrics={"rmse": 1.0})
+    result = ForecastResult("arima", [{"date": "2024-01-01", "predicted_revenue": 100.0}], metrics={"rmse": 1.0})
     d = result.to_dict()
-    assert d["model"] == "amira"
+    assert d["model"] == "arima"
     assert len(d["forecasts"]) == 1
     assert d["error"] is None
 
-    error_result = ForecastResult("amira", [], error="some error")
+    error_result = ForecastResult("arima", [], error="some error")
     assert error_result.to_dict()["error"] == "some error"
     print("PASS: test_forecast_result")
 
@@ -194,9 +194,9 @@ def test_forecaster_train_model():
     config = Config()
     client = None
     forecaster = Forecaster(config=config, client=client)
-    result = forecaster.train_model("amira", days=7, post_to_api=False)
+    result = forecaster.train_model("arima", days=7, post_to_api=False)
     assert result is not None
-    assert result.model_name == "amira"
+    assert result.model_name == "arima"
     assert not result.error
     print("PASS: test_forecaster_train_model")
 
@@ -207,7 +207,7 @@ def test_forecaster_train_all():
     forecaster = Forecaster(config=config, client=client)
     results = forecaster.train_all(days=7, post_to_api=False)
     assert len(results) == 3
-    for name in ["amira", "samira", "linear_regression"]:
+    for name in ["arima", "sarima", "linear_regression"]:
         assert name in results
         assert not results[name].error
         assert len(results[name].forecasts) > 0
@@ -219,8 +219,8 @@ def run_all_tests():
         test_prepare_dataset,
         test_prepare_dataset_no_test,
         test_generate_future_features,
-        test_amira_model,
-        test_samira_model,
+        test_arima_model,
+        test_sarima_model,
         test_linear_regression_model,
         test_forecaster,
         test_weather_manager_neutral,
