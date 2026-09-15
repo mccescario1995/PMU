@@ -138,24 +138,63 @@ export function useForecast() {
     }
   }
 
-  async function runModel(model: string) {
-    modelLoading.value = true
-    modelError.value = ""
-    try {
-      await apiFetch(`/v1/forecasts/run-model`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, days: 30 }),
-        parseJson: true,
-        throwOnError: true,
-      })
-      await load()
-    } catch (e: any) {
-      modelError.value = e?.message || "Failed to run model"
-    } finally {
-      modelLoading.value = false
+  const showProgressModal = ref(false)
+const progressSteps = ref<string[]>([])
+const progressError = ref("")
+
+function addProgressStep(step: string) {
+  progressSteps.value.push(step)
+}
+
+function clearProgress() {
+  progressSteps.value = []
+  progressError.value = ""
+}
+
+async function runModel(model: string) {
+  modelLoading.value = true
+  modelError.value = ""
+  clearProgress()
+  showProgressModal.value = true
+
+  addProgressStep(`Initializing ${model} model...`)
+
+  try {
+    addProgressStep("Fetching historical data...")
+    addProgressStep("Training model...")
+    addProgressStep("Generating forecasts...")
+
+    const response = await apiFetch(`/v1/forecasts/run-model`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model, days: 30 }),
+      parseJson: true,
+      throwOnError: true,
+    }) as any
+
+    addProgressStep(`Model ${model} trained successfully!`)
+    addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
+
+    if (response?.metrics) {
+      const metrics = response.metrics
+      const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
+      if (metricStrs.length) {
+        addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
+      }
     }
+
+    await load()
+
+    setTimeout(() => {
+      showProgressModal.value = false
+    }, 2000)
+  } catch (e: any) {
+    progressError.value = e?.message || "Failed to run model"
+    addProgressStep(`Error: ${progressError.value}`)
+  } finally {
+    modelLoading.value = false
   }
+}
 
   async function remove(row: any) {
     if (!confirm('Delete this forecast?')) return
@@ -212,6 +251,9 @@ export function useForecast() {
     showForm,
     modelLoading,
     modelError,
+    showProgressModal,
+    progressSteps,
+    progressError,
     form,
     modalMode,
     saving,

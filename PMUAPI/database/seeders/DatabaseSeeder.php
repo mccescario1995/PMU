@@ -417,3 +417,6 @@ class DatabaseSeeder extends Seeder
         $this->call(MlFeatureSeeder::class);
     }
 }
+
+// What if i do tthis:
+// have a initial model training that will compile and ingest data to a new table named transaction revenue from ml feature, weather data, revenue history so that it the data is combined and later when training again it will just train using the table transaction revenue. note that the model training is use for forecasting of revenue thru seasonal revenue or peack revenue.

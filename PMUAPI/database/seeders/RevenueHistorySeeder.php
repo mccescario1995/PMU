@@ -40,14 +40,14 @@ class RevenueHistorySeeder extends Seeder
             ]);
         }
 
-        $stakeholder = Stakeholder::first();
-        if (! $stakeholder) {
-            $stakeholder = Stakeholder::create([
-                'name' => 'Walk-in',
-                'type' => 'buyer',
-                'status' => 'active',
-            ]);
-        }
+        // $stakeholder = Stakeholder::first();,
+        // if (! $stakeholder) {
+        //     $stakeholder = Stakeholder::create([
+        //         'name' => 'Walk-in',
+        //         'type' => 'buyer',
+        //         'status' => 'active',
+        //     ]);
+        // }
         $feeTypes = FeeType::all()->keyBy('fee_name');
 
         foreach ($rows as $row) {

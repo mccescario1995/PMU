@@ -15,6 +15,9 @@ const {
   showForm,
   modelLoading,
   modelError,
+  showProgressModal,
+  progressSteps,
+  progressError,
   form,
   modalMode,
   saving,
@@ -74,6 +77,37 @@ const UBadge = resolveComponent('UBadge')
     </div>
 
     <UAlert v-if="modelError" type="error" :title="modelError" class="mb-4" />
+
+    <UModal v-model:open="showProgressModal" :dismissible="false">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <UIcon name="i-lucide-brain" class="w-5 h-5 text-primary" />
+          <span>Training {{ modelLabel }} Model</span>
+        </div>
+      </template>
+      <template #body>
+        <div class="space-y-3">
+          <div v-if="modelLoading" class="flex items-center gap-2 text-sm text-slate-500">
+            <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+            Processing...
+          </div>
+          <ul class="space-y-2">
+            <li v-for="(step, index) in progressSteps" :key="index" class="flex items-start gap-2 text-sm">
+              <UIcon v-if="index < progressSteps.length - 1 || !modelLoading" name="i-lucide-check" class="w-4 h-4 text-green-500 mt-0.5" />
+              <UIcon v-else name="i-lucide-loader" class="w-4 h-4 text-primary mt-0.5 animate-spin" />
+              <span>{{ step }}</span>
+            </li>
+          </ul>
+          <UAlert v-if="progressError" type="error" :title="progressError" class="mt-2" />
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end">
+          <UButton v-if="!modelLoading && !progressError" @click="showProgressModal = false">Close</UButton>
+          <UButton v-if="progressError" variant="ghost" @click="showProgressModal = false">Dismiss</UButton>
+        </div>
+      </template>
+    </UModal>
 
     <UModal v-model:open="showForm">
       <template #header>

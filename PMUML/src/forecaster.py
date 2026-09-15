@@ -84,13 +84,16 @@ class Forecaster:
         engine = create_engine(self.config.db_url)
         limit = f" LIMIT {days}" if days else ""
         query = f"""
-            SELECT report_date, year_num, month_num, day_num, day_of_week, quarter_num,
-                   is_weekend, is_month_start, is_month_end, revenue_target, log_revenue,
-                   revenue_lag_1d, revenue_lag_7d, revenue_lag_365d,
-                   revenue_rolling_7d_mean, revenue_rolling_30d_mean,
-                   summary_metric_col17, is_missing_date
-            FROM ml_features
-            ORDER BY report_date ASC{limit}
+            SELECT tr.report_date, tr.year_num, tr.month_num, tr.day_num,
+                   tr.day_of_week, tr.quarter_num, tr.is_weekend,
+                   tr.is_month_start, tr.is_month_end,
+                   tr.revenue_target, tr.log_revenue,
+                   tr.temp_celsius, tr.precipitation_mm, tr.wind_speed,
+                   trf.revenue_lag_1d, trf.revenue_lag_7d, trf.revenue_lag_365d,
+                   trf.revenue_rolling_7d_mean, trf.revenue_rolling_30d_mean
+            FROM transaction_revenue tr
+            LEFT JOIN transaction_revenue_features trf ON tr.report_date = trf.report_date
+            ORDER BY tr.report_date ASC{limit}
         """
         df = pd.read_sql(query, con=engine)
         if "report_date" in df.columns:

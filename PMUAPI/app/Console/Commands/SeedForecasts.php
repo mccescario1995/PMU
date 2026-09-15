@@ -32,6 +32,12 @@ class SeedForecasts extends Command
         $avg = (float) $history->avg('total_revenue');
         $trend = $this->calculateTrend($history);
 
+        // Compute monthly seasonal factors from actual historical data
+        $monthlyFactors = $this->computeMonthlyFactors();
+
+        // Compute data-driven peak/off-peak classification
+        $peakMonths = $this->computePeakMonths();
+
         $lastDate = Carbon::parse($history->last()->revenue_date);
         $weather = new WeatherService();
 
@@ -42,11 +48,10 @@ class SeedForecasts extends Command
             $date = $lastDate->copy()->addDays($i);
             $dateStr = $date->toDateString();
 
-            $seasonal = $this->getSeasonalFactor($date->month);
+            $seasonal = $monthlyFactors[$date->month] ?? 1.0;
             $predicted = max(0, round($avg * $seasonal * (1 + $trend * $i / 30), 2));
 
-            $month = (int) $date->month;
-            $season = ($month >= 1 && $month <= 6) ? 'Peak' : 'Off-Peak';
+            $season = in_array((int) $date->month, $peakMonths) ? 'Peak' : 'Off-Peak';
 
             $batch[] = [
                 'forecast_date' => $dateStr,
@@ -94,13 +99,60 @@ class SeedForecasts extends Command
         return $den == 0 ? 0 : $num / $den;
     }
 
-    private function getSeasonalFactor(int $month): float
+    /**
+     * Compute monthly seasonal factors from actual revenue history.
+     * Factor = monthly average / annual average.
+     * A factor > 1.0 means that month is above average; < 1.0 means below.
+     */
+    private function computeMonthlyFactors(): array
     {
-        $factors = [
-            1 => 1.1, 2 => 0.9, 3 => 1.0, 4 => 0.95, 5 => 1.05, 6 => 1.2,
-            7 => 1.1, 8 => 0.95, 9 => 1.0, 10 => 1.15, 11 => 1.3, 12 => 1.25,
-        ];
+        $monthlyAvg = RevenueHistory::selectRaw('MONTH(revenue_date) as month, AVG(total_revenue) as avg_rev')
+            ->groupBy('month')
+            ->pluck('avg_rev', 'month')
+            ->toArray();
 
-        return $factors[$month] ?? 1.0;
+        if (empty($monthlyAvg)) {
+            return [];
+        }
+
+        $annualAvg = array_sum($monthlyAvg) / count($monthlyAvg);
+
+        if ($annualAvg == 0) {
+            return [];
+        }
+
+        $factors = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $factors[$m] = isset($monthlyAvg[$m]) ? $monthlyAvg[$m] / $annualAvg : 1.0;
+        }
+
+        return $factors;
+    }
+
+    /**
+     * Compute data-driven peak months.
+     * A month is "Peak" if its average revenue is above the annual average.
+     */
+    private function computePeakMonths(): array
+    {
+        $monthlyAvg = RevenueHistory::selectRaw('MONTH(revenue_date) as month, AVG(total_revenue) as avg_rev')
+            ->groupBy('month')
+            ->pluck('avg_rev', 'month')
+            ->toArray();
+
+        if (empty($monthlyAvg)) {
+            return [];
+        }
+
+        $annualAvg = array_sum($monthlyAvg) / count($monthlyAvg);
+
+        $peak = [];
+        for ($m = 1; $m <= 12; $m++) {
+            if (isset($monthlyAvg[$m]) && $monthlyAvg[$m] > $annualAvg) {
+                $peak[] = $m;
+            }
+        }
+
+        return $peak;
     }
 }

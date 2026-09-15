@@ -71,18 +71,27 @@ function toArray(r: any): any[] {
 
 async function load() {
   loading.value = true;
-  const [r, u, p] = await Promise.all([
-    apiFetch("/v1/roles", { parseJson: true }),
-    apiFetch("/v1/users", { parseJson: true }),
-    apiFetch("/v1/permissions", { parseJson: true }),
-  ]);
-  roles.value = toArray(r as any);
-  users.value = toArray(u as any);
-  permissionGroups.value = toArray(p as any);
-  loading.value = false;
+  try {
+    const [r, u, p] = await Promise.all([
+      apiFetch("/v1/roles", { parseJson: true, throwOnError: false }),
+      apiFetch("/v1/users", { parseJson: true, throwOnError: false }),
+      apiFetch("/v1/permissions", { parseJson: true, throwOnError: false }),
+    ]);
+    roles.value = toArray(r as any);
+    users.value = toArray(u as any);
+    permissionGroups.value = toArray(p as any);
+  } catch (e) {
+    // Silently handle errors during SSR (user not authenticated yet)
+    console.error("Failed to load accounts data:", e);
+  } finally {
+    loading.value = false;
+  }
 }
 
-onMounted(load);
+onMounted(() => {
+  loading.value = true;
+  load();
+})
 
 function togglePerm(name: string, checked: boolean) {
   if (checked) {

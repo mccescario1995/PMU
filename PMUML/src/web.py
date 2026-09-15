@@ -50,21 +50,24 @@ if os.path.exists("outputs/models/amira.joblib"):
 
 
 def get_historical_features() -> pd.DataFrame:
-    df = pd.read_sql(
-        """
-        SELECT report_date, year_num, month_num, day_num, day_of_week, quarter_num,
-               is_weekend, is_month_start, is_month_end, revenue_target, log_revenue,
-               revenue_lag_1d, revenue_lag_7d, revenue_lag_365d,
-               revenue_rolling_7d_mean, revenue_rolling_30d_mean,
-               summary_metric_col17, is_missing_date
-        FROM ml_features
-        ORDER BY report_date ASC
-    """,
-        con=engine,
-    )
-    if "report_date" in df.columns and not df.empty:
-        df["report_date"] = df["report_date"].astype(str)
-    return df
+        df = pd.read_sql(
+            """
+            SELECT tr.report_date, tr.year_num, tr.month_num, tr.day_num,
+                   tr.day_of_week, tr.quarter_num, tr.is_weekend,
+                   tr.is_month_start, tr.is_month_end,
+                   tr.revenue_target, tr.log_revenue,
+                   tr.temp_celsius, tr.precipitation_mm, tr.wind_speed,
+                   trf.revenue_lag_1d, trf.revenue_lag_7d, trf.revenue_lag_365d,
+                   trf.revenue_rolling_7d_mean, trf.revenue_rolling_30d_mean
+            FROM transaction_revenue tr
+            LEFT JOIN transaction_revenue_features trf ON tr.report_date = trf.report_date
+            ORDER BY tr.report_date ASC
+        """,
+            con=engine,
+        )
+        if "report_date" in df.columns and not df.empty:
+            df["report_date"] = df["report_date"].astype(str)
+        return df
 
 
 @app.route("/", methods=["GET"])
@@ -133,7 +136,7 @@ def weather_backfill():
     try:
         df = get_historical_features()
         if df.empty:
-            return jsonify({"error": "No records in ml_features"}), 404
+            return jsonify({"error": "No records in transaction_revenue"}), 404
         dates = df["report_date"].tolist()
         result = forecaster.weather_manager.backfill(dates)
         return jsonify({
@@ -186,7 +189,7 @@ def predict_all():
     try:
         df = get_historical_features()
         if df.empty:
-            return jsonify({"error": "No records found in ml_features"}), 404
+            return jsonify({"error": "No records found in transaction_revenue"}), 404
 
         results = forecaster.forecast(
             models=["amira", "samira", "linear_regression"],
@@ -226,7 +229,7 @@ def predict_single(model_name):
     try:
         df = get_historical_features()
         if df.empty:
-            return jsonify({"error": "No records found in ml_features"}), 404
+            return jsonify({"error": "No records found in transaction_revenue"}), 404
 
         results = forecaster.forecast(
             models=[model_name],

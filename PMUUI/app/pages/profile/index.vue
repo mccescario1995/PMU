@@ -127,9 +127,9 @@ async function saveProfile() {
     }
 }
 
-async function handleProfilePictureUpload(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) return;
+async function handleProfilePictureUpload() {
+    const input = profilePictureInput.value as HTMLInputElement;
+    if (!input?.files?.length) return;
 
     const file = input.files[0];
     const formData = new FormData();
@@ -197,20 +197,20 @@ async function handleProfilePictureUpload(event: Event) {
                     size="xl"
                     class="ring-4 ring-primary/10"
                 />
-<div class="flex gap-2">
-                    <input
-                        type="file"
-                        id="profile-picture-input"
-                        class="hidden"
-                        accept="image/*"
-                        @change="handleProfilePictureUpload"
-                    />
+                <div class="flex gap-2">
+<input
+    type="file"
+    ref="profilePictureInput"
+    class="hidden"
+    accept="image/*"
+    @change="handleProfilePictureUpload"
+/>
                     <UButton
                         variant="ghost"
                         color="neutral"
                         icon="i-lucide-camera"
                         :loading="uploading"
-                        @click="typeof document !== 'undefined' && document.getElementById('profile-picture-input')?.click()"
+                        @click="profilePictureInput?.click()"
                     >
                         {{ uploading ? 'Uploading...' : 'Change Photo' }}
                     </UButton>

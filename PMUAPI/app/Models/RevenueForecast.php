@@ -4,8 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
-class RevenueForecast extends Model
+use Illuminate\Support\Facades\Cache;
 {
     use HasFactory;
 
@@ -21,10 +20,44 @@ class RevenueForecast extends Model
         'predicted_revenue' => 'decimal:2',
     ];
 
+    /**
+     * Compute data-driven peak months from revenue history.
+     * A month is "Peak" if its average revenue is above the annual average.
+     * Results are cached for 1 hour to avoid repeated queries.
+     */
+    public static function computePeakMonths(): array
+    {
+        return Cache::remember('peak_months', 3600, function () {
+            $monthlyAvg = RevenueHistory::selectRaw('MONTH(revenue_date) as month, AVG(total_revenue) as avg_rev')
+                ->groupBy('month')
+                ->pluck('avg_rev', 'month')
+                ->toArray();
+
+            if (empty($monthlyAvg)) {
+                return [1, 2, 3, 4, 5, 6]; // fallback to old default
+            }
+
+            $annualAvg = array_sum($monthlyAvg) / count($monthlyAvg);
+
+            $peak = [];
+            for ($m = 1; $m <= 12; $m++) {
+                if (isset($monthlyAvg[$m]) && $monthlyAvg[$m] > $annualAvg) {
+                    $peak[] = $m;
+                }
+            }
+
+            return $peak;
+        });
+    }
+
+    /**
+     * Fallback accessor: derive season from date using data-driven peak months.
+     * Only used when the 'season' column is null.
+     */
     public function getSeasonFromDateAttribute(): string
     {
         $month = (int) $this->forecast_date->format('n');
 
-        return $month >= 1 && $month <= 6 ? 'Peak' : 'Off-Peak';
+        return in_array($month, $this->computePeakMonths()) ? 'Peak' : 'Off-Peak';
     }
 }
