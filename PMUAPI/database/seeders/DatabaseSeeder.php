@@ -196,23 +196,24 @@ class DatabaseSeeder extends Seeder
         ]);
         $userStat->assignRole('Statistician');
 
-        // $feeTypes = [
-        //     ['fee_name' => 'Fish Landing', 'base_rate' => 30.00, 'unit' => 'kg'],
-        //     ['fee_name' => 'Fish Unloading', 'base_rate' => 50.00, 'unit' => 'kg'],
-        //     ['fee_name' => 'Wharfage', 'base_rate' => 20.00, 'unit' => 'trip'],
-        //     ['fee_name' => 'Parking', 'base_rate' => 15.00, 'unit' => 'day'],
-        //     ['fee_name' => 'Storage', 'base_rate' => 25.00, 'unit' => 'day'],
-        //     ['fee_name' => 'Rental', 'base_rate' => 100.00, 'unit' => 'month'],
-        //     ['fee_name' => 'Accreditation', 'base_rate' => 250.00, 'unit' => 'head'],
-        //     ['fee_name' => 'Auxiliary Invoice', 'base_rate' => 40.00, 'unit' => 'item'],
-        //     ['fee_name' => 'Entrance', 'base_rate' => 10.00, 'unit' => 'head'],
-        //     ['fee_name' => 'Usage', 'base_rate' => 15.00, 'unit' => 'hour'],
-        //     ['fee_name' => 'Inspection', 'base_rate' => 150.00, 'unit' => 'unit'],
-        //     ['fee_name' => 'Regulatory', 'base_rate' => 200.00, 'unit' => 'transaction'],
-        // ];
-        // foreach ($feeTypes as $fee) {
-        //     FeeType::create($fee);
-        // }
+        $feeTypes = [
+            ['fee_name' => 'Fish Landing', 'base_rate' => 30.00, 'unit' => 'kg'],
+            ['fee_name' => 'Fish Unloading', 'base_rate' => 50.00, 'unit' => 'kg'],
+            ['fee_name' => 'Wharfage', 'base_rate' => 20.00, 'unit' => 'trip'],
+            ['fee_name' => 'Parking', 'base_rate' => 15.00, 'unit' => 'day'],
+            ['fee_name' => 'Storage', 'base_rate' => 25.00, 'unit' => 'day'],
+            ['fee_name' => 'Rental', 'base_rate' => 100.00, 'unit' => 'month'],
+            ['fee_name' => 'Accreditation', 'base_rate' => 250.00, 'unit' => 'head'],
+            ['fee_name' => 'Auxiliary Invoice', 'base_rate' => 40.00, 'unit' => 'item'],
+            ['fee_name' => 'Entrance', 'base_rate' => 10.00, 'unit' => 'head'],
+            ['fee_name' => 'Usage', 'base_rate' => 15.00, 'unit' => 'hour'],
+            ['fee_name' => 'Inspection', 'base_rate' => 150.00, 'unit' => 'unit'],
+            ['fee_name' => 'Regulatory', 'base_rate' => 200.00, 'unit' => 'transaction'],
+        ];
+
+        foreach ($feeTypes as $fee) {
+            FeeType::firstOrCreate(['fee_name' => $fee['fee_name']], $fee);
+        }
 
         // Stakeholder::create(['name' => 'Juan Dela Cruz', 'type' => 'buyer', 'contact_no' => '09123456789', 'email' => 'juan@example.com', 'address' => 'Pasacao, Camarines Sur', 'status' => 'active']);
         // Stakeholder::create(['name' => 'Pedro Santos', 'type' => 'broker', 'contact_no' => '09987654321', 'email' => 'pedro@example.com', 'address' => 'Pasacao, Camarines Sur', 'status' => 'active']);
@@ -288,7 +289,7 @@ class DatabaseSeeder extends Seeder
                 'unit' => 'pcs',
                 'status' => 'available'
             ],
-            
+
             // Materials
             [
                 'item_name' => 'Cleaning Hoses',
