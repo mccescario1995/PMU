@@ -22,7 +22,7 @@ class BuildMlFeatures extends Command
         $query = DB::table('revenue_histories as rh')
             ->leftjoin('weather_data as wd', 'wd.weather_date', '=', 'rh.revenue_date')
             ->select([
-                'rh.revenue_date',
+                'rh.revenue_date as report_date',
                 'rh.total_revenue as revenue_target',
                 DB::raw('LOG(GREATEST(rh.total_revenue, 0.0001)) as log_revenue'),
                 'wd.temperature as temp_celsius',
