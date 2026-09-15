@@ -306,4 +306,160 @@ class ReportController extends Controller
 
         return response()->streamDownload($callback, "monthly-report-{$month}.csv");
     }
+
+    /**
+     * Fetch transactions with per-fee-type breakdown for a date range.
+     *
+     * @param  string  $type  daily|monthly|yearly
+     */
+    public function transactionReport()
+    {
+        $type = request('type', 'daily');
+        $query = Transaction::with(['stakeholder', 'items.feeType']);
+
+        switch ($type) {
+            case 'monthly':
+                $month = request('month', now()->format('Y-m'));
+                $query->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month]);
+                break;
+            case 'yearly':
+                $year = request('year', now()->year);
+                $query->whereYear('transaction_date', $year);
+                break;
+            case 'daily':
+            default:
+                $date = request('date', today()->toDateString());
+                $query->whereDate('transaction_date', $date);
+                $type = 'daily';
+                break;
+        }
+
+        $transactions = $query->orderBy('transaction_date')->get();
+
+        // Collect all fee types that appear in this range
+        $feeTypes = $transactions
+            ->pluck('items')
+            ->flatten()
+            ->pluck('feeType')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $rows = $transactions->map(function ($tx) use ($feeTypes) {
+            $feeMap = [];
+            foreach ($feeTypes as $ft) {
+                $feeMap[$ft->id] = $tx->items
+                    ->where('fee_type_id', $ft->id)
+                    ->sum('subtotal');
+            }
+            return [
+                'id' => str_pad((string) $tx->id, 3, '0', STR_PAD_LEFT),
+                'date' => $tx->transaction_date->toDateString(),
+                'payor' => $tx->stakeholder?->name ?? '-',
+                'fees' => collect($feeTypes)->mapWithKeys(fn ($ft) => [$ft->fee_name => $feeMap[$ft->id] ?? 0])->all(),
+                'total' => (float) $tx->total_amount,
+                'remarks' => $tx->remarks ?? '',
+            ];
+        });
+
+        return response()->json([
+            'type' => $type,
+            'fee_types' => $feeTypes->map(fn ($f) => ['id' => $f->id, 'fee_name' => $f->fee_name]),
+            'transactions' => $rows,
+            'grand_total' => (float) $transactions->sum('total_amount'),
+            'count' => $transactions->count(),
+        ]);
+    }
+
+    /**
+     * Export the per-fee-type transaction report as XLSX.
+     *
+     * @param  string  $type  daily|monthly|yearly
+     */
+    public function transactionReportXlsx()
+    {
+        $type = request('type', 'daily');
+        $query = Transaction::with(['stakeholder', 'items.feeType']);
+
+        switch ($type) {
+            case 'monthly':
+                $month = request('month', now()->format('Y-m'));
+                $query->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month]);
+                $label = "monthly-report-{$month}";
+                break;
+            case 'yearly':
+                $year = request('year', now()->year);
+                $query->whereYear('transaction_date', $year);
+                $label = "yearly-report-{$year}";
+                break;
+            case 'daily':
+            default:
+                $date = request('date', today()->toDateString());
+                $query->whereDate('transaction_date', $date);
+                $type = 'daily';
+                $label = "daily-report-{$date}";
+                break;
+        }
+
+        $transactions = $query->orderBy('transaction_date')->get();
+
+        $feeTypes = $transactions
+            ->pluck('items')
+            ->flatten()
+            ->pluck('feeType')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // Report details
+        $sheet->setCellValue('A1', 'PORT MANAGEMENT UNIT - PASACAO, CAMARINES SUR');
+        $sheet->setCellValue('A2', 'Transaction Report');
+        $sheet->setCellValue('A3', 'Report Period: ' . strtoupper($type));
+        $sheet->setCellValue('A4', 'Generated: ' . now()->format('F j, Y g:i A') . ' by: ' . auth()->user()?->name ?? 'System');
+        $sheet->setCellValue('A6', 'Date');
+        $sheet->setCellValue('B6', 'Transaction #');
+        $sheet->setCellValue('C6', 'Payor/Stakeholder');
+
+        $col = 'D';
+        foreach ($feeTypes as $ft) {
+            $sheet->setCellValue($col . '6', $ft->fee_name);
+            $col++;
+        }
+
+        $sheet->setCellValue($col, 'Total');
+        $col++;
+        $sheet->setCellValue($col, 'Remarks');
+
+        $row = 7;
+        foreach ($transactions as $tx) {
+            $sheet->setCellValue('A' . $row, $tx->transaction_date->toDateString());
+            $sheet->setCellValue('B' . $row, str_pad((string) $tx->id, 3, '0', STR_PAD_LEFT));
+            $sheet->setCellValue('C' . $row, $tx->stakeholder?->name ?? '-');
+
+            $c = 'D';
+            foreach ($feeTypes as $ft) {
+                $subtotal = $tx->items->where('fee_type_id', $ft->id)->sum('subtotal');
+                $sheet->setCellValue($c . $row, $subtotal);
+                $c++;
+            }
+
+            $sheet->setCellValue($c, $tx->total_amount);
+            $c++;
+            $sheet->setCellValue($c, $tx->remarks ?? '');
+            $row++;
+        }
+
+        // Total row
+        $sheet->setCellValue('A' . $row, 'TOTAL');
+        $sheet->setCellValue($col, $transactions->sum('total_amount'));
+
+        $writer = new Xlsx($spreadsheet);
+        $tempPath = tempnam(sys_get_temp_dir(), 'transaction_report_') . '.xlsx';
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, $label . '.xlsx')->deleteFileAfterSend(true);
+    }
 }

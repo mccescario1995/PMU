@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted, computed, watch } from 'vue'
+import { onMounted, computed, watch, ref } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
 
@@ -12,7 +12,8 @@ definePageMeta({
 const currency = (value: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(value)
 
-const today = new Date().toISOString().slice(0, 10)
+const selectedDate = ref(new Date().toISOString().slice(0, 10))
+const dateStr = computed(() => selectedDate.value)
 
 const transactions = ref<any[]>([])
 const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => transactions.value.length)
@@ -25,8 +26,8 @@ function formatFeeTypes(items: any[]): string {
   return items.map((i: any) => i.fee_type?.fee_name).filter(Boolean).join(", ");
 }
 
-onMounted(async () => {
-  const report = (await apiFetch('/v1/reports/daily?date=' + today, { parseJson: true })) as any
+async function loadData() {
+  const report = (await apiFetch('/v1/reports/daily?date=' + dateStr.value, { parseJson: true })) as any
   total.value = Number(report.total ?? 0)
   count.value = Number(report.count ?? 0)
   transactions.value = (report.transactions ?? []).map((t: any) => ({
@@ -36,18 +37,25 @@ onMounted(async () => {
     amount: t.total_amount,
     time: (t.transaction_date ?? "").toString().slice(11, 16) || "-",
   }))
-})
+}
+
+onMounted(loadData)
+watch(dateStr, loadData)
 
 function exportCsv() {
-  window.open('/v1/reports/daily/excel?date=' + today, '_blank')
+  window.open('/v1/reports/daily/excel?date=' + dateStr.value, '_blank')
 }
 
 function exportPdf() {
-  window.open('/v1/reports/daily/pdf?date=' + today, '_blank')
+  window.open('/v1/reports/daily/pdf?date=' + dateStr.value, '_blank')
 }
 
 function exportXlsx() {
-  window.open('/v1/reports/daily/xlsx?date=' + today, '_blank')
+  window.open('/v1/reports/daily/xlsx?date=' + dateStr.value, '_blank')
+}
+
+function exportDetailXlsx() {
+  window.open('/v1/reports/transaction/xlsx?type=daily&date=' + dateStr.value, '_blank')
 }
 
 type Transaction = {
@@ -78,14 +86,18 @@ const columns: TableColumn<Transaction>[] = [
 
 <template>
   <div class="p-6 space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex items-center justify-between flex-wrap gap-2">
       <div>
         <h1 class="text-2xl font-bold">Daily Report</h1>
-        <p class="text-slate-500">{{ new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
+        <p class="text-slate-500">{{ new Date(dateStr.value + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}</p>
       </div>
-      <UButton icon="i-lucide-download" @click="exportCsv"> Export CSV </UButton>
-      <UButton icon="i-lucide-file-spreadsheet" variant="outline" @click="exportXlsx"> Export Excel </UButton>
-      <UButton icon="i-lucide-file-text" variant="outline" @click="exportPdf"> Export PDF </UButton>
+      <div class="flex items-center gap-2 flex-wrap">
+        <UInput v-model="selectedDate" type="date" class="w-40" />
+        <UButton icon="i-lucide-download" @click="exportCsv"> Export CSV </UButton>
+        <UButton icon="i-lucide-file-spreadsheet" variant="outline" @click="exportXlsx"> Export Excel </UButton>
+        <UButton icon="i-lucide-file-columns" variant="outline" @click="exportDetailXlsx"> Export Excel (Detail) </UButton>
+        <UButton icon="i-lucide-file-text" variant="outline" @click="exportPdf"> Export PDF </UButton>
+      </div>
     </div>
 
     <div class="grid gap-4 sm:grid-cols-2">

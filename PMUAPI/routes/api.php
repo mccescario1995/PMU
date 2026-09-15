@@ -338,6 +338,16 @@ Route::prefix('v1')->group(function () {
                 '/annual/pdf',
                 [ReportController::class, 'annualPdf']
             );
+
+            // Per-fee-type transaction detail report
+            Route::get(
+                '/transaction',
+                [ReportController::class, 'transactionReport']
+            );
+            Route::get(
+                '/transaction/xlsx',
+                [ReportController::class, 'transactionReportXlsx']
+            );
         });
 
         /*

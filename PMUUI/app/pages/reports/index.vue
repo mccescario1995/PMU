@@ -1,35 +1,98 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
 definePageMeta({
   layout: "dashboard",
 });
 
-const reports = [
-  { title: "Daily Report", description: "Transactions and revenue for a specific day.", to: "/reports/daily", icon: "i-lucide-calendar-1" },
-  { title: "Monthly Report", description: "Aggregated operations overview per month.", to: "/reports/monthly", icon: "i-lucide-calendar-range" },
-  { title: "Yearly Report", description: "Annual trends, totals and forecasts.", to: "/reports/yearly", icon: "i-lucide-calendars" },
-]
+const selectedDate = ref(new Date().toISOString().slice(0, 10));
+const selectedMonth = ref(new Date().toISOString().slice(0, 7));
+const selectedYear = ref(new Date().getFullYear());
+
+function exportDaily() {
+  window.open(
+    `/v1/reports/transaction/xlsx?type=daily&date=${selectedDate.value}`,
+    "_blank"
+  );
+}
+
+function exportMonthly() {
+  window.open(
+    `/v1/reports/transaction/xlsx?type=monthly&month=${selectedMonth.value}`,
+    "_blank"
+  );
+}
+
+function exportYearly() {
+  window.open(
+    `/v1/reports/transaction/xlsx?type=yearly&year=${selectedYear.value}`,
+    "_blank"
+  );
+}
 </script>
 
 <template>
   <div class="p-6 space-y-6">
     <div>
       <h1 class="text-2xl font-bold">Reports</h1>
-      <p class="text-slate-500">Generate and review port operation reports.</p>
+      <p class="text-slate-500">Generate and download transaction records reports.</p>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-3">
-      <UCard
-        v-for="report in reports"
-        :key="report.to"
-        class="cursor-pointer transition hover:ring-2 hover:ring-[#031120] hover:shadow-lg"
-        :to="report.to"
-      >
-        <div class="flex items-start gap-4">
-          <UIcon :name="report.icon" class="size-8 text-[#2E4C6C]" />
-          <div>
-            <h2 class="font-semibold">{{ report.title }}</h2>
-            <p class="text-sm text-slate-500">{{ report.description }}</p>
+    <div class="grid gap-6 md:grid-cols-3">
+      <!-- Daily -->
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <UIcon name="i-lucide-calendar-1" class="size-6 text-[#2E4C6C]" />
+            <h2 class="font-semibold">Daily Report</h2>
           </div>
+        </template>
+        <p class="text-sm text-slate-500 mb-4">
+          Transaction records report for a specific day. Each row is one transaction with per-fee-type columns.
+        </p>
+        <div class="space-y-3">
+          <UInput v-model="selectedDate" type="date" class="w-full" />
+          <UButton class="w-full" icon="i-lucide-file-columns" @click="exportDaily">
+            Export Excel (Detail)
+          </UButton>
+        </div>
+      </UCard>
+
+      <!-- Monthly -->
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <UIcon name="i-lucide-calendar-range" class="size-6 text-[#2E4C6C]" />
+            <h2 class="font-semibold">Monthly Report</h2>
+          </div>
+        </template>
+        <p class="text-sm text-slate-500 mb-4">
+          Transaction records report for an entire month. Each row is one transaction with per-fee-type columns.
+        </p>
+        <div class="space-y-3">
+          <UInput v-model="selectedMonth" type="month" class="w-full" />
+          <UButton class="w-full" icon="i-lucide-file-columns" @click="exportMonthly">
+            Export Excel (Detail)
+          </UButton>
+        </div>
+      </UCard>
+
+      <!-- Yearly -->
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <UIcon name="i-lucide-calendars" class="size-6 text-[#2E4C6C]" />
+            <h2 class="font-semibold">Yearly Report</h2>
+          </div>
+        </template>
+        <p class="text-sm text-slate-500 mb-4">
+          Transaction records report for an entire year. Each row is one transaction with per-fee-type columns.
+        </p>
+        <div class="space-y-3">
+          <UInput v-model="selectedYear" type="number" placeholder="YYYY" class="w-full" />
+          <UButton class="w-full" icon="i-lucide-file-columns" @click="exportYearly">
+            Export Excel (Detail)
+          </UButton>
         </div>
       </UCard>
     </div>
