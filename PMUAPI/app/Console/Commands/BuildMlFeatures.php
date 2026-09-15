@@ -37,8 +37,7 @@ class BuildMlFeatures extends Command
                 DB::raw('DAY(rh.revenue_date) = 1 as is_month_start'),
                 DB::raw('DAY(rh.revenue_date) = DAY(LAST_DAY(rh.revenue_date)) as is_month_end'),
             ])
-            ->orderBy('rh.revenue_date')
-            ->groupBy('rh.revenue_date');
+            ->orderBy('rh.revenue_date');
 
         // Optional: limit to last N days
         if ($this->option('days')) {
