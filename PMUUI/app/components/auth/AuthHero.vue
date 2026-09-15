@@ -1,8 +1,9 @@
 <template>
   <div class="relative hidden lg:block">
 
+    
     <img
-      src="#"
+      src="/assets/images/pmu-login.png"
       class="absolute inset-0 h-full w-full object-cover"
     />
     <!-- src="/images/fish-port.jpg" -->
