@@ -1,6 +1,8 @@
 import os
 import sys
-import socket                                                                                                                                                           
+import socket
+import requests
+                                                                                                                                                  
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -286,6 +288,53 @@ def debug_mysql_connection():
             "message": str(e)
         }
 
+@app.route("/debug/network", methods=["GET"])
+def debug_network():
+    result = {}
+
+    # Test normal HTTPS internet access
+    try:
+        response = requests.get(
+            "https://example.com",
+            timeout=10
+        )
+
+        result["https"] = {
+            "success": True,
+            "status": response.status_code
+        }
+
+    except Exception as e:
+        result["https"] = {
+            "success": False,
+            "error_type": type(e).__name__,
+            "message": str(e)
+        }
+
+    # Test Hostinger MySQL
+    try:
+        ip = socket.gethostbyname("srv1041.hstgr.io")
+
+        sock = socket.create_connection(
+            ("srv1041.hstgr.io", 3306),
+            timeout=10
+        )
+        sock.close()
+
+        result["mysql"] = {
+            "success": True,
+            "resolved_ip": ip,
+            "port": 3306
+        }
+
+    except Exception as e:
+        result["mysql"] = {
+            "success": False,
+            "error_type": type(e).__name__,
+            "message": str(e)
+        }
+
+    return result
 
 def _max_forecast_length(results: dict) -> int:
     max_len = 0
