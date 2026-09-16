@@ -64,6 +64,51 @@ class DashboardController extends Controller
         return response()->json($rows);
     }
 
+    public function exportTransactionReport(Request $request)
+    {
+        $type = $request->query('type');
+        $date = $request->query('date');
+        $month = $request->query('month');
+        $year = $request->query('year');
+
+        $query = DB::table('transaction_items')
+            ->join('fee_types', 'fee_types.id', '=', 'transaction_items.fee_type_id')
+            ->join('transactions', 'transactions.id', '=', 'transaction_items.transaction_id');
+
+        if ($type === 'daily' && $date) {
+            $query->whereDate('transactions.transaction_date', $date);
+        } elseif ($type === 'monthly' && $month) {
+            $query->whereMonth('transactions.transaction_date', $month);
+        } elseif ($type === 'yearly' && $year) {
+            $query->whereYear('transactions.transaction_date', $year);
+        }
+
+        $query->selectRaw('fee_types.fee_name as source, SUM(transaction_items.subtotal) as amount, COUNT(*) as count');
+
+        $rows = $query->groupBy('fee_types.fee_name')->get();
+
+        // Return as Excel file download
+        $filename = match ($type) {
+            'daily' => "daily-report-" . $date . ".xlsx",
+            'monthly' => "monthly-report-" . $month . ".xlsx",
+            'yearly' => "yearly-report-" . $year . ".xlsx",
+            default => "transaction-report.xlsx"
+        };
+
+        $headers = [
+            'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition: attachment; filename="' . $filename . '"',
+            'Cache-Control: max-age=0',
+        ];
+
+        $response = response()->json($rows);
+        foreach ($headers as $header) {
+            $response->header(explode(':', $header)[0], explode(':', $header)[1]);
+        }
+
+        return $response;
+    }
+
     public function inventorySummary()
     {
         return response()->json([

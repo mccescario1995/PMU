@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import axios from "axios";
 
 definePageMeta({
   layout: "dashboard",
@@ -11,51 +10,24 @@ const selectedMonth = ref(new Date().toISOString().slice(0, 7));
 const selectedYear = ref(new Date().getFullYear());
 
 function exportDaily() {
-  axios.get("/v1/reports/transaction/xlsx", {
-    params: { type: "daily", date: selectedDate.value },
-    responseType: "blob",
-  }).then((response) => {
-    const url = URL.createObjectURL(response.data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "daily-report.xlsx";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+  window.open(
+    `/v1/reports/transaction/xlsx?type=daily&date=${selectedDate.value}`,
+    "_blank"
+  );
 }
 
 function exportMonthly() {
-  axios.get("/v1/reports/transaction/xlsx", {
-    params: { type: "monthly", month: selectedMonth.value },
-    responseType: "blob",
-  }).then((response) => {
-    const url = URL.createObjectURL(response.data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "monthly-report.xlsx";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+  window.open(
+    `/v1/reports/transaction/xlsx?type=monthly&month=${selectedMonth.value}`,
+    "_blank"
+  );
 }
 
 function exportYearly() {
-  axios.get("/v1/reports/transaction/xlsx", {
-    params: { type: "yearly", year: selectedYear.value },
-    responseType: "blob",
-  }).then((response) => {
-    const url = URL.createObjectURL(response.data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "yearly-report.xlsx";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
+  window.open(
+    `/v1/reports/transaction/xlsx?type=yearly&year=${selectedYear.value}`,
+    "_blank"
+  );
 }
 </script>
 

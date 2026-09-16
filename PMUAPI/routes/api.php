@@ -268,10 +268,9 @@ Route::prefix('v1')->group(function () {
             );
 
             Route::get(
-                '/weather-revenue-correlation',
-                [DashboardController::class, 'weatherRevenueCorrelation']
+                '/reports/transaction/xlsx',
+                [DashboardController::class, 'exportTransactionReport']
             );
-        });
 
         /*
         |--------------------------------------------------------------------------
