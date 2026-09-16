@@ -63,24 +63,24 @@ const columns: TableColumn<Inventory>[] = [
     accessorKey: "item_name",
     header: "Name",
   },
-  {
-    accessorKey: "category_type",
-    header: "Type",
-    cell: ({ row }) => {
-      const type = row.getValue("category_type");
-      const color =
-        type === "equipment"
-          ? "primary"
-          : type === "materials"
-            ? "success"
-            : "warning";
-      return h(
-        UBadge,
-        { class: "capitalize", variant: "subtle", color },
-        () => type,
-      );
-    },
-  },
+  // {
+  //   accessorKey: "category_type",
+  //   header: "Type",
+  //   cell: ({ row }) => {
+  //     const type = row.getValue("category_type");
+  //     const color =
+  //       type === "equipment"
+  //         ? "primary"
+  //         : type === "materials"
+  //           ? "success"
+  //           : "warning";
+  //     return h(
+  //       UBadge,
+  //       { class: "capitalize", variant: "subtle", color },
+  //       () => type,
+  //     );
+  //   },
+  // },
   {
     accessorKey: "category",
     header: "Category",

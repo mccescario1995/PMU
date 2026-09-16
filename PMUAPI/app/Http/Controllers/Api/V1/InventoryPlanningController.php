@@ -17,7 +17,7 @@ class InventoryPlanningController extends Controller
 
         $items = InventoryItem::orderBy('item_name')->get();
 
-        $byCategoryType = $items->groupBy('category_type')->map(function ($group) {
+        $byCategoryType = $items->groupBy('category')->map(function ($group) {
             return [
                 'total_items' => $group->count(),
                 'total_quantity' => $group->sum('quantity'),
@@ -60,7 +60,7 @@ class InventoryPlanningController extends Controller
 
     public function planningView()
     {
-        $items = InventoryItem::orderBy('category_type')->orderBy('item_name')->get();
+        $items = InventoryItem::orderBy('category')->orderBy('item_name')->get();
         $forecasts = RevenueForecastSamira::orderBy('forecast_date')->get();
 
         $lowStockItems = $items->whereIn('status', ['low_stock', 'damaged']);
@@ -114,7 +114,7 @@ class InventoryPlanningController extends Controller
                 'item_id' => $item->id,
                 'item_name' => $item->item_name,
                 'current_quantity' => $item->quantity,
-                'category_type' => $item->category_type,
+                'category_type' => $item->category,
                 'status' => $item->status,
                 'recommended_min' => max(1, (int) ($item->quantity * $seasonFactor)),
                 'needs_reorder' => $item->quantity <= 10,
@@ -129,9 +129,9 @@ class InventoryPlanningController extends Controller
         $peakRevenue = $forecasts->filter(fn ($f) => $this->isPeakSeason($f->forecast_date))->sum('predicted_revenue');
         $offPeakRevenue = $forecasts->filter(fn ($f) => $this->isOffPeakSeason($f->forecast_date))->sum('predicted_revenue');
 
-        $equipmentTotal = $items->where('category_type', 'equipment')->sum('quantity');
-        $materialsTotal = $items->where('category_type', 'materials')->sum('quantity');
-        $suppliesTotal = $items->where('category_type', 'supplies')->sum('quantity');
+        $equipmentTotal = $items->where('category', 'equipment')->sum('quantity');
+        $materialsTotal = $items->where('category', 'materials')->sum('quantity');
+        $suppliesTotal = $items->where('category', 'supplies')->sum('quantity');
 
         return [
             'peak_budget_allocation' => [
