@@ -159,6 +159,8 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
 
     addProgressStep(`Initializing ${model} model...`)
 
+    const timeout = model === "sarima" || model === "samira" ? 240000 : 60000
+
     try {
       addProgressStep("Fetching historical data...")
       addProgressStep("Training model...")
@@ -170,6 +172,7 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
         body: JSON.stringify({ model, days: 30 }),
         parseJson: true,
         throwOnError: true,
+        timeout,
       }) as any
 
       addProgressStep(`Model ${model} trained successfully!`)

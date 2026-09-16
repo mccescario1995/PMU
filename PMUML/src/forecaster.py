@@ -68,6 +68,7 @@ class Forecaster:
                 self._models[canonical_model_name] = SARIMAModel(
                     order=(p, d, q),
                     seasonal_order=(1, d, 1, m),
+                    max_training_rows=cfg.get("training_days"),
                 )
             elif canonical_model_name == "linear_regression":
                 cfg = self.config.get_model_config("linear_regression")

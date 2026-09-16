@@ -18,4 +18,5 @@ sarima:
   D: 1
   Q: 1
   m: 12
+  training_days: 365
   exog: true

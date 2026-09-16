@@ -12,10 +12,21 @@ except ImportError:
 
 
 class SARIMAModel(BaseModel):
-    def __init__(self, order: tuple = (1, 1, 1), seasonal_order: tuple = (1, 1, 1, 7), **kwargs):
+    def __init__(
+        self,
+        order: tuple = (1, 1, 1),
+        seasonal_order: tuple = (1, 1, 1, 7),
+        max_training_rows: Optional[int] = None,
+        fit_options: Optional[Dict[str, Any]] = None,
+        **kwargs,
+    ):
         super().__init__(model_name="sarima")
         self.order = order
         self.seasonal_order = seasonal_order
+        self.max_training_rows = max_training_rows
+        self.fit_options = {"method": "lbfgs", "maxiter": 50}
+        if fit_options:
+            self.fit_options.update(fit_options)
         self._SARIMAX = None
 
     def fit(
@@ -46,6 +57,13 @@ class SARIMAModel(BaseModel):
         self.y_test = test
 
         train_exog = exog.iloc[:split] if exog is not None else None
+        if self.max_training_rows is not None and self.max_training_rows > 0 and len(train) > self.max_training_rows:
+            train = train.iloc[-self.max_training_rows:]
+            if train_exog is not None:
+                train_exog = train_exog.iloc[-self.max_training_rows:]
+
+        fit_kwargs = {"disp": False}
+        fit_kwargs.update(self.fit_options)
 
         try:
             self.result = self._SARIMAX(
@@ -53,10 +71,10 @@ class SARIMAModel(BaseModel):
                 exog=train_exog,
                 order=self.order,
                 seasonal_order=self.seasonal_order,
-            ).fit(disp=False)
+            ).fit(**fit_kwargs)
         except Exception as e:
             logger.warning(f"SARIMAX fit failed, falling back: {e}")
-            self.result = self._SARIMAX(train, order=(1, 1, 0)).fit(disp=False)
+            self.result = self._SARIMAX(train, order=(1, 1, 0)).fit(**fit_kwargs)
 
         self._is_fitted = True
         return self

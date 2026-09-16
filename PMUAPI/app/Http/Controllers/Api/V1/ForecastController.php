@@ -275,7 +275,7 @@ class ForecastController extends Controller
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $payload,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_TIMEOUT => 120,
+            CURLOPT_TIMEOUT => $model === 'sarima' ? 300 : 120,
         ]);
 
         // LOCAL RENDER

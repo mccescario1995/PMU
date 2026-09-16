@@ -16,6 +16,7 @@ from src.weather_service import WeatherManager
 import pandas as pd
 import numpy as np
 from datetime import date
+from unittest.mock import patch
 
 
 def test_prepare_dataset():
@@ -94,6 +95,40 @@ def test_sarima_model():
     assert "rmse" in metrics
     assert "mae" in metrics
     print("PASS: test_sarima_model")
+
+
+def test_sarima_model_bounds_training_window_and_fit_options():
+    df = pd.DataFrame({
+        "report_date": pd.date_range("2024-01-01", periods=80, freq="D"),
+        "revenue_target": np.linspace(100, 180, 80),
+        "temp_celsius": np.full(80, 25.0),
+    })
+    model = SARIMAModel(
+        order=(1, 1, 1),
+        seasonal_order=(1, 1, 1, 7),
+        max_training_rows=30,
+        fit_options={"method": "lbfgs", "maxiter": 50},
+    )
+
+    with patch("statsmodels.tsa.statespace.sarimax.SARIMAX") as sarimax:
+        sarimax.return_value.fit.return_value = object()
+        model.fit(df, target="revenue_target", exog_col="temp_celsius")
+
+    fitted_args, fitted_kwargs = sarimax.call_args
+    assert len(fitted_args[0]) == 30
+    assert len(fitted_kwargs["exog"]) == 30
+    fit_kwargs = sarimax.return_value.fit.call_args.kwargs
+    assert fit_kwargs["method"] == "lbfgs"
+    assert fit_kwargs["maxiter"] == 50
+    print("PASS: test_sarima_model_bounds_training_window_and_fit_options")
+
+
+def test_forecaster_sarima_uses_configured_training_window():
+    model = Forecaster(config=Config()).get_model("sarima")
+    assert model.max_training_rows == 365
+    assert model.fit_options["method"] == "lbfgs"
+    assert model.fit_options["maxiter"] == 50
+    print("PASS: test_forecaster_sarima_uses_configured_training_window")
 
 
 def test_linear_regression_model():
@@ -357,6 +392,8 @@ def run_all_tests():
         test_generate_future_features,
         test_arima_model,
         test_sarima_model,
+        test_sarima_model_bounds_training_window_and_fit_options,
+        test_forecaster_sarima_uses_configured_training_window,
         test_linear_regression_model,
         test_forecaster,
         test_weather_manager_neutral,
