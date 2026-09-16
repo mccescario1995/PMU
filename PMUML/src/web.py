@@ -53,24 +53,7 @@ if os.path.exists("outputs/models/arima.joblib"):
 
 
 def get_historical_features() -> pd.DataFrame:
-        df = pd.read_sql(
-            """
-            SELECT tr.report_date, tr.year_num, tr.month_num, tr.day_num,
-                   tr.day_of_week, tr.quarter_num, tr.is_weekend,
-                   tr.is_month_start, tr.is_month_end,
-                   tr.revenue_target, tr.log_revenue,
-                   tr.temp_celsius, tr.precipitation_mm, tr.wind_speed,
-                   trf.revenue_lag_1d, trf.revenue_lag_7d, trf.revenue_lag_365d,
-                   trf.revenue_rolling_7d_mean, trf.revenue_rolling_30d_mean
-            FROM transaction_revenue tr
-            LEFT JOIN transaction_revenue_features trf ON tr.report_date = trf.report_date
-            ORDER BY tr.report_date ASC
-        """,
-            con=engine,
-        )
-        if "report_date" in df.columns and not df.empty:
-            df["report_date"] = df["report_date"].astype(str)
-        return df
+        return forecaster.get_historical_df()
 
 
 @app.route("/", methods=["GET"])

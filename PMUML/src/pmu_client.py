@@ -47,6 +47,36 @@ class PMUClient:
             if isinstance(item, dict) and start <= date.fromisoformat(item["weather_date"][:10]) <= end
         ]
 
+    def _paginate(self, path: str, params: Optional[dict] = None, per_page: int = 200) -> list[dict]:
+        records: list[dict] = []
+        page = 1
+        while True:
+            p = dict(params or {})
+            p["per_page"] = per_page
+            p["page"] = page
+            data = self._get(path, params=p)
+            if isinstance(data, dict):
+                items = data.get("data", [])
+                meta = data.get("meta", {})
+            elif isinstance(data, list):
+                items = data
+                meta = {}
+            else:
+                items = []
+                meta = {}
+            records.extend(items)
+            last_page = meta.get("last_page", page)
+            if not items or page >= last_page:
+                break
+            page += 1
+        return records
+
+    def get_transaction_revenue(self, per_page: int = 200) -> list[dict]:
+        return self._paginate("/v1/transaction-revenue", {}, per_page=per_page)
+
+    def get_transaction_revenue_features(self, per_page: int = 200) -> list[dict]:
+        return self._paginate("/v1/transaction-revenue-features", {}, per_page=per_page)
+
     def get_forecasts(self) -> list[dict]:
         return self._get("/v1/forecasts")
 

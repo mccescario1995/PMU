@@ -262,7 +262,7 @@ class ForecastController extends Controller
         };
 
         $url = $pmumlUrl.'/forecast';
-        $payload = json_encode(['model' => $pmuModel, 'days' => $days]);
+        $payload = json_encode(['model' => $pmuModel, 'days' => $days, 'post_to_api' => false]);
 
         Log::info('PMUML request starting', [
             'url' => $url,
