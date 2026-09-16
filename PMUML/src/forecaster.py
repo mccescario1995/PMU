@@ -35,6 +35,8 @@ class ForecastResult:
 
 
 class Forecaster:
+    MODEL_ALIASES = {"amira": "arima", "samira": "sarima"}
+
     def __init__(self, config: Optional[Config] = None, client: Optional[Any] = None):
         self.config = config or Config()
         self.client = client
@@ -48,31 +50,35 @@ class Forecaster:
             self._weather_manager.load_historical(days=730)
         return self._weather_manager
 
+    def _canonical_model_name(self, model_name: str) -> str:
+        return self.MODEL_ALIASES.get(model_name, model_name)
+
     def get_model(self, model_name: str):
-        if model_name not in self._models:
-            if model_name == "arima":
+        canonical_model_name = self._canonical_model_name(model_name)
+        if canonical_model_name not in self._models:
+            if canonical_model_name == "arima":
                 cfg = self.config.get_model_config("arima")
-                self._models[model_name] = ARIMAModel(
+                self._models[canonical_model_name] = ARIMAModel(
                     order=(cfg.get("p", 1), cfg.get("d", 1), cfg.get("q", 1))
                 )
-            elif model_name == "sarima":
+            elif canonical_model_name == "sarima":
                 cfg = self.config.get_model_config("sarima")
                 p, d, q = cfg.get("p", 1), cfg.get("d", 1), cfg.get("q", 1)
                 m = cfg.get("m", 7)
-                self._models[model_name] = SARIMAModel(
+                self._models[canonical_model_name] = SARIMAModel(
                     order=(p, d, q),
                     seasonal_order=(1, d, 1, m),
                 )
-            elif model_name == "linear_regression":
+            elif canonical_model_name == "linear_regression":
                 cfg = self.config.get_model_config("linear_regression")
-                self._models[model_name] = LinearRegressionModel(
+                self._models[canonical_model_name] = LinearRegressionModel(
                     alpha=cfg.get("alpha", 1.0),
                     fit_intercept=cfg.get("fit_intercept", True),
                     use_log_target=True,
                 )
             else:
                 raise ValueError(f"Unknown model: {model_name}")
-        return self._models[model_name]
+        return self._models[canonical_model_name]
 
     def get_historical_df(self, client=None, days: int = 730) -> pd.DataFrame:
         client = client or self.client
@@ -181,15 +187,16 @@ class Forecaster:
         client=None,
     ) -> ForecastResult:
         try:
-            model = self.get_model(model_name)
+            canonical_model_name = self._canonical_model_name(model_name)
+            model = self.get_model(canonical_model_name)
 
-            if model_name == "linear_regression":
+            if canonical_model_name == "linear_regression":
                 model.fit(df)
                 future_df = generate_future_features(
                     df.iloc[-1], steps=days, weather_df=weather_df
                 )
                 forecasts = model.predict(df, steps=days, future_features=future_df)
-            elif model_name == "sarima":
+            elif canonical_model_name == "sarima":
                 cfg = self.config.get_model_config("sarima")
                 exog_col = None
                 if cfg.get("exog"):

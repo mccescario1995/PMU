@@ -190,6 +190,30 @@ def test_weather_manager_status():
     print("PASS: test_weather_manager_status")
 
 
+def test_forecaster_model_aliases():
+    forecaster = Forecaster(config=Config())
+    assert forecaster.get_model("amira") is forecaster.get_model("arima")
+    assert forecaster.get_model("samira") is forecaster.get_model("sarima")
+    print("PASS: test_forecaster_model_aliases")
+
+
+def test_forecaster_samira_alias_forecasts():
+    df = pd.DataFrame({
+        "report_date": pd.date_range("2024-01-01", periods=60, freq="D"),
+        "revenue_target": np.linspace(100, 160, 60),
+        "temp_celsius": np.full(60, 25.0),
+    })
+    forecaster = Forecaster(config=Config())
+    result = forecaster._forecast_single(
+        "samira", df, days=3, wm=None, weather_df=None
+    )
+
+    assert result.model_name == "samira"
+    assert not result.error
+    assert len(result.forecasts) == 3
+    print("PASS: test_forecaster_samira_alias_forecasts")
+
+
 def test_forecaster_train_model():
     config = Config()
     client = None
