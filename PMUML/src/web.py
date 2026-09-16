@@ -260,6 +260,31 @@ def predict_single(model_name):
         logger.error(f"predict_single error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
+@app.route("/debug/mysql-connection", methods=["GET"])
+def debug_mysql_connection():
+    try:
+        ip = socket.gethostbyname("srv1041.hstgr.io")
+
+        sock = socket.create_connection(
+            ("srv1041.hstgr.io", 3306),
+            timeout=10
+        )
+        sock.close()
+
+        return {
+            "success": True,
+            "dns": ip,
+            "mysql_port": 3306,
+            "message": "Render can reach Hostinger MySQL"
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error_type": type(e).__name__,
+            "message": str(e)
+        }
+
 
 def _max_forecast_length(results: dict) -> int:
     max_len = 0

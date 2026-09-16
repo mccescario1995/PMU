@@ -75,6 +75,7 @@ class Forecaster:
         return self._models[model_name]
 
     def get_historical_df(self, client=None, days: int = 730) -> pd.DataFrame:
+        client = client or self.client
         if client is not None:
             return self._load_from_api(client, days)
         return self._load_from_db()
@@ -119,7 +120,8 @@ class Forecaster:
         client=None,
         use_weather: bool = True,
         concurrent: bool = False,
-    ) -> Dict[str, ForecastResult]:
+        ) -> Dict[str, ForecastResult]:
+        client = client or self.client
         # Load historical data first
         df = self.get_historical_df(client=client)
         
@@ -238,6 +240,7 @@ class Forecaster:
     def train_all(self, days: Optional[int] = None, client=None, use_weather: bool = True,
                   post_to_api: bool = True) -> Dict[str, ForecastResult]:
         days = days or self.config.forecast_days
+        client = client or self.client
         results = self.forecast(models=None, days=days, client=client,
                                 use_weather=use_weather, concurrent=True)
         if post_to_api and client is not None:
@@ -247,6 +250,7 @@ class Forecaster:
     def train_model(self, model_name: str, days: Optional[int] = None, client=None,
                     use_weather: bool = True, post_to_api: bool = True) -> ForecastResult:
         days = days or self.config.forecast_days
+        client = client or self.client
         results = self.forecast(models=[model_name], days=days, client=client,
                                 use_weather=use_weather, concurrent=False)
         result = results.get(model_name)

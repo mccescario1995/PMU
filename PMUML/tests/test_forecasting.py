@@ -214,6 +214,45 @@ def test_forecaster_train_all():
     print("PASS: test_forecaster_train_all")
 
 
+def test_forecaster_uses_client_fallback():
+    """When a PMU client is attached, historical data must be loaded via the
+    API instead of the (unreachable) direct MySQL connection. This guards the
+    Render deployment where the Hostinger MySQL host is not reachable."""
+    from datetime import timedelta
+
+    config = Config()
+
+    class FakeClient:
+        def get_transactions(self, start, end):
+            rows = []
+            cur = start
+            i = 0
+            while cur <= end and i < 60:
+                rows.append({"transaction_date": cur.isoformat(), "total_amount": 100.0 + i})
+                cur += timedelta(days=1)
+                i += 1
+            return rows
+
+        def get_weather(self, start, end):
+            return []
+
+    fake = FakeClient()
+    forecaster = Forecaster(config=config, client=fake)
+    db_called = {"hit": False}
+    original_load_db = forecaster._load_from_db
+
+    def trap_db(days=None):
+        db_called["hit"] = True
+        return original_load_db(days)
+
+    forecaster._load_from_db = trap_db
+
+    df = forecaster.get_historical_df()
+    assert not db_called["hit"], "DB path was used despite a client being present"
+    assert not df.empty
+    print("PASS: test_forecaster_uses_client_fallback")
+
+
 def run_all_tests():
     tests = [
         test_prepare_dataset,
@@ -231,6 +270,7 @@ def run_all_tests():
         test_weather_manager_status,
         test_forecaster_train_model,
         test_forecaster_train_all,
+        test_forecaster_uses_client_fallback,
     ]
     passed = 0
     failed = 0

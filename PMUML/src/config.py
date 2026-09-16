@@ -35,7 +35,7 @@ class Config:
 
     @property
     def pmu_api_url(self) -> str:
-        return os.getenv("PMU_API_URL", "http://localhost:8000")
+        return os.getenv("PMU_API_URL", "https://pmu-pasacao.com/api")
 
     @property
     def pmu_api_token(self) -> str:
