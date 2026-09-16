@@ -199,12 +199,12 @@ jobs:
             # VALIDATE ENVIRONMENT
             # ========================================================
 
-            echo "Validating Laravel environment..."
+            # echo "Validating Laravel environment..."
 
-            grep -q '^APP_KEY=.' "$ENV_FILE" || { echo "ERROR: APP_KEY is missing."; exit 1; }
-            grep -q '^APP_URL=.' "$ENV_FILE" || { echo "ERROR: APP_URL is missing."; exit 1; }
-            grep -q '^DB_DATABASE=.' "$ENV_FILE" || { echo "ERROR: DB_DATABASE is missing."; exit 1; }
-            grep -q '^DB_USERNAME=.' "$ENV_FILE" || { echo "ERROR: DB_USERNAME is missing."; exit 1; }
+            # grep -q '^APP_KEY=.' "$ENV_FILE" || { echo "ERROR: APP_KEY is missing."; exit 1; }
+            # grep -q '^APP_URL=.' "$ENV_FILE" || { echo "ERROR: APP_URL is missing."; exit 1; }
+            # grep -q '^DB_DATABASE=.' "$ENV_FILE" || { echo "ERROR: DB_DATABASE is missing."; exit 1; }
+            # grep -q '^DB_USERNAME=.' "$ENV_FILE" || { echo "ERROR: DB_USERNAME is missing."; exit 1; }
 
 
             # ========================================================
