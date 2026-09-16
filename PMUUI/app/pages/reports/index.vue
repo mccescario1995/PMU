@@ -10,24 +10,33 @@ const selectedMonth = ref(new Date().toISOString().slice(0, 7));
 const selectedYear = ref(new Date().getFullYear());
 
 function exportDaily() {
-  window.open(
-    `/v1/reports/transaction/xlsx?type=daily&date=${selectedDate.value}`,
-    "_blank"
-  );
+  const url = `/v1/reports/transaction/xlsx?type=daily&date=${selectedDate.value}`;
+  const element = document.createElement("a");
+  element.setAttribute("href", url);
+  element.setAttribute("download", "daily-report.xlsx");
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
 }
 
 function exportMonthly() {
-  window.open(
-    `/v1/reports/transaction/xlsx?type=monthly&month=${selectedMonth.value}`,
-    "_blank"
-  );
+  const url = `/v1/reports/transaction/xlsx?type=monthly&month=${selectedMonth.value}`;
+  const element = document.createElement("a");
+  element.setAttribute("href", url);
+  element.setAttribute("download", "monthly-report.xlsx");
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
 }
 
 function exportYearly() {
-  window.open(
-    `/v1/reports/transaction/xlsx?type=yearly&year=${selectedYear.value}`,
-    "_blank"
-  );
+  const url = `/v1/reports/transaction/xlsx?type=yearly&year=${selectedYear.value}`;
+  const element = document.createElement("a");
+  element.setAttribute("href", url);
+  element.setAttribute("download", "yearly-report.xlsx");
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
 }
 </script>
 
