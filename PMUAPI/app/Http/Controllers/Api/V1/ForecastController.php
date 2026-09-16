@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\RevenueForecast;
 use App\Models\RevenueForecastAmira;
 use App\Models\RevenueForecastLinearRegression;
 use App\Models\RevenueForecastSamira;
@@ -19,7 +18,7 @@ class ForecastController extends Controller
 
     public function index(WeatherService $weather)
     {
-        $query = RevenueForecast::orderBy('forecast_date');
+        $query = RevenueForecastSamira::orderBy('forecast_date');
 
         if (request()->has('page')) {
             $forecasts = $query->paginate(request('per_page', 10));
@@ -46,7 +45,7 @@ class ForecastController extends Controller
 
     public function table(WeatherService $weather)
     {
-        $query = RevenueForecast::orderBy('forecast_date');
+        $query = RevenueForecastSamira::orderBy('forecast_date');
 
         if (request()->has('page')) {
             $forecasts = $query->paginate(request('per_page', 10));
@@ -99,7 +98,7 @@ class ForecastController extends Controller
     public function chart()
     {
         return response()->json(
-            RevenueForecast::orderBy('forecast_date')
+            RevenueForecastSamira::orderBy('forecast_date')
                 ->get(['forecast_date', 'predicted_revenue', 'season'])
         );
     }
@@ -125,8 +124,8 @@ class ForecastController extends Controller
             ]);
         }
 
-        // Default: look up in revenue_forecasts table
-        $record = RevenueForecast::find($forecast);
+        // Default: look up in revenue_forecasts_samira table
+        $record = RevenueForecastSamira::find($forecast);
         if (! $record) {
             return response()->json(['error' => 'Forecast not found'], 404);
         }
@@ -165,14 +164,14 @@ class ForecastController extends Controller
             return response()->json($record);
         }
 
-        // Default: look up in revenue_forecasts table
-        $record = RevenueForecast::find($forecast);
+        // Default: look up in revenue_forecasts_samira table
+        $record = RevenueForecastSamira::find($forecast);
         if (! $record) {
             return response()->json(['error' => 'Forecast not found'], 404);
         }
         $oldValues = $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']);
         $record->update($data);
-        $this->logAudit('update', 'revenue_forecasts', $record->id, $oldValues, $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
+        $this->logAudit('update', 'revenue_forecasts_samira', $record->id, $oldValues, $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
         return response()->json($record);
     }
 
@@ -191,12 +190,12 @@ class ForecastController extends Controller
             return response()->noContent();
         }
 
-        // Default: look up in revenue_forecasts table
-        $record = RevenueForecast::find($forecast);
+        // Default: look up in revenue_forecasts_samira table
+        $record = RevenueForecastSamira::find($forecast);
         if (! $record) {
             return response()->json(['error' => 'Forecast not found'], 404);
         }
-        $this->logAudit('delete', 'revenue_forecasts', $record->id, $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']), null);
+        $this->logAudit('delete', 'revenue_forecasts_samira', $record->id, $this->modelToArray($record, ['forecast_date', 'predicted_revenue', 'season', 'model_version']), null);
         $record->delete();
         return response()->noContent();
     }
@@ -212,11 +211,11 @@ class ForecastController extends Controller
 
         if (empty($data['season'])) {
             $month = (int) date('n', strtotime($data['forecast_date']));
-            $peakMonths = RevenueForecast::computePeakMonths();
+            $peakMonths = RevenueForecastSamira::computePeakMonths();
             $data['season'] = in_array($month, $peakMonths) ? 'Peak' : 'Off-Peak';
         }
 
-        $forecast = RevenueForecast::create($data);
+        $forecast = RevenueForecastSamira::create($data);
         $this->logAudit('create', 'revenue_forecasts', $forecast->id, null, $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
         $weather->ensureWeatherForDates([$forecast->forecast_date->toDateString()]);
         $weatherData = WeatherData::where('weather_date', $forecast->forecast_date->toDateString())->first();
@@ -306,7 +305,7 @@ class ForecastController extends Controller
             return response()->json(['error' => 'Invalid PMUML response', 'details' => $result], 502);
         }
 
-        $peakMonths = RevenueForecast::computePeakMonths();
+        $peakMonths = RevenueForecastSamira::computePeakMonths();
 
         $saved = [];
         foreach ($result['forecasts'] as $item) {
@@ -358,7 +357,7 @@ class ForecastController extends Controller
             'amira', 'arima' => RevenueForecastAmira::class,
             'samira', 'sarima' => RevenueForecastSamira::class,
             'linear_regression' => RevenueForecastLinearRegression::class,
-            default => RevenueForecast::class,
+            default => RevenueForecastSamira::class,
         };
     }
 

@@ -19,8 +19,8 @@ class WeatherController extends Controller
         $data = $weather->fetchForecast($days);
 
         return response()->json([
-            'location' => config('services.openweather.default_location'),
-            'source' => 'onecall_forecast',
+            'location' => 'Pasacao, Camarines Sur',
+            'source' => 'openmeteo_forecast',
             'forecast' => $data,
         ]);
     }

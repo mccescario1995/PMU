@@ -10,113 +10,58 @@ use Illuminate\Support\Facades\Log;
 
 class WeatherService
 {
-    protected string $apiKey;
+    protected string $baseUrl = 'https://archive-api.open-meteo.com/v1/archive';
 
-    protected string $baseUrl;
+    protected string $forecastUrl = 'https://api.open-meteo.com/v1/forecast';
 
-    protected string $defaultLocation;
+    protected float $lat = 13.5049;
 
-    protected ?array $coords = null;
-
-    public function __construct()
-    {
-        $this->apiKey = config('services.openweather.key');
-        $this->baseUrl = rtrim(config('services.openweather.url'), '/');
-        $this->defaultLocation = config('services.openweather.default_location', 'Pasao,Camarines Sur,PH');
-    }
-
-    protected function coords(): ?array
-    {
-        if ($this->coords !== null) {
-            return $this->coords;
-        }
-
-        if (! $this->apiKey) {
-            return null;
-        }
-
-        try {
-            $response = Http::timeout(10)->get('https://api.openweathermap.org/geo/1.0/direct', [
-                'q' => $this->defaultLocation,
-                'limit' => 1,
-                'appid' => $this->apiKey,
-            ]);
-
-            if ($response->successful()) {
-                $results = $response->json();
-                if (! empty($results[0]['lat']) && ! empty($results[0]['lon'])) {
-                    $this->coords = [
-                        'lat' => $results[0]['lat'],
-                        'lon' => $results[0]['lon'],
-                    ];
-
-                    return $this->coords;
-                }
-            }
-
-            Log::error('OpenWeather geocoding failed', ['status' => $response->status()]);
-        } catch (\Exception $e) {
-            Log::error('OpenWeather geocoding exception', ['message' => $e->getMessage()]);
-        }
-
-        return null;
-    }
+    protected float $lon = 123.0434;
 
     public function fetchForecast(int $days = 7): Collection
     {
-        $coords = $this->coords();
+        $days = max(1, min($days, 16));
 
-        if (! $coords) {
-            Log::warning('Weather coordinates unavailable; cannot fetch forecast');
-
-            return collect();
-        }
-
-        if (! $this->apiKey) {
-            Log::warning('Weather API key not configured');
-
-            return collect();
-        }
+        $url = $this->forecastUrl
+            . "?latitude={$this->lat}"
+            . "&longitude={$this->lon}"
+            . '&daily=temperature_2m_mean,precipitation_sum,wind_speed_10m_max'
+            . '&temperature_unit=celsius'
+            . '&wind_speed_unit=kmh'
+            . '&precipitation_unit=mm'
+            . '&timezone=Asia/Manila'
+            . '&forecast_days=' . $days;
 
         try {
-            $response = Http::timeout(10)->get($this->baseUrl, [
-                'lat' => $coords['lat'],
-                'lon' => $coords['lon'],
-                'exclude' => 'current,minutely,hourly,alerts',
-                'units' => 'metric',
-                'appid' => $this->apiKey,
-            ]);
+            $response = Http::timeout(30)->withOptions(['verify' => false])->get($url);
 
             if (! $response->successful()) {
-                Log::error('OpenWeather One Call failed', ['status' => $response->status()]);
+                Log::error('Open-Meteo forecast failed', ['status' => $response->status()]);
 
                 return collect();
             }
 
-            $data = $response->json();
+            $data = $response->json('daily');
+            if (empty($data['time'])) {
+                return collect();
+            }
+
             $out = collect();
-
-            foreach (array_slice($data['daily'] ?? [], 0, $days) as $day) {
-                if (empty($day['dt'])) {
-                    continue;
-                }
-
-                $date = Carbon::createFromTimestamp($day['dt'])->toDateString();
-
+            foreach ($data['time'] as $i => $date) {
                 $out->push(WeatherData::updateOrCreate(
                     ['weather_date' => $date],
                     [
-                        'rainfall_mm' => $day['rain'] ?? null,
-                        'temperature' => $day['temp']['day'] ?? null,
-                        'wind_speed' => $day['wind_speed'] ?? null,
-                        'source' => 'onecall_forecast',
+                        'temperature' => isset($data['temperature_2m_mean'][$i]) ? round((float) $data['temperature_2m_mean'][$i], 2) : null,
+                        'rainfall_mm' => isset($data['precipitation_sum'][$i]) ? round((float) $data['precipitation_sum'][$i], 2) : null,
+                        'wind_speed' => isset($data['wind_speed_10m_max'][$i]) ? round((float) $data['wind_speed_10m_max'][$i], 2) : null,
+                        'source' => 'openmeteo_forecast',
                     ]
                 ));
             }
 
             return $out;
         } catch (\Exception $e) {
-            Log::error('OpenWeather One Call exception', ['message' => $e->getMessage()]);
+            Log::error('Open-Meteo forecast exception', ['message' => $e->getMessage()]);
 
             return collect();
         }
@@ -134,14 +79,10 @@ class WeatherService
         $target = Carbon::parse($date)->startOfDay();
 
         if ($target->lessThan($today)) {
-            Log::info('Historical weather for past dates is not available on the free One Call tier; import it instead.', [
-                'date' => $date,
-            ]);
-
             return null;
         }
 
-        return $this->fetchForecast(8)->firstWhere('weather_date', $date);
+        return $this->fetchForecast(16)->firstWhere('weather_date', $date);
     }
 
     public function ensureWeatherForDates(array $dates): void
@@ -158,7 +99,7 @@ class WeatherService
         $hasFuture = $missing->contains(fn ($d) => Carbon::parse($d)->startOfDay()->greaterThanOrEqualTo(Carbon::now()->startOfDay()));
 
         if ($hasFuture) {
-            $this->fetchForecast(8);
+            $this->fetchForecast(16);
         }
     }
 }

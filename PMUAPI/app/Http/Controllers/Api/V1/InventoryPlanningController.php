@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
-use App\Models\RevenueForecast;
+use App\Models\RevenueForecastSamira;
 
 class InventoryPlanningController extends Controller
 {
     public function index()
     {
-        $forecasts = RevenueForecast::orderBy('forecast_date')->get();
+        $forecasts = RevenueForecastSamira::orderBy('forecast_date')->get();
 
         $peakForecasts = $forecasts->filter(fn ($f) => $this->isPeakSeason($f->forecast_date));
         $offPeakForecasts = $forecasts->filter(fn ($f) => $this->isOffPeakSeason($f->forecast_date));
@@ -61,7 +61,7 @@ class InventoryPlanningController extends Controller
     public function planningView()
     {
         $items = InventoryItem::orderBy('category_type')->orderBy('item_name')->get();
-        $forecasts = RevenueForecast::orderBy('forecast_date')->get();
+        $forecasts = RevenueForecastSamira::orderBy('forecast_date')->get();
 
         $lowStockItems = $items->whereIn('status', ['low_stock', 'damaged']);
 

@@ -207,11 +207,13 @@ async function runModel(model: string) {
   }
 
   const weatherLabel = (w: any) => {
-    if (!w) return "No weather data"
+                                                                                                                                                                                                                                                                                                                                                                            if (!w) return "N/A"
     const parts: string[] = []
     if (w.rainfall_mm !== null && w.rainfall_mm !== undefined) parts.push(`${w.rainfall_mm}mm rain`)
     if (w.temperature !== null && w.temperature !== undefined) parts.push(`${w.temperature}°C`)
     if (w.wind_speed !== null && w.wind_speed !== undefined) parts.push(`${w.wind_speed}km/h wind`)
+    return parts.length ? parts.join(', ') : "N/A"
+  }
     return parts.length ? parts.join(', ') : "No weather data"
   }
 
@@ -223,7 +225,7 @@ async function runModel(model: string) {
     {
       accessorKey: 'forecast_date',
       header: 'Period',
-      cell: ({ row }) => new Date(row.getValue('forecast_date')).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }),
+      cell: ({ row }) => new Date(row.getValue('forecast_date')).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
     },
     {
       accessorKey: 'predicted_revenue',
