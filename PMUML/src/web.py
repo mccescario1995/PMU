@@ -18,6 +18,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from sqlalchemy import create_engine
 from sqlalchemy.pool import QueuePool
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from src.pmu_client import PMUClient
 from src.config import Config
@@ -249,27 +251,25 @@ def predict_single(model_name):
 @app.route("/debug/mysql-connection", methods=["GET"])
 def debug_mysql_connection():
     try:
-        ip = socket.gethostbyname("srv1041.hstgr.io")
+        with engine.connect() as connection:
+            row = connection.execute(
+                text("SELECT 1, DATABASE(), CURRENT_USER()")
+            ).fetchone()
 
-        sock = socket.create_connection(
-            ("srv1041.hstgr.io", 3306),
-            timeout=10
-        )
-        sock.close()
-
-        return {
+        return jsonify({
             "success": True,
-            "dns": ip,
-            "mysql_port": 3306,
-            "message": "Render can reach Hostinger MySQL"
-        }
+            "database_connection": True,
+            "result": list(row),
+            "message": "Render connected to MySQL and executed a query",
+        })
 
-    except Exception as e:
-        return {
+    except SQLAlchemyError as e:
+        return jsonify({
             "success": False,
+            "database_connection": False,
             "error_type": type(e).__name__,
-            "message": str(e)
-        }
+            "message": str(e),
+        }), 500
 
 @app.route("/debug/network", methods=["GET"])
 def debug_network():
