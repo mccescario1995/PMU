@@ -226,18 +226,18 @@ Route::prefix('v1')->group(function () {
             Route::put('/{forecast}', [ForecastController::class, 'update'])->middleware('can:edit forecasts')->where('forecast', '[0-9]+');
             Route::delete('/{forecast}', [ForecastController::class, 'destroy'])->middleware('can:delete forecasts')->where('forecast', '[0-9]+');
 
-            Route::post('/generate', [ForecastController::class, 'generate'])->middleware('can:create forecasts');
-            Route::post('/run-model', [ForecastController::class, 'runModel'])->middleware('can:create forecasts');
+            Route::post('/generate', [ForecastController::class, 'generate']);
+            Route::post('/run-model', [ForecastController::class, 'runModel']);
 
             // Per-model endpoints for comparison
-            Route::get('/model/arima', [ForecastController::class, 'byModel'])->middleware('can:view forecasts')->defaults('model', 'arima');
-            Route::get('/model/sarima', [ForecastController::class, 'byModel'])->middleware('can:view forecasts')->defaults('model', 'sarima');
-            Route::get('/model/linear-regression', [ForecastController::class, 'byModel'])->middleware('can:view forecasts')->defaults('model', 'linear_regression');
+            Route::get('/model/arima', [ForecastController::class, 'byModel'])->defaults('model', 'arima');
+            Route::get('/model/sarima', [ForecastController::class, 'byModel'])->defaults('model', 'sarima');
+            Route::get('/model/linear-regression', [ForecastController::class, 'byModel'])->defaults('model', 'linear_regression');
 
             // Per-model training endpoints
-            Route::post('/train/arima', [ForecastController::class, 'runModel'])->middleware('can:create forecasts')->defaults('model', 'arima');
-            Route::post('/train/sarima', [ForecastController::class, 'runModel'])->middleware('can:create forecasts')->defaults('model', 'sarima');
-            Route::post('/train/linear-regression', [ForecastController::class, 'runModel'])->middleware('can:create forecasts')->defaults('model', 'linear_regression');
+            Route::post('/train/arima', [ForecastController::class, 'runModel'])->defaults('model', 'arima');
+            Route::post('/train/sarima', [ForecastController::class, 'runModel'])->defaults('model', 'sarima');
+            Route::post('/train/linear-regression', [ForecastController::class, 'runModel'])->defaults('model', 'linear_regression');
         });
 
         /*
