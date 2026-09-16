@@ -113,7 +113,7 @@ const isToday = (date: string) => {
     </div>
 
     <!-- Generate Forecast -->
-    <UCard class="mt-6">
+    <!-- <UCard class="mt-6">
       <template #header>
         <div class="flex items-center justify-between">
           <span>Generate Forecast</span>
@@ -142,7 +142,7 @@ const isToday = (date: string) => {
         Click a button to generate a revenue forecast. Forecasts are based on historical transaction data and weather
         conditions. The port manager uses these to plan operations and budget.
       </p>
-    </UCard>
+    </UCard> -->
 
     <!-- Bottom -->
     <div class="grid gap-6 lg:grid-cols-2 mt-6">

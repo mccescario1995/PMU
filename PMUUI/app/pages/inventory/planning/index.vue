@@ -67,19 +67,30 @@ const statusColor: Record<string, string> = {
 
 const columns: TableColumn<any>[] = [
   { accessorKey: 'item_name', header: 'Item Name' },
-  { accessorKey: 'category_type', header: 'Category Type', cell: ({ row }) => {
-    const type = row.getValue('category_type')
-    return h('UBadge', { variant: 'subtle', color: categoryTypeColors[type] || 'neutral' }, () => type)
-  }},
-  { accessorKey: 'quantity', header: 'Current Qty' },
+  {
+    accessorKey: 'category_type', header: 'Category', cell: ({ row }) => {
+      const type = row.getValue('category_type')
+      return h('UBadge', { variant: 'subtle', color: categoryTypeColors[type] || 'neutral' }, () => type)
+    }
+  },
+  {
+    accessorKey: 'quantity', header: 'Current Qty', cell: ({ row }) => {
+      const qty = row.getValue('quantity')
+      return h('span', { class: qty <= 5 ? 'text-warning font-semibold' : '' }, () => qty)
+    }
+  },
   { accessorKey: 'recommended_min', header: 'Recommended Min' },
-  { accessorKey: 'status', header: 'Status', cell: ({ row }) => {
-    const s = row.getValue('status')
-    return h('UBadge', { variant: 'subtle', color: statusColor[s] || 'neutral' }, () => s)
-  }},
-  { accessorKey: 'needs_reorder', header: 'Reorder?', cell: ({ row }) => {
-    return row.getValue('needs_reorder') ? 'Yes' : 'No'
-  }},
+  {
+    accessorKey: 'status', header: 'Status', cell: ({ row }) => {
+      const s = row.getValue('status')
+      return h('UBadge', { variant: 'subtle', color: statusColor[s] || 'neutral' }, () => s)
+    }
+  },
+  {
+    accessorKey: 'needs_reorder', header: 'Reorder?', cell: ({ row }) => {
+      return row.getValue('needs_reorder') ? 'Yes' : 'No'
+    }
+  },
 ]
 </script>
 
@@ -90,9 +101,9 @@ const columns: TableColumn<any>[] = [
         <h1 class="text-2xl font-bold">Inventory Planning</h1>
         <p class="text-slate-500">Inventory and resource planning based on current stock and revenue forecasts.</p>
       </div>
-      <UButton icon="i-lucide-refresh-cw" :loading="loading" @click="() => window.location.reload()">
+      <!-- <UButton icon="i-lucide-refresh-cw" :loading="loading" @click="() => window.location.reload()">
         Refresh
-      </UButton>
+      </UButton> -->
     </div>
 
     <div v-if="loading" class="flex items-center justify-center py-20">
@@ -122,7 +133,9 @@ const columns: TableColumn<any>[] = [
       <!-- Recommended Stock Levels -->
       <UCard>
         <template #header>Recommended Stock Levels</template>
-        <UTable :data="Array.isArray(planning.recommended_stock) ? planning.recommended_stock : []" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="overviewTablePagination" />
+        <UTable :data="Array.isArray(planning.recommended_stock) ? planning.recommended_stock : []" :columns="columns"
+          :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
+          v-model:pagination="overviewTablePagination" />
 
         <div class="flex items-center justify-between mt-4">
           <div class="flex items-center gap-2">
@@ -131,22 +144,20 @@ const columns: TableColumn<any>[] = [
           </div>
           <div class="flex items-center gap-2">
             <span class="text-sm text-slate-500">Go to page:</span>
-            <UInput v-model="overviewGoToPageInput" type="number" :min="1" :max="overviewTotalPages" class="w-16" @keyup.enter="overviewHandleGoToPage" />
+            <UInput v-model="overviewGoToPageInput" type="number" :min="1" :max="overviewTotalPages" class="w-16"
+              @keyup.enter="overviewHandleGoToPage" />
             <UButton size="sm" @click="overviewHandleGoToPage">Go</UButton>
           </div>
-          <UPagination :total="Array.isArray(planning.recommended_stock) ? planning.recommended_stock.length : 0" v-model:page="overviewPage" :items-per-page="overviewPageSize" />
+          <UPagination :total="Array.isArray(planning.recommended_stock) ? planning.recommended_stock.length : 0"
+            v-model:page="overviewPage" :items-per-page="overviewPageSize" />
         </div>
       </UCard>
 
       <UCard v-if="categoryTypes.length">
         <template #header>Inventory by Category Type</template>
         <div class="grid gap-4 sm:grid-cols-3">
-          <div
-            v-for="category in categoryTypes"
-            :key="category.type"
-            class="rounded-lg border p-4"
-            :style="{ borderLeftColor: categoryTypeColors[category.type] ? `var(--color-${categoryTypeColors[category.type]})` : 'var(--color-neutral)', borderLeftStyle: 'solid', borderLeftWidth: '4px' }"
-          >
+          <div v-for="category in categoryTypes" :key="category.type" class="rounded-lg border p-4"
+            :style="{ borderLeftColor: categoryTypeColors[category.type] ? `var(--color-${categoryTypeColors[category.type]})` : 'var(--color-neutral)', borderLeftStyle: 'solid', borderLeftWidth: '4px' }">
             <p class="text-sm font-semibold capitalize">{{ category.type.replace(/_/g, ' ') }}</p>
             <p class="text-2xl font-bold">{{ category.totalItems }} items</p>
             <p class="text-sm text-slate-500">{{ category.totalQuantity }} total qty</p>
@@ -159,7 +170,8 @@ const columns: TableColumn<any>[] = [
       <UCard>
         <template #header>Low Stock Alerts</template>
         <div v-if="planning.low_stock_items?.length" class="space-y-3">
-          <div v-for="item in planning.low_stock_items" :key="item.id" class="flex items-center justify-between py-2 border-b last:border-0">
+          <div v-for="item in planning.low_stock_items" :key="item.id"
+            class="flex items-center justify-between py-2 border-b last:border-0">
             <div>
               <p class="text-sm font-medium">{{ item.item_name }}</p>
               <p class="text-xs text-slate-500 capitalize">{{ item.category_type }} • {{ item.category }}</p>

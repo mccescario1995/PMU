@@ -139,19 +139,19 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
   }
 
   const showProgressModal = ref(false)
-const progressSteps = ref<string[]>([])
-const progressError = ref("")
+  const progressSteps = ref<string[]>([])
+  const progressError = ref("")
 
-function addProgressStep(step: string) {
-  progressSteps.value.push(step)
-}
+  function addProgressStep(step: string) {
+    progressSteps.value.push(step)
+  }
 
-function clearProgress() {
-  progressSteps.value = []
-  progressError.value = ""
-}
+  function clearProgress() {
+    progressSteps.value = []
+    progressError.value = ""
+  }
 
-async function runModel(model: string) {
+  async function runModel(model: string) {
     modelLoading.value = true
     modelError.value = ""
     clearProgress()
@@ -172,29 +172,29 @@ async function runModel(model: string) {
         throwOnError: true,
       }) as any
 
-    addProgressStep(`Model ${model} trained successfully!`)
-    addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
+      addProgressStep(`Model ${model} trained successfully!`)
+      addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
 
-    if (response?.metrics) {
-      const metrics = response.metrics
-      const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
-      if (metricStrs.length) {
-        addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
+      if (response?.metrics) {
+        const metrics = response.metrics
+        const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
+        if (metricStrs.length) {
+          addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
+        }
       }
+
+      await load()
+
+      setTimeout(() => {
+        showProgressModal.value = false
+      }, 2000)
+    } catch (e: any) {
+      progressError.value = e?.message || "Failed to run model"
+      addProgressStep(`Error: ${progressError.value}`)
+    } finally {
+      modelLoading.value = false
     }
-
-    await load()
-
-    setTimeout(() => {
-      showProgressModal.value = false
-    }, 2000)
-  } catch (e: any) {
-    progressError.value = e?.message || "Failed to run model"
-    addProgressStep(`Error: ${progressError.value}`)
-  } finally {
-    modelLoading.value = false
   }
-}
 
   async function remove(row: any) {
     if (!confirm('Delete this forecast?')) return
@@ -206,15 +206,15 @@ async function runModel(model: string) {
     toast.add({ title: 'Forecast deleted', color: 'success' })
   }
 
+
+
   const weatherLabel = (w: any) => {
-                                                                                                                                                                                                                                                                                                                                                                            if (!w) return "N/A"
+    if (!w) return "N/A"
     const parts: string[] = []
     if (w.rainfall_mm !== null && w.rainfall_mm !== undefined) parts.push(`${w.rainfall_mm}mm rain`)
     if (w.temperature !== null && w.temperature !== undefined) parts.push(`${w.temperature}°C`)
     if (w.wind_speed !== null && w.wind_speed !== undefined) parts.push(`${w.wind_speed}km/h wind`)
     return parts.length ? parts.join(', ') : "N/A"
-  }
-    return parts.length ? parts.join(', ') : "No weather data"
   }
 
   const totalRevenue = computed(() => forecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0))
