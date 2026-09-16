@@ -47,9 +47,7 @@ function exportYearly() {
             <h2 class="font-semibold">Daily Report</h2>
           </div>
         </template>
-        <p class="text-sm text-slate-500 mb-4">
-          Transaction records report for a specific day. Each row is one transaction with per-fee-type columns.
-        </p>
+        
         <div class="space-y-3">
           <UInput v-model="selectedDate" type="date" class="w-full" />
           <UButton class="w-full" icon="i-lucide-file-columns" @click="exportDaily">
@@ -66,9 +64,7 @@ function exportYearly() {
             <h2 class="font-semibold">Monthly Report</h2>
           </div>
         </template>
-        <p class="text-sm text-slate-500 mb-4">
-          Transaction records report for an entire month. Each row is one transaction with per-fee-type columns.
-        </p>
+        
         <div class="space-y-3">
           <UInput v-model="selectedMonth" type="month" class="w-full" />
           <UButton class="w-full" icon="i-lucide-file-columns" @click="exportMonthly">
@@ -85,9 +81,6 @@ function exportYearly() {
             <h2 class="font-semibold">Yearly Report</h2>
           </div>
         </template>
-        <p class="text-sm text-slate-500 mb-4">
-          Transaction records report for an entire year. Each row is one transaction with per-fee-type columns.
-        </p>
         <div class="space-y-3">
           <UInput v-model="selectedYear" type="number" placeholder="YYYY" class="w-full" />
           <UButton class="w-full" icon="i-lucide-file-columns" @click="exportYearly">

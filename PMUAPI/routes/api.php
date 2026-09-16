@@ -271,6 +271,7 @@ Route::prefix('v1')->group(function () {
                 '/reports/transaction/xlsx',
                 [DashboardController::class, 'exportTransactionReport']
             );
+        });
 
         /*
         |--------------------------------------------------------------------------
