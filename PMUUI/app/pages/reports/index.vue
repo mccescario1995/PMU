@@ -10,33 +10,48 @@ const selectedMonth = ref(new Date().toISOString().slice(0, 7));
 const selectedYear = ref(new Date().getFullYear());
 
 function exportDaily() {
-  const url = `/v1/reports/transaction/xlsx?type=daily&date=${selectedDate.value}`;
-  const element = document.createElement("a");
-  element.setAttribute("href", url);
-  element.setAttribute("download", "daily-report.xlsx");
-  document.body.appendChild(element);
-  element.click();
-  document.body.removeChild(element);
+  downloadReport("/v1/reports/transaction/xlsx", "daily", selectedDate.value);
 }
 
 function exportMonthly() {
-  const url = `/v1/reports/transaction/xlsx?type=monthly&month=${selectedMonth.value}`;
-  const element = document.createElement("a");
-  element.setAttribute("href", url);
-  element.setAttribute("download", "monthly-report.xlsx");
-  document.body.appendChild(element);
-  element.click();
-  document.body.removeChild(element);
+  downloadReport("/v1/reports/transaction/xlsx", "monthly", selectedMonth.value);
 }
 
 function exportYearly() {
-  const url = `/v1/reports/transaction/xlsx?type=yearly&year=${selectedYear.value}`;
-  const element = document.createElement("a");
-  element.setAttribute("href", url);
-  element.setAttribute("download", "yearly-report.xlsx");
-  document.body.appendChild(element);
-  element.click();
-  document.body.removeChild(element);
+  downloadReport("/v1/reports/transaction/xlsx", "yearly", selectedYear.value);
+}
+
+function downloadReport(url: string, type: string, dateMonthYear: string) {
+  const params = new URLSearchParams();
+  params.append("type", type);
+  if (type === "daily") {
+    params.append("date", dateMonthYear);
+  } else if (type === "monthly") {
+    params.append("month", dateMonthYear);
+  } else if (type === "yearly") {
+    params.append("year", dateMonthYear);
+  }
+  const fullUrl = `${url}?${params.toString()}`;
+
+  fetch(fullUrl, {
+    method: "GET",
+    headers: {
+      Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    },
+  }).then((response) => {
+    return response.blob();
+  }).then((blob) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${type}-report.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }).catch((error) => {
+    console.error("Export failed:", error);
+  });
 }
 </script>
 

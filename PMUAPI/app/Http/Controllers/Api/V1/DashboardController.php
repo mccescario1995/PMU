@@ -7,6 +7,8 @@ use App\Models\InventoryItem;
 use App\Models\RevenueHistory;
 use App\Models\Stakeholder;
 use App\Models\Transaction;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -87,7 +89,31 @@ class DashboardController extends Controller
 
         $rows = $query->groupBy('fee_types.fee_name')->get();
 
-        // Return as Excel file download
+        // Generate Excel file using PhpSpreadsheet
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Transaction Report');
+
+        // Add headers
+        $sheet->setCellValue('A1', 'Fee Type');
+        $sheet->setCellValue('B1', 'Total Amount');
+        $sheet->setCellValue('C1', 'Transaction Count');
+
+        // Add data
+        $row = 2;
+        foreach ($rows as $rowData) {
+            $sheet->setCellValue('A' . $row, $rowData->source);
+            $sheet->setCellValue('B' . $row, $rowData->amount);
+            $sheet->setCellValue('C' . $row, $rowData->count);
+            $row++;
+        }
+
+        // Set column widths
+        $sheet->getColumnDimension('A')->setWidth(40);
+        $sheet->getColumnDimension('B')->setWidth(20);
+        $sheet->getColumnDimension('C')->setWidth(20);
+
+        // Generate filename
         $filename = match ($type) {
             'daily' => "daily-report-" . $date . ".xlsx",
             'monthly' => "monthly-report-" . $month . ".xlsx",
@@ -95,13 +121,15 @@ class DashboardController extends Controller
             default => "transaction-report.xlsx"
         };
 
+        // Return as Excel file download
         $headers = [
             'Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition: attachment; filename="' . $filename . '"',
             'Cache-Control: max-age=0',
         ];
 
-        $response = response()->json($rows);
+        $writer = new Xlsx($spreadsheet);
+        $response = $writer->stream('php://output');
         foreach ($headers as $header) {
             $response->header(explode(':', $header)[0], explode(':', $header)[1]);
         }
