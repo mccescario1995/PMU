@@ -241,10 +241,10 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
       header: 'Season',
       cell: ({ row }) => row.getValue("season"),
     },
-    {
-      header: 'Weather',
-      cell: ({ row }) => row.original.weather ? weatherLabel(row.original.weather) : "No data",
-    },
+    // {
+    //   header: 'Weather',
+    //   cell: ({ row }) => row.original.weather ? weatherLabel(row.original.weather) : "No data",
+    // },
     { accessorKey: 'action', header: 'Action' },
   ]
 
