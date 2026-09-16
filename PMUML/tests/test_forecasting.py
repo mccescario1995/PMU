@@ -253,6 +253,79 @@ def test_forecaster_uses_client_fallback():
     print("PASS: test_forecaster_uses_client_fallback")
 
 
+def test_pmuml_client_uses_internal_ml_data_route():
+    client = PMUClient(
+        base_url="https://example.test",
+        service_secret="test-secret",
+    )
+    calls = []
+
+    def fake_post(path, payload):
+        calls.append((path, payload))
+        return {
+            "data": [
+                {
+                    "report_date": "2026-01-01",
+                    "revenue_target": 100.0,
+                    "temp_celsius": 25.0,
+                }
+            ]
+        }
+
+    client._post = fake_post
+    rows = client.get_ml_data(date(2026, 1, 1), date(2026, 1, 2))
+
+    assert calls == [
+        (
+            "/v1/internal/ml-data",
+            {"start_date": "2026-01-01", "end_date": "2026-01-02"},
+        )
+    ]
+    assert rows == [
+        {
+            "report_date": "2026-01-01",
+            "revenue_target": 100.0,
+            "temp_celsius": 25.0,
+        }
+    ]
+    assert client.headers["X-PMUML-Secret"] == "test-secret"
+
+
+def test_forecaster_uses_internal_ml_data_client():
+    config = Config()
+    requested_start = None
+
+    class FakeClient:
+        uses_internal_ml_data = True
+
+        def get_ml_data(self, start, end):
+            nonlocal requested_start
+            requested_start = start
+            return [
+                {
+                    "report_date": start.isoformat(),
+                    "revenue_target": 100.0,
+                    "temp_celsius": 25.0,
+                }
+            ]
+
+    fake = FakeClient()
+    forecaster = Forecaster(config=config, client=fake)
+    db_called = {"hit": False}
+    original_load_db = forecaster._load_from_db
+
+    def trap_db(days=None):
+        db_called["hit"] = True
+        return original_load_db(days)
+
+    forecaster._load_from_db = trap_db
+    df = forecaster.get_historical_df(days=2)
+
+    assert not db_called["hit"]
+    assert list(df.columns) == ["report_date", "revenue_target", "temp_celsius"]
+    assert df.iloc[0]["report_date"] == requested_start.isoformat()
+
+
 def run_all_tests():
     tests = [
         test_prepare_dataset,
@@ -271,6 +344,8 @@ def run_all_tests():
         test_forecaster_train_model,
         test_forecaster_train_all,
         test_forecaster_uses_client_fallback,
+        test_pmuml_client_uses_internal_ml_data_route,
+        test_forecaster_uses_internal_ml_data_client,
     ]
     passed = 0
     failed = 0

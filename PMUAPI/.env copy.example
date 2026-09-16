@@ -69,3 +69,4 @@ OPENWEATHER_URL=https://api.openweathermap.org/data/3.0/onecall
 OPENWEATHER_DEFAULT_LOCATION="Pasao,Camarines Sur,PH"
 
 PMUML_URL=https://pmuml.onrender.com
+PMUML_SERVICE_SECRET=

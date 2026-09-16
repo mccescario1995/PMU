@@ -105,6 +105,16 @@ class Forecaster:
         from datetime import date as date_cls
         end = date_cls.today()
         start = end - timedelta(days=days)
+
+        if getattr(client, "uses_internal_ml_data", False):
+            data = client.get_ml_data(start, end)
+            df = pd.DataFrame(data)
+            if df.empty:
+                raise ValueError("No data fetched from PMUAPI")
+            if "report_date" in df.columns:
+                df["report_date"] = df["report_date"].astype(str)
+            return df
+
         from src.data_loader import load_transactions, load_weather, merge_data
         transactions = load_transactions(client, start, end)
         weather = load_weather(client, start, end)

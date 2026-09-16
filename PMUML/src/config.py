@@ -42,6 +42,10 @@ class Config:
         return os.getenv("PMU_API_TOKEN", "")
 
     @property
+    def pmuml_service_secret(self) -> str:
+        return os.getenv("PMUML_SERVICE_SECRET", "")
+
+    @property
     def model_version(self) -> str:
         return os.getenv("MODEL_VERSION", "arima-v1")
 

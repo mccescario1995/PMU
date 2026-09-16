@@ -42,7 +42,8 @@ CORS(app)
 pmu_client = PMUClient(
     base_url=config.pmu_api_url,
     token=config.pmu_api_token,
-) if config.pmu_api_token else None
+    service_secret=config.pmuml_service_secret,
+) if config.pmu_api_token or config.pmuml_service_secret else None
 
 forecaster = Forecaster(config=config, client=pmu_client)
 

@@ -18,6 +18,7 @@ def run_model(model_name: str):
     client = PMUClient(
         base_url=os.getenv("PMU_API_URL", "http://localhost:8000"),
         token=os.getenv("PMU_API_TOKEN", ""),
+        service_secret=os.getenv("PMUML_SERVICE_SECRET", ""),
     )
     config = Config()
     forecaster = Forecaster(config=config, client=client)

@@ -46,6 +46,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 // v1 Routes
 Route::prefix('v1')->group(function () {
 
+    Route::post('internal/ml-data', [TransactionRevenueController::class, 'mlData']);
+
     /*
     |--------------------------------------------------------------------------
     | Authentication
