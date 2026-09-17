@@ -119,9 +119,9 @@ class TransactionItemsSeeder extends Seeder
                 DB::table('transaction_items')->insert($batchItems);
                 $itemCount += count($batchItems);
             }
-        });
 
-        $this->command?->info("Import completed: {$transactionCount} transactions, {$itemCount} items.");
+            $this->command?->info("Import completed: {$transactionCount} transactions, {$itemCount} items.");
+        });
     }
 
     private function readXlsx(string $filePath): array
