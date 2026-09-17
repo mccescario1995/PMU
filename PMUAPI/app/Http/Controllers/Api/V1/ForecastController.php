@@ -230,6 +230,18 @@ class ForecastController extends Controller
         ], 201);
     }
 
+    public function clearModel(Request $request, string $model)
+    {
+        $forecastClass = $this->getModelClass($model);
+        $count = $forecastClass::count();
+        $forecastClass::truncate();
+
+        return response()->json([
+            'message' => "All {$model} forecast records cleared",
+            'cleared_count' => $count,
+        ]);
+    }
+
     public function runModel(Request $request, WeatherService $weather, ?string $model = null)
     {
         // Use route default if not provided in body

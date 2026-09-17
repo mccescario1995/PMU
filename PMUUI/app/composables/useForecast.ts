@@ -151,17 +151,31 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     progressError.value = ""
   }
 
+  async function clearModelData(model: string) {
+    const deleteUrl = model
+      ? `/v1/forecasts/model/${model}`
+      : `/v1/forecasts/model`
+    await apiFetch(deleteUrl, { method: 'DELETE' })
+  }
+
   async function runModel(model: string) {
     modelLoading.value = true
     modelError.value = ""
     clearProgress()
-    showProgressModal.value = true
 
+    if (!confirm('This will clear all existing forecast data for this model and retrain. Continue?')) {
+      modelLoading.value = false
+      return
+    }
+
+    showProgressModal.value = true
     addProgressStep(`Initializing ${model} model...`)
 
     const timeout = model === "sarima" || model === "samira" ? 240000 : 60000
 
     try {
+      addProgressStep("Clearing existing forecast data...")
+      await clearModelData(model)
       addProgressStep("Fetching historical data...")
       addProgressStep("Training model...")
       addProgressStep("Generating forecasts...")
@@ -282,5 +296,6 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     can,
     load,
     trainEndpoint,
+    clearModelData,
   }
 }
