@@ -8,7 +8,7 @@ definePageMeta({
 });
 
 const stats = ref({
-  total_revenue: 0,
+  today_revenue: 0,
   monthly_revenue: 0,
   yearly_revenue: 0,
   transactions_today: 0,
@@ -64,19 +64,29 @@ const isToday = (date: string) => {
   const t = new Date();
   return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
 };
+
+const formatForecastDate = (dateStr) => {
+  if (!dateStr) return ''
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC' // Keeps it aligned with the ISO string's UTC offset
+  }).format(new Date(dateStr))
+}
 </script>
 
 <template>
   <div class="space-y-4 w-full">
     <!-- Statistics -->
     <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-      <!-- Total Revenue -->
-      <DashboardStatCard icon="i-lucide-philippine-peso" label="Total Revenue" :value="currency(stats.total_revenue)"
+      <!-- Today's Revenue -->
+      <DashboardStatCard icon="i-lucide-philippine-peso" label="Today's Revenue" :value="currency(stats.today_revenue)"
         color="text-success" />
-      <!-- Monthly Revenue -->
+      <!-- Monthly Revenue (last month) -->
       <DashboardStatCard icon="i-lucide-philippine-peso" label="Monthly Revenue" :value="currency(stats.monthly_revenue)"
         color="text-success" />
-      <!-- Yearly Revenue -->
+      <!-- Yearly Revenue (last year) -->
       <DashboardStatCard icon="i-lucide-philippine-peso" label="Yearly Revenue" :value="currency(stats.yearly_revenue)"
         color="text-info" />
       <!-- Transactions Today -->
@@ -91,7 +101,7 @@ const isToday = (date: string) => {
         <div class="flex items-end gap-1 h-40 border-b border-gray-300 pb-1">
           <div v-for="(item, i) in forecastData" :key="i" class="flex-1 bg-success/70 hover:bg-success rounded-t"
             :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
-            :title="`${item.forecast_date}: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
+            :title="`${formatForecastDate(item.forecast_date)}: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
         </div>
         <p class="text-xs text-gray-400 mt-1">{{ forecastData.length }} forecast periods</p>
       </UCard>
