@@ -192,6 +192,8 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
       addProgressStep("Training model...")
       addProgressStep("Generating forecasts...")
 
+      const requestUrl = `${useRuntimeConfig().public.apiBase}/api${trainEndpoint}`
+      console.log('[runModel] training URL:', requestUrl)
       const response = await apiFetch(trainEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -200,6 +202,8 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
         throwOnError: true,
         timeout,
       }) as any
+
+      console.log('[runModel] train success', response)
 
       addProgressStep(`Model ${model} trained successfully!`)
       addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
@@ -218,7 +222,8 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
         showProgressModal.value = false
       }, 2000)
     } catch (e: any) {
-      const errMsg = e?.body?.message || e?.message || "Failed to run model"
+      console.log('[runModel] catch error', JSON.stringify(e, null, 2))
+      const errMsg = e?.body?.message || e?.body || e?.message || "Failed to run model"
       progressError.value = errMsg
       addProgressStep(`Error: ${errMsg}`)
       toast.add({
