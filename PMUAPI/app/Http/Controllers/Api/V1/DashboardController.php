@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
-use App\Models\RevenueHistory;
 use App\Models\Stakeholder;
 use App\Models\Transaction;
+use App\Models\TransactionRevenue;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Illuminate\Http\Request;
@@ -21,7 +21,9 @@ class DashboardController extends Controller
             ->first(['weather_date', 'temperature', 'rainfall_mm', 'wind_speed']);
 
         return response()->json([
-            'total_revenue' => (float) RevenueHistory::sum('total_revenue'),
+            'total_revenue' => (float) TransactionRevenue::sum('revenue_target'),
+            'monthly_revenue' => (float) TransactionRevenue::where('month_num', now()->month)->sum('revenue_target'),
+            'yearly_revenue' => (float) TransactionRevenue::where('year_num', now()->year)->sum('revenue_target'),
             'transactions_today' => Transaction::whereDate('transaction_date', today())->count(),
             'active_stakeholders' => Stakeholder::where('status', 'active')->count(),
             'low_stock_items' => InventoryItem::where('status', 'low_stock')

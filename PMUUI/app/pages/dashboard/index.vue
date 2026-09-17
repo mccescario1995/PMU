@@ -9,6 +9,8 @@ definePageMeta({
 
 const stats = ref({
   total_revenue: 0,
+  monthly_revenue: 0,
+  yearly_revenue: 0,
   transactions_today: 0,
   active_stakeholders: 0,
   low_stock_items: 0,
@@ -68,14 +70,18 @@ const isToday = (date: string) => {
   <div class="space-y-4 w-full">
     <!-- Statistics -->
     <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <!-- Total Revenue -->
       <DashboardStatCard icon="i-lucide-philippine-peso" label="Total Revenue" :value="currency(stats.total_revenue)"
         color="text-success" />
-      <DashboardStatCard icon="i-lucide-receipt" label="Transactions Today" :value="String(stats.transactions_today)"
-        color="text-primary" />
-      <DashboardStatCard icon="i-lucide-users" label="Active Stakeholders" :value="String(stats.active_stakeholders)"
+      <!-- Monthly Revenue -->
+      <DashboardStatCard icon="i-lucide-philippine-peso" label="Monthly Revenue" :value="currency(stats.monthly_revenue)"
+        color="text-success" />
+      <!-- Yearly Revenue -->
+      <DashboardStatCard icon="i-lucide-philippine-peso" label="Yearly Revenue" :value="currency(stats.yearly_revenue)"
         color="text-info" />
-      <DashboardStatCard icon="i-lucide-package-x" label="Low Stock Items" :value="String(stats.low_stock_items)"
-        color="text-warning" />
+      <!-- Transactions Today -->
+      <DashboardStatCard icon="i-lucide-receipt" label="Transactions Today" :value="String(stats.transactions_today)" 
+        color="text-primary" />
     </div>
 
     <!-- Revenue Forecast + Weather -->
