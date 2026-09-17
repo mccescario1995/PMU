@@ -261,11 +261,11 @@ class ForecastController extends Controller
             default => $model,
         };
 
-        // Clear existing forecasts for this model before retraining
-        $forecastClass = $this->getModelClass($model);
-        if ($forecastClass::count() > 0) {
-            $forecastClass::truncate();
-        }
+        // // Clear existing forecasts for this model before retraining
+        // $forecastClass = $this->getModelClass($model);
+        // if ($forecastClass::count() > 0) {
+        //     $forecastClass::truncate();
+        // }
 
         $url = $pmumlUrl.'/forecast';
         $payload = json_encode(['model' => $pmuModel, 'days' => $days, 'post_to_api' => false]);
