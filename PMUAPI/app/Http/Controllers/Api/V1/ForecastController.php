@@ -230,30 +230,6 @@ class ForecastController extends Controller
         ], 201);
     }
 
-    public function clearModel(Request $request, string $model)
-    {
-        try {
-            $forecastClass = $this->getModelClass($model);
-            $count = $forecastClass::count();
-            $forecastClass::truncate();
-
-            return response()->json([
-                'message' => "All {$model} forecast records cleared",
-                'cleared_count' => $count,
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('clearModel failed', [
-                'model' => $model,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-            return response()->json([
-                'error' => 'Failed to clear model data',
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
     public function runModel(Request $request, WeatherService $weather, ?string $model = null)
     {
         // Use route default if not provided in body
@@ -284,6 +260,10 @@ class ForecastController extends Controller
             'sarima' => 'samira',
             default => $model,
         };
+
+        // Clear existing forecasts for this model before retraining
+        $forecastClass = $this->getModelClass($model);
+        $forecastClass::truncate();
 
         $url = $pmumlUrl.'/forecast';
         $payload = json_encode(['model' => $pmuModel, 'days' => $days, 'post_to_api' => false]);

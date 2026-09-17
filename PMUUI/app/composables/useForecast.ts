@@ -151,49 +151,21 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     progressError.value = ""
   }
 
-  async function clearModelData(model: string) {
-    const deleteUrl = model
-      ? `/v1/forecasts/model/${model}`
-      : `/v1/forecasts/model`
-    console.log('[clearModelData]', deleteUrl)
-    try {
-      const response = await apiFetch(deleteUrl, { method: 'DELETE', throwOnError: true })
-      console.log('[clearModelData] success', response)
-    } catch (e: any) {
-      console.error('[clearModelData] error', e)
-      toast.add({
-        title: 'Failed to clear model data',
-        description: e?.body?.message || e?.body || e?.message || 'Please try again.',
-        color: 'error',
-      })
-      throw e
-    }
-  }
-
   async function runModel(model: string) {
     modelLoading.value = true
     modelError.value = ""
     clearProgress()
-
-    if (!confirm('This will clear all existing forecast data for this model and retrain. Continue?')) {
-      modelLoading.value = false
-      return
-    }
-
     showProgressModal.value = true
+
     addProgressStep(`Initializing ${model} model...`)
 
-    const timeout = model === "sarima" || model === "samira" ? 300000 : 60000
+    const timeout = model === "sarima" || model === "samira" ? 240000 : 60000
 
     try {
-      addProgressStep("Clearing existing forecast data...")
-      await clearModelData(model)
       addProgressStep("Fetching historical data...")
       addProgressStep("Training model...")
       addProgressStep("Generating forecasts...")
 
-      const requestUrl = `${useRuntimeConfig().public.apiBase}/api${trainEndpoint}`
-      console.log('[runModel] training URL:', requestUrl)
       const response = await apiFetch(trainEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -202,8 +174,6 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
         throwOnError: true,
         timeout,
       }) as any
-
-      console.log('[runModel] train success', response)
 
       addProgressStep(`Model ${model} trained successfully!`)
       addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
@@ -222,15 +192,8 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
         showProgressModal.value = false
       }, 2000)
     } catch (e: any) {
-      console.log('[runModel] catch error', JSON.stringify(e, null, 2))
-      const errMsg = e?.body?.message || e?.body || e?.message || "Failed to run model"
-      progressError.value = errMsg
-      addProgressStep(`Error: ${errMsg}`)
-      toast.add({
-        title: 'Model training failed',
-        description: errMsg,
-        color: 'error',
-      })
+      progressError.value = e?.message || "Failed to run model"
+      addProgressStep(`Error: ${progressError.value}`)
     } finally {
       modelLoading.value = false
     }
@@ -319,6 +282,5 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     can,
     load,
     trainEndpoint,
-    clearModelData,
   }
 }
