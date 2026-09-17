@@ -169,7 +169,7 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
       const response = await apiFetch(trainEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, days: 30 }),
+        body: JSON.stringify({ model, days: 365 }),
         parseJson: true,
         throwOnError: true,
         timeout,
