@@ -232,14 +232,26 @@ class ForecastController extends Controller
 
     public function clearModel(Request $request, string $model)
     {
-        $forecastClass = $this->getModelClass($model);
-        $count = $forecastClass::count();
-        $forecastClass::truncate();
+        try {
+            $forecastClass = $this->getModelClass($model);
+            $count = $forecastClass::count();
+            $forecastClass::truncate();
 
-        return response()->json([
-            'message' => "All {$model} forecast records cleared",
-            'cleared_count' => $count,
-        ]);
+            return response()->json([
+                'message' => "All {$model} forecast records cleared",
+                'cleared_count' => $count,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('clearModel failed', [
+                'model' => $model,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'error' => 'Failed to clear model data',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function runModel(Request $request, WeatherService $weather, ?string $model = null)

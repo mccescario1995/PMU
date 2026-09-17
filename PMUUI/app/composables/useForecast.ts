@@ -155,12 +155,15 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     const deleteUrl = model
       ? `/v1/forecasts/model/${model}`
       : `/v1/forecasts/model`
+    console.log('[clearModelData]', deleteUrl)
     try {
-      await apiFetch(deleteUrl, { method: 'DELETE', throwOnError: true })
+      const response = await apiFetch(deleteUrl, { method: 'DELETE', throwOnError: true })
+      console.log('[clearModelData] success', response)
     } catch (e: any) {
+      console.error('[clearModelData] error', e)
       toast.add({
         title: 'Failed to clear model data',
-        description: e?.body?.message || e?.message || 'Please try again.',
+        description: e?.body?.message || e?.body || e?.message || 'Please try again.',
         color: 'error',
       })
       throw e
