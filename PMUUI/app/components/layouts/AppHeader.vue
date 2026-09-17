@@ -2,7 +2,27 @@
 import ThemeToggle from '~/components/layouts/ThemeToggle.vue'
 import UserDropdown from '~/components/layouts/UserDropdown.vue'
 
+const route = useRoute()
 const today = new Date()
+
+const pageTitleLabels: Record<string, string> = {
+  dashboard: "Dashboard",
+  transactions: "Transactions",
+  stakeholders: "Stakeholders",
+  inventory: "Inventory",
+  revenue: "Revenue",
+  forecast: "Forecasting",
+  reports: "Reports",
+  cms: "CMS",
+  "audit-logs": "Audit Logs",
+  settings: "Settings",
+  profile: "Profile",
+}
+
+const pageTitle = computed(() => {
+  const segment = route.path.split("/").filter(Boolean)[0] ?? ""
+  return pageTitleLabels[segment] ?? "Dashboard"
+})
 
 const formatted = computed(() =>
   today.toLocaleDateString("en-PH", {
@@ -21,7 +41,7 @@ const formatted = computed(() =>
     <div>
 
       <h1 class="text-3xl font-bold text-slate-800 dark:text-slate-100">
-        Dashboard
+        {{ pageTitle }}
       </h1>
 
       <p class="text-sm text-slate-500 dark:text-slate-400">
