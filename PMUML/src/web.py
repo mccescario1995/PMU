@@ -69,12 +69,15 @@ def health_check():
     })
 
 
-@app.route("/forecast", methods=["POST"])
+@app.route("/forecast", methods=["POST", "GET"])
 def forecast():
-    data = request.get_json(force=True) or {}
-    model_name = data.get("model", "arima")
-    days = int(data.get("days", config.forecast_days))
-    post_to_api = data.get("post_to_api", True)
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+    else:
+        data = {}
+    model_name = data.get("model") or request.args.get("model", "arima")
+    days = int(data.get("days") or request.args.get("days", config.forecast_days))
+    post_to_api = data.get("post_to_api", request.args.get("post_to_api", "true").lower() == "true")
     try:
         result = forecaster.train_model(
             model_name, days=days, post_to_api=post_to_api,
@@ -94,12 +97,17 @@ def forecast():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/train", methods=["POST"])
+@app.route("/train", methods=["POST", "GET"])
 def train():
-    data = request.get_json(force=True) or {}
-    models = data.get("models", ["arima", "sarima", "linear_regression"])
-    days = int(data.get("days", config.forecast_days))
-    post_to_api = data.get("post_to_api", True)
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+    else:
+        data = {}
+    models = data.get("models") or request.args.getlist("models") or ["arima", "sarima", "linear_regression"]
+    if isinstance(models, str):
+        models = [models]
+    days = int(data.get("days") or request.args.get("days", config.forecast_days))
+    post_to_api = data.get("post_to_api", request.args.get("post_to_api", "true").lower() == "true")
     try:
         results = forecaster.train_all(
             days=days, post_to_api=post_to_api,
