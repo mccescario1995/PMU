@@ -155,7 +155,16 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     const deleteUrl = model
       ? `/v1/forecasts/model/${model}`
       : `/v1/forecasts/model`
-    await apiFetch(deleteUrl, { method: 'DELETE' })
+    try {
+      await apiFetch(deleteUrl, { method: 'DELETE', throwOnError: true })
+    } catch (e: any) {
+      toast.add({
+        title: 'Failed to clear model data',
+        description: e?.body?.message || e?.message || 'Please try again.',
+        color: 'error',
+      })
+      throw e
+    }
   }
 
   async function runModel(model: string) {
@@ -171,7 +180,7 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     showProgressModal.value = true
     addProgressStep(`Initializing ${model} model...`)
 
-    const timeout = model === "sarima" || model === "samira" ? 240000 : 60000
+    const timeout = model === "sarima" || model === "samira" ? 300000 : 60000
 
     try {
       addProgressStep("Clearing existing forecast data...")
@@ -206,8 +215,14 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
         showProgressModal.value = false
       }, 2000)
     } catch (e: any) {
-      progressError.value = e?.message || "Failed to run model"
-      addProgressStep(`Error: ${progressError.value}`)
+      const errMsg = e?.body?.message || e?.message || "Failed to run model"
+      progressError.value = errMsg
+      addProgressStep(`Error: ${errMsg}`)
+      toast.add({
+        title: 'Model training failed',
+        description: errMsg,
+        color: 'error',
+      })
     } finally {
       modelLoading.value = false
     }
