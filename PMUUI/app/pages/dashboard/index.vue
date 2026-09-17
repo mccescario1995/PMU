@@ -85,7 +85,7 @@ const isToday = (date: string) => {
         <div class="flex items-end gap-1 h-40 border-b border-gray-300 pb-1">
           <div v-for="(item, i) in forecastData" :key="i" class="flex-1 bg-success/70 hover:bg-success rounded-t"
             :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
-            :title="`${item.period}: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
+            :title="`${item.forecast_date}: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
         </div>
         <p class="text-xs text-gray-400 mt-1">{{ forecastData.length }} forecast periods</p>
       </UCard>
