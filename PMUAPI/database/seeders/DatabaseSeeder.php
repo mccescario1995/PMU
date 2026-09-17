@@ -420,6 +420,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(RevenueHistorySeeder::class);
+        $this->call(TransactionItemsSeeder::class);
         $this->call(MlFeatureSeeder::class);
     }
 }
