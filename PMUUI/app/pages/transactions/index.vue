@@ -437,6 +437,7 @@ onMounted(() => {
                 :items="stakeholders.map((s) => ({ label: s.name, value: s.id }))"
                 placeholder="Select stakeholder"
                 :disabled="modalMode === 'view'"
+                :filterable="true"
                 @update:open="(isOpen: boolean) => isOpen && loadStakeholders()"
               />
             </UFormField>

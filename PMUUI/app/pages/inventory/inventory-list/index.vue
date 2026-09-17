@@ -17,6 +17,9 @@ const toast = useToast();
 const UBadge = resolveComponent("UBadge");
 
 const items = ref<any[]>([]);
+const searchName = ref("");
+const searchStatus = ref("");
+
 const {
   page,
   pageSize,
@@ -30,12 +33,24 @@ const {
   refresh,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: pageSize.toString(),
+    });
+    if (searchName.value) params.append("name", searchName.value);
+    if (searchStatus.value) params.append("status", searchStatus.value);
+
     const result = await apiFetch(
-      `/v1/inventory/items?page=${page}&per_page=${pageSize}`,
+      `/v1/inventory/items?${params.toString()}`,
       { parseJson: true },
     );
     return { data: result.data, total: result.meta.total };
   },
+});
+
+watch([searchName, searchStatus], () => {
+  page.value = 1;
+  refresh();
 });
 
 type Inventory = {
@@ -218,6 +233,25 @@ async function remove(row: any) {
       >
         Add Item
       </UButton>
+    </div>
+
+    <div class="flex gap-4 mb-4 flex-wrap">
+      <UFormField label="Search by Name" class="w-64">
+        <UInput v-model="searchName" placeholder="Item name..." class="w-full" />
+      </UFormField>
+      <UFormField label="Filter by Status" class="w-48">
+        <USelect
+          v-model="searchStatus"
+          :items="[
+            { label: 'All', value: '' },
+            { label: 'Available', value: 'available' },
+            { label: 'Low Stock', value: 'low_stock' },
+            { label: 'Damaged', value: 'damaged' },
+          ]"
+          placeholder="Status"
+          class="w-full"
+        />
+      </UFormField>
     </div>
 
     <UTable :data="data" :columns="columns" :loading="loading">
