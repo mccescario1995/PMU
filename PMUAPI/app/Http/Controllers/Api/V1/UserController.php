@@ -61,9 +61,19 @@ class UserController extends Controller
             'status' => 'nullable|in:active,inactive',
             'roles' => 'nullable|array',
             'roles.*' => 'string|exists:roles,name',
+            'current_password' => 'nullable|string',
         ]);
 
+        if (isset($data['current_password'])) {
+            $authenticatedUser = $request->user();
+            if (! Hash::check($data['current_password'], $authenticatedUser->password)) {
+                return response()->json(['message' => 'Password is incorrect'], 422);
+            }
+        }
+
         $oldValues = $this->modelToArray($user, ['name', 'email', 'status']);
+
+        unset($data['current_password']);
 
         if (! empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);

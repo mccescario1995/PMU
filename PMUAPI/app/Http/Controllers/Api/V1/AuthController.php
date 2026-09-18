@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -39,5 +41,32 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return new UserResource($request->user()->load('roles', 'permissions'));
+    }
+
+    public function uploadProfilePicture(Request $request)
+    {
+        $validated = $request->validate([
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'current_password' => 'required|string',
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($validated['current_password'], $user->password)) {
+            return response()->json(['message' => 'Password is incorrect'], 422);
+        }
+
+        if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
+            Storage::disk('public')->delete($user->profile_picture);
+        }
+
+        $path = $request->file('profile_picture')->store('profile-pictures', 'public');
+
+        $user->update(['profile_picture' => $path]);
+
+        return response()->json([
+            'message' => 'Profile picture updated successfully',
+            'user' => new UserResource($user->load('roles', 'permissions')),
+        ]);
     }
 }

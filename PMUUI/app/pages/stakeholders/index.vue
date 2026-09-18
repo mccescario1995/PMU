@@ -24,6 +24,7 @@ const typeColor = {
 
 const stakeholders = ref<any[]>([]);
 const searchQuery = ref("");
+const typeFilter = ref<string | null>(null);
 const {
   page,
   pageSize,
@@ -44,6 +45,9 @@ const {
     if (searchQuery.value) {
       params.set("search", searchQuery.value);
     }
+    if (typeFilter.value) {
+      params.set("type", typeFilter.value);
+    }
     const result = await apiFetch(`/v1/stakeholders?${params.toString()}`, {
       parseJson: true,
     });
@@ -52,6 +56,10 @@ const {
 });
 
 watch(searchQuery, () => {
+  page.value = 1;
+});
+
+watch(typeFilter, () => {
   page.value = 1;
 });
 
@@ -71,6 +79,66 @@ const form = reactive({
   address: "",
   status: "active",
 });
+
+const errors = reactive({
+  name: "",
+  stakeholder_type_id: "",
+  contact_no: "",
+  email: "",
+  address: "",
+  status: "",
+});
+
+function validateForm(): boolean {
+  let isValid = true;
+
+  if (!form.name.trim()) {
+    errors.name = "Name is required";
+    isValid = false;
+  } else {
+    errors.name = "";
+  }
+
+  if (!form.stakeholder_type_id) {
+    errors.stakeholder_type_id = "Stakeholder type is required";
+    isValid = false;
+  } else {
+    errors.stakeholder_type_id = "";
+  }
+
+  if (!form.contact_no.trim()) {
+    errors.contact_no = "Contact number is required";
+    isValid = false;
+  } else if (!/^09\d{9}$/.test(form.contact_no.trim())) {
+    errors.contact_no = "Contact number must be 11 digits and start with 09";
+    isValid = false;
+  } else {
+    errors.contact_no = "";
+  }
+
+  if (!form.address.trim()) {
+    errors.address = "Address is required";
+    isValid = false;
+  } else {
+    errors.address = "";
+  }
+
+  if (!form.status) {
+    errors.status = "Status is required";
+    isValid = false;
+  } else {
+    errors.status = "";
+  }
+
+  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    errors.email = "Invalid email format";
+    isValid = false;
+  } else {
+    errors.email = "";
+  }
+
+  return isValid;
+}
 
 async function loadTypes() {
   if (typesLoaded.value) return;
@@ -127,6 +195,7 @@ function openEdit(row: any) {
 }
 
 async function save() {
+  if (!validateForm()) return;
   saving.value = true;
   try {
     if (modalMode.value === "edit" && editingStakeholder.value) {
@@ -232,6 +301,57 @@ const columns: TableColumn<Stakeholder>[] = [
       </UButton>
     </div>
 
+    <div class="flex flex-wrap items-center gap-3 mt-2">
+      <button
+        type="button"
+        :class="[
+          'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
+          typeFilter === null
+            ? 'bg-primary-500 text-white border-primary-500'
+            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
+        ]"
+        @click="typeFilter = null"
+      >
+        All
+      </button>
+      <button
+        type="button"
+        :class="[
+          'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
+          typeFilter === 'buyer'
+            ? 'bg-success-500 text-white border-success-500'
+            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
+        ]"
+        @click="typeFilter = 'buyer'"
+      >
+        Buyers
+      </button>
+      <button
+        type="button"
+        :class="[
+          'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
+          typeFilter === 'broker'
+            ? 'bg-warning-500 text-white border-warning-500'
+            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
+        ]"
+        @click="typeFilter = 'broker'"
+      >
+        Brokers
+      </button>
+      <button
+        type="button"
+        :class="[
+          'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
+          typeFilter === 'renter'
+            ? 'bg-neutral-500 text-white border-neutral-500'
+            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
+        ]"
+        @click="typeFilter = 'renter'"
+      >
+        Renters
+      </button>
+    </div>
+
     <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
         <UButton
@@ -297,11 +417,11 @@ const columns: TableColumn<Stakeholder>[] = [
         </template>
         <template #body>
           <div class="space-y-4">
-            <UFormField label="Name" class="mb-3">
+            <UFormField label="Name" class="mb-3" :error="errors.name" required>
               <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" />
             </UFormField>
 
-            <UFormField label="Stakeholder Type" class="mb-3">
+            <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id" required>
               <USelect
                 v-model="form.stakeholder_type_id"
                 :items="types"
@@ -312,19 +432,20 @@ const columns: TableColumn<Stakeholder>[] = [
               />
             </UFormField>
 
-            <UFormField label="Contact" class="mb-3">
+            <UFormField label="Contact" class="mb-3" :error="errors.contact_no" required>
               <UInput v-model="form.contact_no" :disabled="modalMode === 'view'" class="w-full" />
             </UFormField>
 
-            <UFormField label="Email" class="mb-3">
+            <UFormField label="Email" class="mb-3" :error="errors.email">
               <UInput v-model="form.email" type="email" :disabled="modalMode === 'view'" class="w-full" />
+              <template #description>Email (optional)</template>
             </UFormField>
 
-            <UFormField label="Address" class="mb-3">
+            <UFormField label="Address" class="mb-3" :error="errors.address" required>
               <UTextarea v-model="form.address" :disabled="modalMode === 'view'" class="w-full" />
             </UFormField>
 
-            <UFormField label="Status" class="mb-3">
+            <UFormField label="Status" class="mb-3" :error="errors.status" required>
               <USelect
                 v-model="form.status"
                 :items="[

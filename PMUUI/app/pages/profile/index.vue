@@ -10,6 +10,7 @@ const isEditing = ref(false);
 const loading = ref(false);
 const uploading = ref(false);
 const fetching = ref(true);
+const profilePictureInput = ref<HTMLElement | null>(null);
 
 const form = reactive({
     name: "",
@@ -26,6 +27,8 @@ const originalForm = reactive({
     status: "",
     created_at: "",
 });
+
+const currentPassword = ref("");
 
 // Helper to unwrap the API response
 const unwrap = (response: any) => response?.data || response;
@@ -44,8 +47,6 @@ onMounted(async () => {
 
         const profile = response?.data;
 
-        console.log("Fetched profile:", profile);
-
         form.name = profile.name || "";
         form.email = profile.email || "";
         form.role = profile.role || "";
@@ -57,9 +58,6 @@ onMounted(async () => {
         originalForm.role = form.role;
         originalForm.status = form.status;
         originalForm.created_at = form.created_at;
-        console.log("Profile data set in form:", form);
-        console.log("Original form data:", originalForm);
-        console.log("User state:", user.value.roles, user.value.status, user.value.created_at);
     } catch {
         toast.add({
             title: "Error",
@@ -78,10 +76,20 @@ function startEdit() {
 function cancelEdit() {
     form.name = originalForm.name;
     form.email = originalForm.email;
+    currentPassword.value = "";
     isEditing.value = false;
 }
 
 async function saveProfile() {
+    if (!currentPassword.value) {
+        toast.add({
+            title: "Password required",
+            description: "Please enter your current password to save changes.",
+            color: "error",
+        });
+        return;
+    }
+
     loading.value = true;
     try {
         const profile = unwrap(user.value);
@@ -93,6 +101,7 @@ async function saveProfile() {
             body: JSON.stringify({
                 name: form.name,
                 email: form.email,
+                current_password: currentPassword.value,
             }),
             headers: {
                 "Content-Type": "application/json",
@@ -109,6 +118,7 @@ async function saveProfile() {
 
         originalForm.name = form.name;
         originalForm.email = form.email;
+        currentPassword.value = "";
         isEditing.value = false;
 
         toast.add({
@@ -128,12 +138,22 @@ async function saveProfile() {
 }
 
 async function handleProfilePictureUpload() {
+    if (!currentPassword.value) {
+        toast.add({
+            title: "Password required",
+            description: "Please enter your current password before changing your photo.",
+            color: "error",
+        });
+        return;
+    }
+
     const input = profilePictureInput.value as HTMLInputElement;
     if (!input?.files?.length) return;
 
     const file = input.files[0];
     const formData = new FormData();
     formData.append("profile_picture", file);
+    formData.append("current_password", currentPassword.value);
 
     uploading.value = true;
     try {
@@ -198,13 +218,13 @@ async function handleProfilePictureUpload() {
                     class="ring-4 ring-primary/10"
                 />
                 <div class="flex gap-2">
-<input
-    type="file"
-    ref="profilePictureInput"
-    class="hidden"
-    accept="image/*"
-    @change="handleProfilePictureUpload"
-/>
+                    <input
+                        type="file"
+                        ref="profilePictureInput"
+                        class="hidden"
+                        accept="image/*"
+                        @change="handleProfilePictureUpload"
+                    />
                     <UButton
                         variant="ghost"
                         color="neutral"
@@ -224,6 +244,11 @@ async function handleProfilePictureUpload() {
 
                 <UFormField label="Email" name="email">
                     <UInput v-model="form.email" type="email" :disabled="!isEditing" />
+                </UFormField>
+
+                <UFormField v-if="isEditing" label="Current Password" name="current_password">
+                    <UInput v-model="currentPassword" type="password" placeholder="Enter your password"
+                        :disabled="!isEditing" />
                 </UFormField>
 
                 <div v-if="originalForm.role || originalForm.status" class="text-sm text-slate-500 space-y-1 pt-4 border-t border-slate-200">
