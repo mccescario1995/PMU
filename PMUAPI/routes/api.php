@@ -221,12 +221,12 @@ Route::prefix('v1')->group(function () {
 
         Route::prefix('forecasts')->group(function () {
 
-            Route::get('/', [ForecastController::class, 'index'])->middleware('can:view forecasts');
-            Route::get('/table', [ForecastController::class, 'table'])->middleware('can:view forecasts');
-            Route::get('/chart', [ForecastController::class, 'chart'])->middleware('can:view forecasts');
-            Route::get('/{forecast}', [ForecastController::class, 'show'])->middleware('can:view forecasts')->where('forecast', '[0-9]+');
-            Route::put('/{forecast}', [ForecastController::class, 'update'])->middleware('can:edit forecasts')->where('forecast', '[0-9]+');
-            Route::delete('/{forecast}', [ForecastController::class, 'destroy'])->middleware('can:delete forecasts')->where('forecast', '[0-9]+');
+            Route::get('/', [ForecastController::class, 'index']);
+            Route::get('/table', [ForecastController::class, 'table']);
+            Route::get('/chart', [ForecastController::class, 'chart']);
+            Route::get('/{forecast}', [ForecastController::class, 'show'])->where('forecast', '[0-9]+');
+            Route::put('/{forecast}', [ForecastController::class, 'update'])->where('forecast', '[0-9]+');
+            Route::delete('/{forecast}', [ForecastController::class, 'destroy'])->where('forecast', '[0-9]+');
 
             Route::post('/generate', [ForecastController::class, 'generate']);
             Route::post('/run-model', [ForecastController::class, 'runModel']);
