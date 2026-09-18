@@ -14,6 +14,10 @@ definePageMeta({
 const { can } = usePermissions();
 const toast = useToast();
 
+const searchQuery = ref("");
+const dateFilter = ref("");
+const dateFilterEnd = ref("");
+
 const {
   page,
   pageSize,
@@ -27,8 +31,16 @@ const {
   refresh,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      per_page: pageSize.toString(),
+    });
+    if (searchQuery.value) params.append("or_number", searchQuery.value);
+    if (dateFilter.value) params.append("date_from", dateFilter.value);
+    if (dateFilterEnd.value) params.append("date_to", dateFilterEnd.value);
+
     const result = await apiFetch(
-      `/v1/transactions?page=${page}&per_page=${pageSize}`,
+      `/v1/transactions?${params.toString()}`,
       { parseJson: true },
     );
     return { data: result.data, total: result.meta.total };
@@ -50,6 +62,7 @@ const revenueLoading = ref(false);
 
 const form = reactive({
   stakeholder_id: null as number | null,
+  or_number: null as string | null,
   items: [
     {
       fee_type_id: null as number | null,
@@ -118,6 +131,7 @@ function openCreate() {
   modalMode.value = "create";
   editingTransaction.value = null;
   form.stakeholder_id = null;
+  form.or_number = null;
   form.items = [
     {
       fee_type_id: null,
@@ -135,6 +149,7 @@ function openView(row: any) {
   modalMode.value = "view";
   editingTransaction.value = row;
   form.stakeholder_id = row.stakeholder_id;
+  form.or_number = row.or_number;
   form.items = (row.items ?? []).map((item: any) => ({
     fee_type_id: item.fee_type_id,
     quantity: item.quantity,
@@ -150,6 +165,7 @@ function openEdit(row: any) {
   modalMode.value = "edit";
   editingTransaction.value = row;
   form.stakeholder_id = row.stakeholder_id;
+  form.or_number = row.or_number;
   form.items = (row.items ?? []).map((item: any) => ({
     fee_type_id: item.fee_type_id,
     quantity: item.quantity,
@@ -215,6 +231,7 @@ async function save() {
 
     const payload = {
       stakeholder_id: form.stakeholder_id,
+      or_number: form.or_number,
       transaction_date: form.transaction_date,
       status: form.status,
       remarks: "",
@@ -281,10 +298,18 @@ type Transactions = {
 };
 
 const columns: TableColumn<Transactions>[] = [
+  // {
+  //   accessorKey: "id",
+  //   header: "#",
+  //   cell: ({ row }) => `#${row.getValue("id")}`,
+  // },
   {
-    accessorKey: "id",
-    header: "#",
-    cell: ({ row }) => `#${row.getValue("id")}`,
+    accessorKey: "or",
+    header: "OR #",
+    cell: ({ row }) => {
+      const tx = data.value.find((t: any) => t.id === row.getValue("id"));
+      return tx ? (tx.or_number ?? "-") : "-";
+    },
   },
   {
     accessorKey: "stakeholder",
@@ -346,14 +371,7 @@ const columns: TableColumn<Transactions>[] = [
       );
     },
   },
-  {
-    accessorKey: "or",
-    header: "OR",
-    cell: ({ row }) => {
-      const tx = data.value.find((t: any) => t.id === row.getValue("id"));
-      return tx ? (tx.or_number ?? "-") : "-";
-    },
-  },
+  
   { accessorKey: "action", header: "Action" },
 ];
 
@@ -371,6 +389,37 @@ onMounted(() => {
       <h1 class="text-2xl font-bold">Transactions</h1>
       <UButton v-if="can('create transactions')" icon="i-lucide-plus" @click="openCreate">
         Add Transaction
+      </UButton>
+    </div>
+
+    <div class="flex flex-wrap gap-3 mb-4">
+      <UInput
+        v-model="searchQuery"
+        placeholder="Search by OR Number"
+        class="w-64"
+        @keyup.enter="refresh"
+        @update:modelValue="() => {}"
+      >
+        <template #leading>
+          <UIcon name="i-lucide-search" />
+        </template>
+      </UInput>
+      <UInput
+        v-model="dateFilter"
+        type="date"
+        placeholder="From Date"
+        class="w-40"
+        @change="refresh"
+      />
+      <UInput
+        v-model="dateFilterEnd"
+        type="date"
+        placeholder="To Date"
+        class="w-40"
+        @change="refresh"
+      />
+      <UButton variant="outline" @click="searchQuery = ''; dateFilter = ''; dateFilterEnd = ''; refresh()">
+        <UIcon name="i-lucide-x" class="mr-1" /> Clear
       </UButton>
     </div>
 
@@ -447,6 +496,15 @@ onMounted(() => {
                 :disabled="modalMode === 'view'"
                 :filterable="true"
                 @update:open="(isOpen: boolean) => isOpen && loadStakeholders()"
+              />
+            </UFormField>
+
+            <UFormField label="OR Number" class="mb-3">
+              <UInput
+                v-model="form.or_number"
+                placeholder="Enter OR Number"
+                maxlength="50"
+                :disabled="modalMode === 'view'"
               />
             </UFormField>
 
