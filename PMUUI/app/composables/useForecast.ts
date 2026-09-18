@@ -160,21 +160,22 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     addProgressStep(`Initializing ${model} model...`)
 
     const timeout = model === "sarima" || model === "samira" ? 240000 : 60000
+    const days = (model === "sarima" || model === "samira") ? 180 : 365
 
     try {
       addProgressStep("Fetching historical data...")
       addProgressStep("Training model...")
-      addProgressStep("Generating forecasts...")
-
+      
       const response = await apiFetch(trainEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, days: 365 }),
+        body: JSON.stringify({ model, days }),
         parseJson: true,
         throwOnError: true,
         timeout,
       }) as any
-
+      
+      addProgressStep("Generating forecasts...")
       addProgressStep(`Model ${model} trained successfully!`)
       addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
 
