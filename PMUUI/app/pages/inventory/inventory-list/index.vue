@@ -18,7 +18,7 @@ const UBadge = resolveComponent("UBadge");
 
 const items = ref<any[]>([]);
 const searchName = ref("");
-const searchStatus = ref("");
+const searchStatus = ref("all");
 
 const {
   page,
@@ -38,7 +38,7 @@ const {
       per_page: pageSize.toString(),
     });
     if (searchName.value) params.append("name", searchName.value);
-    if (searchStatus.value) params.append("status", searchStatus.value);
+    if (searchStatus.value && searchStatus.value !== "all") params.append("status", searchStatus.value);
 
     const result = await apiFetch(
       `/v1/inventory/items?${params.toString()}`,
@@ -243,7 +243,7 @@ async function remove(row: any) {
         <USelect
           v-model="searchStatus"
           :items="[
-            { label: 'All', value: '' },
+            { label: 'All', value: 'all' },
             { label: 'Available', value: 'available' },
             { label: 'Low Stock', value: 'low_stock' },
             { label: 'Damaged', value: 'damaged' },
