@@ -19,4 +19,5 @@ import LoginCard from '~/components/auth/LoginCard.vue';
         <LoginCard />
       </div>
     </div>
+  </div>
 </template>
