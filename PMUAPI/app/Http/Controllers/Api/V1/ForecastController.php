@@ -232,6 +232,8 @@ class ForecastController extends Controller
 
     public function runModel(Request $request, WeatherService $weather, ?string $model = null)
     {
+        set_time_limit(0);
+        ignore_user_abort(true);
         // Use route default if not provided in body
         if (! $model) {
             $model = $request->input('model');
@@ -281,7 +283,7 @@ class ForecastController extends Controller
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $payload,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_TIMEOUT => $model === 'sarima' ? 300 : 120,
+            CURLOPT_TIMEOUT => $model === 'sarima' ? 600 : 120,
         ]);
 
         // LOCAL RENDER
@@ -302,7 +304,7 @@ class ForecastController extends Controller
         ]);
 
         if ($httpCode !== 200 || ! $response) {
-            return response()->json(['error' => 'PMUML request failed', 'details' => $response], 502);
+            return response()->json(['error' => 'PMUML request failed', 'details' => ['http_code' => $httpCode, 'curl_error' => $curlError, 'response' => $response]], 502);
         }
 
         $result = json_decode($response, true);
