@@ -21,6 +21,14 @@ class InventoryItemController extends Controller
             $query->where('category', $category);
         }
 
+        if ($name = request('name')) {
+            $query->where('item_name', 'like', '%' . $name . '%');
+        }
+
+        if ($status = request('status')) {
+            $query->where('status', $status);
+        }
+
         if (request()->has('page')) {
             return InventoryItemResource::collection($query->paginate(request('per_page', 10)));
         }
