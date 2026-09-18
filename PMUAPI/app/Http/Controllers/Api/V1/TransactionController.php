@@ -31,6 +31,7 @@ class TransactionController extends Controller
         $data = $request->validate([
             'stakeholder_id' => 'nullable|exists:stakeholders,id',
             'transaction_date' => 'required|date',
+            'or_number' => 'nullable|string|max:50',
             'status' => 'nullable|in:pending,completed,cancelled',
             'remarks' => 'nullable|string',
             'items' => 'nullable|array',
@@ -44,6 +45,7 @@ class TransactionController extends Controller
         $transaction = Transaction::create([
             'stakeholder_id' => $data['stakeholder_id'] ?? null,
             'transaction_date' => $data['transaction_date'],
+            'or_number' => $data['or_number'] ?? null,
             'status' => $data['status'] ?? 'completed',
             'remarks' => $data['remarks'] ?? null,
             'total_amount' => 0,
@@ -74,7 +76,7 @@ class TransactionController extends Controller
         $weatherService = app(WeatherService::class);
         $weatherService->fetchForDate($data['transaction_date']);
 
-        $this->logAudit('create', 'transactions', $transaction->id, null, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']));
+        $this->logAudit('create', 'transactions', $transaction->id, null, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'or_number', 'status', 'remarks', 'total_amount', 'recorded_by']));
 
         return new TransactionResource(
             $transaction->load(['stakeholder', 'items.feeType', 'recordedBy'])
@@ -113,11 +115,12 @@ class TransactionController extends Controller
         $oldTotal = (float) $transaction->total_amount;
         $oldDate = $transaction->transaction_date->toDateString();
 
-        $oldValues = $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']);
+        $oldValues = $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'or_number', 'status', 'remarks', 'total_amount', 'recorded_by']);
 
         $data = $request->validate([
             'stakeholder_id' => 'nullable|exists:stakeholders,id',
             'transaction_date' => 'sometimes|required|date',
+            'or_number' => 'nullable|string|max:50',
             'status' => 'nullable|in:pending,completed,cancelled',
             'remarks' => 'nullable|string',
             'items' => 'nullable|array',
@@ -128,6 +131,7 @@ class TransactionController extends Controller
         $transaction->update([
             'stakeholder_id' => $data['stakeholder_id'] ?? $transaction->stakeholder_id,
             'transaction_date' => $data['transaction_date'] ?? $transaction->transaction_date,
+            'or_number' => $data['or_number'] ?? $transaction->or_number,
             'status' => $data['status'] ?? $transaction->status,
             'remarks' => $data['remarks'] ?? $transaction->remarks,
         ]);
@@ -176,7 +180,7 @@ class TransactionController extends Controller
             $this->syncRevenueOnStatusChange($transaction, $oldValues['status'], $newStatus);
         }
 
-        $this->logAudit('update', 'transactions', $transaction->id, $oldValues, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']));
+        $this->logAudit('update', 'transactions', $transaction->id, $oldValues, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'or_number', 'status', 'remarks', 'total_amount', 'recorded_by']));
 
         return new TransactionResource(
             $transaction->load(['stakeholder', 'items.feeType', 'recordedBy'])
@@ -346,7 +350,7 @@ class TransactionController extends Controller
         $date = $transaction->transaction_date->toDateString();
         $amount = $transaction->total_amount;
 
-        $this->logAudit('delete', 'transactions', $transaction->id, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'status', 'remarks', 'total_amount', 'recorded_by']), null);
+        $this->logAudit('delete', 'transactions', $transaction->id, $this->modelToArray($transaction, ['stakeholder_id', 'transaction_date', 'or_number', 'status', 'remarks', 'total_amount', 'recorded_by']), null);
 
         $transaction->delete();
 

@@ -70,8 +70,10 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-md">
-    <UButton icon="i-lucide-arrow-left" variant="ghost" to="/">Back</UButton>
+  <div class="mx-auto w-full max-w-md"> 
+    <div class="mb-3">
+      <UButton icon="i-lucide-arrow-left" variant="ghost" to="/">Back</UButton>
+    </div>
     <!-- <RoleBadge :role="role" /> -->
 
     <UForm @submit.prevent="handleSubmit" class="w-full">

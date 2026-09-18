@@ -14,6 +14,7 @@ class TransactionResource extends JsonResource
             'stakeholder_id' => $this->stakeholder_id,
             'total_amount' => $this->total_amount,
             'transaction_date' => $this->transaction_date,
+            'or_number' => $this->or_number,
             'status' => $this->status,
             'remarks' => $this->remarks,
             'recorded_by' => $this->recorded_by,

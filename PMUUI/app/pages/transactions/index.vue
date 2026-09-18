@@ -346,6 +346,14 @@ const columns: TableColumn<Transactions>[] = [
       );
     },
   },
+  {
+    accessorKey: "or",
+    header: "OR",
+    cell: ({ row }) => {
+      const tx = data.value.find((t: any) => t.id === row.getValue("id"));
+      return tx ? (tx.or_number ?? "-") : "-";
+    },
+  },
   { accessorKey: "action", header: "Action" },
 ];
 

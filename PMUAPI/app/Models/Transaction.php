@@ -15,6 +15,7 @@ class Transaction extends Model
         'stakeholder_id',
         'total_amount',
         'transaction_date',
+        'or_number',
         'recorded_by',
         'status',
         'remarks',
