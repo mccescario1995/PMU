@@ -71,12 +71,13 @@ const handleSubmit = async () => {
 
 <template>
   <div class="mx-auto w-full max-w-md">
+    <UButton icon="i-lucide-arrow-left" variant="ghost" to="/">Back</UButton>
     <!-- <RoleBadge :role="role" /> -->
 
     <UForm @submit.prevent="handleSubmit" class="w-full">
-      
+
       <UFormField label="Email" class="text-xl">
-        <UInput v-model="username" icon="i-lucide-user" size="xl" color="secondary" placeholder="Email" 
+        <UInput v-model="username" icon="i-lucide-user" size="xl" color="secondary" placeholder="Email"
           :ui="{ base: 'text-lg px-4 py-3' }" class="w-full mb-3" />
       </UFormField>
 
@@ -87,8 +88,7 @@ const handleSubmit = async () => {
           <template #trailing>
             <UButton color="neutral" variant="link" size="sm" :icon="show ? 'i-lucide-eye-off' : 'i-lucide-eye'"
               :aria-label="show ? 'Hide password' : 'Show password'" :aria-pressed="show" aria-controls="password"
-              @click="show = !show"
-               />
+              @click="show = !show" />
           </template>
         </UInput>
       </UFormField>
