@@ -289,6 +289,7 @@ const columns: TableColumn<Stakeholder>[] = [
           placeholder="Search stakeholders..."
           icon="i-lucide-search"
           class="max-w-xs"
+          @keyup.enter="refresh"
         />
       </div>
 
@@ -301,55 +302,15 @@ const columns: TableColumn<Stakeholder>[] = [
       </UButton>
     </div>
 
-    <div class="flex flex-wrap items-center gap-3 mt-2">
-      <button
-        type="button"
-        :class="[
-          'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
-          typeFilter === null
-            ? 'bg-primary-500 text-white border-primary-500'
-            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
-        ]"
-        @click="typeFilter = null"
-      >
-        All
-      </button>
-      <button
-        type="button"
-        :class="[
-          'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
-          typeFilter === 'buyer'
-            ? 'bg-success-500 text-white border-success-500'
-            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
-        ]"
-        @click="typeFilter = 'buyer'"
-      >
-        Buyers
-      </button>
-      <button
-        type="button"
-        :class="[
-          'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
-          typeFilter === 'broker'
-            ? 'bg-warning-500 text-white border-warning-500'
-            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
-        ]"
-        @click="typeFilter = 'broker'"
-      >
-        Brokers
-      </button>
-      <button
-        type="button"
-        :class="[
-          'px-4 py-2 rounded-lg text-sm font-medium border transition-colors',
-          typeFilter === 'renter'
-            ? 'bg-neutral-500 text-white border-neutral-500'
-            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700',
-        ]"
-        @click="typeFilter = 'renter'"
-      >
-        Renters
-      </button>
+    <div class="flex flex-wrap items-center gap-2 mt-2">
+      <UButton
+        v-for="type in [null, 'buyer', 'broker', 'renter']"
+        :key="type"
+        :label="type === null ? 'All' : type.charAt(0).toUpperCase() + type.slice(1)"
+        variant="outline"
+        :color="typeFilter === type ? 'primary' : undefined"
+        @click="typeFilter = type"
+      />
     </div>
 
     <UTable :data="data" :columns="columns" :loading="loading">

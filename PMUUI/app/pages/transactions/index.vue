@@ -398,7 +398,6 @@ onMounted(() => {
         placeholder="Search by OR Number"
         class="w-64"
         @keyup.enter="refresh"
-        @update:modelValue="() => {}"
       >
         <template #leading>
           <UIcon name="i-lucide-search" />
