@@ -11,6 +11,7 @@ const loading = ref(false);
 const uploading = ref(false);
 const fetching = ref(true);
 const profilePictureInput = ref<HTMLElement | null>(null);
+const showPasswordModal = ref(false);
 
 const form = reactive({
     name: "",
@@ -46,10 +47,11 @@ onMounted(async () => {
         });
 
         const profile = response?.data;
+        console.log("Fetched profile:", profile);
 
         form.name = profile.name || "";
         form.email = profile.email || "";
-        form.role = profile.role || "";
+        form.role = profile.roles || [];
         form.status = profile.status || "";
         form.created_at = profile.created_at || "";
 
@@ -80,11 +82,15 @@ function cancelEdit() {
     isEditing.value = false;
 }
 
-async function saveProfile() {
+function saveProfile() {
+    showPasswordModal.value = true;
+}
+
+async function confirmSave() {
     if (!currentPassword.value) {
         toast.add({
             title: "Password required",
-            description: "Please enter your current password to save changes.",
+            description: "Please enter your current password.",
             color: "error",
         });
         return;
@@ -120,16 +126,17 @@ async function saveProfile() {
         originalForm.email = form.email;
         currentPassword.value = "";
         isEditing.value = false;
+        showPasswordModal.value = false;
 
         toast.add({
             title: "Success",
             description: "Profile updated successfully.",
             color: "success",
         });
-    } catch (err) {
+    } catch (err: any) {
         toast.add({
             title: "Update failed",
-            description: err?.message || "Failed to update profile.",
+            description: err?.body?.message || err?.message || "Failed to update profile.",
             color: "error",
         });
     } finally {
@@ -138,22 +145,13 @@ async function saveProfile() {
 }
 
 async function handleProfilePictureUpload() {
-    if (!currentPassword.value) {
-        toast.add({
-            title: "Password required",
-            description: "Please enter your current password before changing your photo.",
-            color: "error",
-        });
-        return;
-    }
-
     const input = profilePictureInput.value as HTMLInputElement;
     if (!input?.files?.length) return;
 
     const file = input.files[0];
+    if (!file) return;
     const formData = new FormData();
     formData.append("profile_picture", file);
-    formData.append("current_password", currentPassword.value);
 
     uploading.value = true;
     try {
@@ -211,27 +209,13 @@ async function handleProfilePictureUpload() {
             </template>
 
             <div class="flex flex-col items-center space-y-4 pb-4 border-b border-slate-200">
-                <UAvatar
-                    :src="profilePictureUrl"
-                    :name="form.name || 'User'"
-                    size="xl"
-                    class="ring-4 ring-primary/10"
-                />
+                <UAvatar :src="profilePictureUrl" :name="form.name || 'User'" size="xl"
+                    class="ring-4 ring-primary/10" />
                 <div class="flex gap-2">
-                    <input
-                        type="file"
-                        ref="profilePictureInput"
-                        class="hidden"
-                        accept="image/*"
-                        @change="handleProfilePictureUpload"
-                    />
-                    <UButton
-                        variant="ghost"
-                        color="neutral"
-                        icon="i-lucide-camera"
-                        :loading="uploading"
-                        @click="profilePictureInput?.click()"
-                    >
+                    <input type="file" ref="profilePictureInput" class="hidden" accept="image/*"
+                        @change="handleProfilePictureUpload" />
+                    <UButton variant="ghost" color="neutral" icon="i-lucide-camera" :loading="uploading"
+                        @click="profilePictureInput?.click()">
                         {{ uploading ? 'Uploading...' : 'Change Photo' }}
                     </UButton>
                 </div>
@@ -246,13 +230,22 @@ async function handleProfilePictureUpload() {
                     <UInput v-model="form.email" type="email" :disabled="!isEditing" />
                 </UFormField>
 
-                <UFormField v-if="isEditing" label="Current Password" name="current_password">
-                    <UInput v-model="currentPassword" type="password" placeholder="Enter your password"
-                        :disabled="!isEditing" />
-                </UFormField>
+                <div v-if="originalForm.role || originalForm.status"
+                    class="text-sm text-slate-500 space-y-1 pt-4 border-t border-slate-200">
+                    <p><strong class="text-slate-700">Role:</strong> {{ originalForm.role || "N/A" }}
 
-                <div v-if="originalForm.role || originalForm.status" class="text-sm text-slate-500 space-y-1 pt-4 border-t border-slate-200">
-                    <p><strong class="text-slate-700">Role:</strong> {{ originalForm.role || "N/A" }}</p>
+                    <ul v-if="originalForm.role && originalForm.role.length > 0">
+                        <li v-for="role in originalForm.role" :key="role">
+                            {{ role }}
+                        </li>
+                    </ul>
+
+                    <ul v-else>
+                        <li >N/A</li>
+                    </ul>
+
+                    </p>
+
                     <p><strong class="text-slate-700">Status:</strong> {{ originalForm.status || "N/A" }}</p>
                     <p v-if="originalForm.created_at">
                         <strong class="text-slate-700">Member since:</strong>
@@ -268,5 +261,31 @@ async function handleProfilePictureUpload() {
                 </div>
             </UForm>
         </UCard>
+
+        <UModal v-model:open="showPasswordModal" class="max-w-md">
+            <template #header>
+                <h3 class="text-lg font-semibold">Confirm Password</h3>
+            </template>
+            <template #body>
+                <div class="space-y-4">
+                    <p class="text-sm text-slate-600">
+                        Please enter your current password to save the changes.
+                    </p>
+                    <UFormField label="Password" name="password">
+                        <UInput v-model="currentPassword" type="password" placeholder="Enter your password" />
+                    </UFormField>
+                </div>
+            </template>
+            <template #footer>
+                <div class="flex gap-2 justify-end">
+                    <UButton variant="ghost" color="neutral" @click="() => { showPasswordModal = false; }">
+                        Cancel
+                    </UButton>
+                    <UButton :loading="loading" @click="confirmSave">
+                        Confirm &amp; Save
+                    </UButton>
+                </div>
+            </template>
+        </UModal>
     </div>
 </template>
