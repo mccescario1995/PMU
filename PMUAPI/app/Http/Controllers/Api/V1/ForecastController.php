@@ -218,8 +218,18 @@ class ForecastController extends Controller
             $data['season'] = in_array($month, $peakMonths) ? 'Peak' : 'Off-Peak';
         }
 
-        $forecast = RevenueForecastSamira::create($data);
-        $this->logAudit('create', 'revenue_forecasts', $forecast->id, null, $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
+        // Determine model class from model_version
+        $modelVersion = $data['model_version'] ?? '';
+        $modelClass = $this->getModelClassFromVersion($modelVersion);
+
+        // Upsert by forecast_date (unique constraint)
+        $forecast = $modelClass::updateOrCreate(
+            ['forecast_date' => $data['forecast_date']],
+            $data
+        );
+        
+        $table = $modelClass::getTable();
+        $this->logAudit('create', $table, $forecast->id, null, $this->modelToArray($forecast, ['forecast_date', 'predicted_revenue', 'season', 'model_version']));
         $weather->ensureWeatherForDates([$forecast->forecast_date->toDateString()]);
         $weatherData = WeatherData::where('weather_date', $forecast->forecast_date->toDateString())->first();
 
@@ -233,6 +243,20 @@ class ForecastController extends Controller
         ], 201);
     }
 
+    protected function getModelClassFromVersion(string $modelVersion): string
+    {
+        if (str_contains($modelVersion, 'arima') || str_contains($modelVersion, 'amira')) {
+            return RevenueForecastAmira::class;
+        }
+        if (str_contains($modelVersion, 'sarima') || str_contains($modelVersion, 'samira')) {
+            return RevenueForecastSamira::class;
+        }
+        if (str_contains($modelVersion, 'linear')) {
+            return RevenueForecastLinearRegression::class;
+        }
+        return RevenueForecastSamira::class;
+    }
+
     public function runModel(Request $request, WeatherService $weather, ?string $model = null)
     {
         // Use route default if not provided in body
@@ -243,6 +267,7 @@ class ForecastController extends Controller
         $data = $request->validate([
             'model' => 'nullable|string|in:linear_regression,arima,sarima',
             'days' => 'nullable|integer|min:1|max:366',
+            'sync' => 'nullable|boolean',
         ]);
 
         if (! $model) {
@@ -250,6 +275,12 @@ class ForecastController extends Controller
         }
 
         $days = $data['days'] ?? 30;
+        $sync = $data['sync'] ?? false;
+
+        // If sync mode, run directly and return results
+        if ($sync) {
+            return $this->runModelSync($model, $days, $weather);
+        }
 
         $pmumlUrl = rtrim(env('PMUML_URL', ''), '/');
         if (empty($pmumlUrl)) {
@@ -279,6 +310,97 @@ class ForecastController extends Controller
             'status' => 'pending',
             'message' => 'Training started. Poll /v1/forecasts/train/status/{task_id} for progress.',
         ], 202);
+    }
+
+    protected function runModelSync(string $model, int $days, WeatherService $weather)
+    {
+        $pmumlUrl = rtrim(env('PMUML_URL', ''), '/');
+        if (empty($pmumlUrl)) {
+            return response()->json(['error' => 'PMUML_URL not configured'], 500);
+        }
+
+        $pmuModel = match ($model) {
+            'arima' => 'amira',
+            'sarima' => 'samira',
+            default => $model,
+        };
+
+        $forecastClass = $this->getModelClass($model);
+        if ($forecastClass::count() > 0) {
+            $forecastClass::truncate();
+        }
+
+        $url = $pmumlUrl . '/forecast?model=' . urlencode($pmuModel) . '&days=' . urlencode($days) . '&post_to_api=false';
+
+        Log::info('PMUML sync request starting', [
+            'url' => $url,
+            'model' => $model,
+            'days' => $days,
+        ]);
+
+        $timeout = $model === 'sarima' ? 600 : 120;
+
+        try {
+            $response = Http::timeout($timeout)
+                ->post($url, []);
+
+            if (!$response->successful()) {
+                return response()->json(['error' => 'PMUML request failed', 'status' => $response->status()], 502);
+            }
+
+            $result = $response->json();
+
+            if (!isset($result['forecasts']) || !is_array($result['forecasts'])) {
+                return response()->json(['error' => 'Invalid PMUML response', 'details' => $result], 502);
+            }
+
+            $peakMonths = RevenueForecastSamira::computePeakMonths();
+            $saved = [];
+
+            foreach ($result['forecasts'] as $item) {
+                $forecastDate = $item['date'] ?? null;
+                $predicted = $item['predicted_revenue'] ?? null;
+
+                if (!$forecastDate || $predicted === null) {
+                    continue;
+                }
+
+                $month = (int) date('n', strtotime($forecastDate));
+                $season = in_array($month, $peakMonths) ? 'Peak' : 'Off-Peak';
+
+                $forecast = $forecastClass::create([
+                    'forecast_date' => $forecastDate,
+                    'predicted_revenue' => $predicted,
+                    'season' => $season,
+                    'model_version' => $model . '-v1',
+                ]);
+
+                $saved[] = [
+                    'id' => $forecast->id,
+                    'forecast_date' => $forecast->forecast_date,
+                    'predicted_revenue' => $forecast->predicted_revenue,
+                    'season' => $forecast->season,
+                    'model_version' => $forecast->model_version,
+                ];
+            }
+
+            $weather->ensureWeatherForDates(
+                collect($saved)->pluck('forecast_date')->map(fn ($d) => Carbon::parse($d)->toDateString())->toArray()
+            );
+
+            return response()->json([
+                'model' => $model,
+                'metrics' => $result['metrics'] ?? [],
+                'saved_forecasts' => $saved,
+            ], 201);
+
+        } catch (\Throwable $e) {
+            Log::error('PMUML sync training error', [
+                'model' => $model,
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['error' => 'Training failed', 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function trainStatus(Request $request, string $taskId)

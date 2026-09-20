@@ -22,6 +22,7 @@ class ARIMAModel(BaseModel):
         super().__init__(model_name="arima")
         self.order = order
         self.max_training_rows = max_training_rows
+        # ARIMA fit() uses different params: method, maxiter are passed to optimizer
         self.fit_options = {"method": "lbfgs", "maxiter": 200, "disp": False}
         if fit_options:
             self.fit_options.update(fit_options)
@@ -50,7 +51,10 @@ class ARIMAModel(BaseModel):
             train = train.iloc[-self.max_training_rows:]
 
         try:
-            self.result = _ARIMA(train, order=self.order).fit(**self.fit_options)
+            # ARIMA fit() accepts method and optimizer kwargs differently
+            fit_kwargs = self.fit_options.copy()
+            method = fit_kwargs.pop("method", "lbfgs")
+            self.result = _ARIMA(train, order=self.order).fit(method=method, **fit_kwargs)
         except Exception as e:
             logger.warning(f"ARIMA fit failed with order {self.order}, falling back to (1,1,0): {e}")
             self.result = _ARIMA(train, order=(1, 1, 0)).fit(**self.fit_options)

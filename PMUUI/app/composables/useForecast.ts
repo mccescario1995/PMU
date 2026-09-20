@@ -159,19 +159,67 @@ export function useForecast(endpoint: string = '/v1/forecasts', model: string = 
 
     addProgressStep(`Initializing ${model} model...`)
 
-    const days = (model === "sarima" || model === "samira") ? 30 : 180
+    const days = (model === "sarima" || model === "samira") ? 180 : 365
     const pmuModel = model === 'arima' ? 'amira' : model === 'sarima' ? 'samira' : model
+
+    // Try direct PMUML call first, fallback to Laravel proxy
+    let pmumlResponse: any = null
+    let usedFallback = false
+
+    const tryDirectPmuml = async (): Promise<any> => {
+      const pmumlUrl = 'https://pmuml.onrender.com/forecast'
+      return await $fetch(`${pmumlUrl}?model=${pmuModel}&days=${days}&post_to_api=false`, {
+        method: 'POST',
+        body: {},
+        timeout: 300000,
+      })
+    }
+
+    const tryLaravelProxy = async (): Promise<any> => {
+      // Use Laravel's train endpoint with sync=true to get results directly
+      const response = await apiFetch('/v1/forecasts/run-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, days, sync: true }),
+        parseJson: true,
+        throwOnError: true,
+        timeout: 300000,
+      }) as any
+      return response
+    }
 
     try {
       addProgressStep("Fetching historical data from PMUML...")
       
-      // Call PMUML directly (bypasses Hostinger proxy timeout)
-      const pmumlUrl = 'https://pmuml.onrender.com/forecast'
-      const pmumlResponse = await $fetch(`${pmumlUrl}?model=${pmuModel}&days=${days}&post_to_api=false`, {
-        method: 'POST',
-        body: {},
-        timeout: 300000, // 5 min
-      }) as any
+      // Try direct call with retry
+      let lastError: any = null
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          pmumlResponse = await tryDirectPmuml()
+          break
+        } catch (e: any) {
+          lastError = e
+          if (attempt < 2) {
+            addProgressStep(`Retrying... (attempt ${attempt + 1})`)
+            await new Promise(r => setTimeout(r, 2000))
+          }
+        }
+      }
+
+      // Fallback to Laravel proxy if direct call fails
+      if (!pmumlResponse && lastError) {
+        addProgressStep("Direct PMUML call failed, trying Laravel proxy...")
+        usedFallback = true
+        try {
+          pmumlResponse = await tryLaravelProxy()
+        } catch (fallbackError: any) {
+          throw new Error(`Both direct and proxy calls failed: ${fallbackError.message}`)
+        }
+      }
+
+      if (!pmumlResponse) {
+        throw new Error('Failed to get response from PMUML')
+      }
 
       addProgressStep("Training model...")
       
@@ -181,12 +229,6 @@ export function useForecast(endpoint: string = '/v1/forecasts', model: string = 
 
       addProgressStep("Generating forecasts...")
 
-      // Save forecasts via Laravel generate endpoint
-      const forecastClass = model === 'arima' ? 'amira' : model === 'sarima' ? 'samira' : 'linear_regression'
-      
-      // Clear existing forecasts for this model first
-      // Note: This requires a backend endpoint or we save individually
-      
       const saved = []
       for (const item of pmumlResponse.forecasts) {
         const forecastDate = item.date
@@ -195,7 +237,7 @@ export function useForecast(endpoint: string = '/v1/forecasts', model: string = 
         if (!forecastDate || predicted === null) continue
 
         const month = new Date(forecastDate).getMonth() + 1
-        const peakMonths = [11, 12, 1, 2, 3, 4] // Approximate - should come from backend
+        const peakMonths = [11, 12, 1, 2, 3, 4]
         const season = peakMonths.includes(month) ? 'Peak' : 'Off-Peak'
 
         const response = await apiFetch('/v1/forecasts/generate', {
