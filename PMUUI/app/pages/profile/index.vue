@@ -232,7 +232,7 @@ async function handleProfilePictureUpload() {
 
                 <div v-if="originalForm.role || originalForm.status"
                     class="text-sm text-slate-500 space-y-1 pt-4 border-t border-slate-200">
-                    <p><strong class="text-slate-700">Role:</strong> {{ originalForm.role || "N/A" }}
+                    <p><strong class="text-slate-700">Role:</strong>
 
                     <ul v-if="originalForm.role && originalForm.role.length > 0">
                         <li v-for="role in originalForm.role" :key="role">

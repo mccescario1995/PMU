@@ -56,6 +56,8 @@ class AuthController extends Controller
 
         $path = $request->file('profile_picture')->store('profile-pictures', 'public');
 
+        
+
         $user->update(['profile_picture' => $path]);
 
         return response()->json([
