@@ -152,6 +152,20 @@ function validateForm(): boolean {
   return isValid;
 }
 
+const isFormValid = computed(() => {
+  if (!form.name.trim()) return false;
+  if (!form.stakeholder_type_id) return false;
+  if (!form.contact_no.trim() || !/^09\d{9}$/.test(form.contact_no.trim())) return false;
+  if (!form.address.trim()) return false;
+  if (!form.status) return false;
+  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return false;
+  return true;
+});
+
+function clearError(field: keyof typeof errors) {
+  errors[field] = "";
+}
+
 async function loadTypes() {
   if (typesLoaded.value) return;
   const allTypes = (
@@ -176,6 +190,12 @@ function openCreate() {
   form.email = "";
   form.address = "";
   form.status = "active";
+  errors.name = "";
+  errors.stakeholder_type_id = "";
+  errors.contact_no = "";
+  errors.email = "";
+  errors.address = "";
+  errors.status = "";
   showModal.value = true;
   loadTypes();
 }
@@ -189,6 +209,12 @@ function openView(row: any) {
   form.email = row.email ?? "";
   form.address = row.address ?? "";
   form.status = row.status ?? "active";
+  errors.name = "";
+  errors.stakeholder_type_id = "";
+  errors.contact_no = "";
+  errors.email = "";
+  errors.address = "";
+  errors.status = "";
   showModal.value = true;
   loadTypes();
 }
@@ -202,6 +228,12 @@ function openEdit(row: any) {
   form.email = row.email ?? "";
   form.address = row.address ?? "";
   form.status = row.status ?? "active";
+  errors.name = "";
+  errors.stakeholder_type_id = "";
+  errors.contact_no = "";
+  errors.email = "";
+  errors.address = "";
+  errors.status = "";
   showModal.value = true;
   loadTypes();
 }
@@ -390,7 +422,7 @@ const columns: TableColumn<Stakeholder>[] = [
         <template #body>
           <div class="space-y-4">
             <UFormField label="Name" class="mb-3" :error="errors.name" required>
-              <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" />
+              <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" @input="clearError('name')" />
             </UFormField>
 
             <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id" required>
@@ -401,20 +433,21 @@ const columns: TableColumn<Stakeholder>[] = [
                 label-key="name"
                 class="w-full"
                 :disabled="modalMode === 'view'"
+                @change="clearError('stakeholder_type_id')"
               />
             </UFormField>
 
             <UFormField label="Contact" class="mb-3" :error="errors.contact_no" required>
-              <UInput v-model="form.contact_no" :disabled="modalMode === 'view'" class="w-full" />
+              <UInput v-model="form.contact_no" :disabled="modalMode === 'view'" class="w-full" type="tel" inputmode="numeric" maxlength="11" @input="form.contact_no = form.contact_no.replace(/\D/g, ''); clearError('contact_no')" />
             </UFormField>
 
             <UFormField label="Email" class="mb-3" :error="errors.email">
-              <UInput v-model="form.email" type="email" :disabled="modalMode === 'view'" class="w-full" />
+              <UInput v-model="form.email" type="email" :disabled="modalMode === 'view'" class="w-full" @input="clearError('email')" />
               <template #description>Email (optional)</template>
             </UFormField>
 
             <UFormField label="Address" class="mb-3" :error="errors.address" required>
-              <UTextarea v-model="form.address" :disabled="modalMode === 'view'" class="w-full" />
+              <UTextarea v-model="form.address" :disabled="modalMode === 'view'" class="w-full" @input="clearError('address')" />
             </UFormField>
 
             <UFormField label="Status" class="mb-3" :error="errors.status" required>
@@ -426,6 +459,7 @@ const columns: TableColumn<Stakeholder>[] = [
                 ]"
                 class="w-full"
                 :disabled="modalMode === 'view'"
+                @change="clearError('status')"
               />
             </UFormField>
           </div>
@@ -433,7 +467,7 @@ const columns: TableColumn<Stakeholder>[] = [
         <template #footer>
           <div class="flex justify-end gap-2">
             <UButton variant="ghost" @click="showModal = false">Close</UButton>
-            <UButton v-if="modalMode !== 'view'" @click="save" :loading="saving">
+            <UButton v-if="modalMode !== 'view'" @click="save" :loading="saving" :disabled="!isFormValid">
               Save
             </UButton>
           </div>
