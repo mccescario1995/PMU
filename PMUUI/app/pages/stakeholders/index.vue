@@ -57,10 +57,12 @@ const {
 
 watch(searchQuery, () => {
   page.value = 1;
+  refresh();
 });
 
 watch(typeFilter, () => {
   page.value = 1;
+  refresh();
 });
 
 const showModal = ref(false);
