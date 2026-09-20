@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\TrainForecastModel;
 use App\Models\RevenueForecastAmira;
 use App\Models\RevenueForecastLinearRegression;
 use App\Models\RevenueForecastSamira;
@@ -10,7 +11,9 @@ use App\Models\WeatherData;
 use App\Services\WeatherService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ForecastController extends Controller
 {
@@ -232,8 +235,6 @@ class ForecastController extends Controller
 
     public function runModel(Request $request, WeatherService $weather, ?string $model = null)
     {
-        set_time_limit(0);
-        ignore_user_abort(true);
         // Use route default if not provided in body
         if (! $model) {
             $model = $request->input('model');
@@ -256,104 +257,57 @@ class ForecastController extends Controller
             return response()->json(['error' => 'PMUML_URL not configured'], 500);
         }
 
-        // Map frontend model names to PMUML model names
-        $pmuModel = match ($model) {
-            'arima' => 'amira',
-            'sarima' => 'samira',
-            default => $model,
-        };
+        // Generate task ID for tracking
+        $taskId = 'train_' . $model . '_' . Str::random(12);
 
-        // Clear existing forecasts for this model before retraining
-        $forecastClass = $this->getModelClass($model);
-        if ($forecastClass::count() > 0) {
-            $forecastClass::truncate();
-        }
+        // Initialize status in cache
+        Cache::put("forecast_train_{$taskId}", [
+            'status' => 'pending',
+            'model' => $model,
+            'days' => $days,
+            'progress' => 0,
+            'message' => 'Queued for training',
+            'created_at' => now()->toISOString(),
+        ], now()->addHours(24));
 
-        $url = $pmumlUrl.'/forecast?model='.urlencode($pmuModel).'&days='.urlencode($days).'&post_to_api=false';
-        $payload = json_encode([]);
-
-        Log::info('PMUML request starting', [
-            'url' => $url,
-            'payload' => $payload,
-        ]);
-
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => $payload,
-            CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
-            CURLOPT_TIMEOUT => $model === 'sarima' ? 600 : 120,
-        ]);
-
-        // LOCAL RENDER
-        if (app()->environment('local')) {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        }
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        Log::info('PMUML response received', [
-            'url' => $url,
-            'http_code' => $httpCode,
-            'response' => $response,
-            'curl_error' => $curlError,
-        ]);
-
-        if ($httpCode !== 200 || ! $response) {
-            return response()->json(['error' => 'PMUML request failed', 'details' => ['http_code' => $httpCode, 'curl_error' => $curlError, 'response' => $response]], 502);
-        }
-
-        $result = json_decode($response, true);
-        if (! isset($result['forecasts']) || ! is_array($result['forecasts'])) {
-            Log::error('Invalid PMUML response format', ['response' => $result]);
-            return response()->json(['error' => 'Invalid PMUML response', 'details' => $result], 502);
-        }
-
-        $peakMonths = RevenueForecastSamira::computePeakMonths();
-
-        $saved = [];
-        foreach ($result['forecasts'] as $item) {
-            $forecastDate = $item['date'] ?? null;
-            $predicted = $item['predicted_revenue'] ?? null;
-
-            if (! $forecastDate || $predicted === null) {
-                continue;
-            }
-
-            $month = (int) date('n', strtotime($forecastDate));
-            $season = in_array($month, $peakMonths) ? 'Peak' : 'Off-Peak';
-
-            // Save to model-specific table
-            $forecastClass = $this->getModelClass($model);
-            $forecast = $forecastClass::create([
-                'forecast_date' => $forecastDate,
-                'predicted_revenue' => $predicted,
-                'season' => $season,
-                'model_version' => $model.'-v1',
-            ]);
-
-            $saved[] = [
-                'id' => $forecast->id,
-                'forecast_date' => $forecast->forecast_date,
-                'predicted_revenue' => $forecast->predicted_revenue,
-                'season' => $forecast->season,
-                'model_version' => $forecast->model_version,
-            ];
-        }
-
-        $weather->ensureWeatherForDates(
-            collect($saved)->pluck('forecast_date')->map(fn ($d) => Carbon::parse($d)->toDateString())->toArray()
-        );
+        // Dispatch async job
+        TrainForecastModel::dispatch($model, $days, $taskId);
 
         return response()->json([
+            'task_id' => $taskId,
             'model' => $model,
-            'metrics' => $result['metrics'] ?? [],
-            'saved_forecasts' => $saved,
-        ], 201);
+            'status' => 'pending',
+            'message' => 'Training started. Poll /v1/forecasts/train/status/{task_id} for progress.',
+        ], 202);
+    }
+
+    public function trainStatus(Request $request, string $taskId)
+    {
+        $status = Cache::get("forecast_train_{$taskId}");
+
+        if (! $status) {
+            return response()->json(['error' => 'Task not found'], 404);
+        }
+
+        // If completed, also return the forecasts
+        if ($status['status'] === 'completed') {
+            $model = $status['model'];
+            $forecastClass = $this->getModelClass($model);
+            $forecasts = $forecastClass::orderBy('forecast_date')->get([
+                'id', 'forecast_date', 'predicted_revenue', 'season', 'model_version'
+            ])->map(fn ($f) => [
+                'id' => $f->id,
+                'forecast_date' => $f->forecast_date,
+                'predicted_revenue' => $f->predicted_revenue,
+                'season' => $f->season,
+                'model_version' => $f->model_version,
+            ]);
+
+            $status['forecasts'] = $forecasts;
+            $status['count'] = $forecasts->count();
+        }
+
+        return response()->json($status);
     }
 
     /**

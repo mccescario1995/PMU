@@ -159,39 +159,78 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
 
     addProgressStep(`Initializing ${model} model...`)
 
-    const timeout = model === "sarima" || model === "samira" ? 240000 : 60000
-    const days = (model === "sarima" || model === "samira") ? 180 : 365
-
     try {
-      addProgressStep("Fetching historical data...")
-      addProgressStep("Training model...")
+      addProgressStep("Starting training job...")
       
       const response = await apiFetch(trainEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, days }),
+        body: JSON.stringify({ model, days: (model === "sarima" || model === "samira") ? 180 : 365 }),
         parseJson: true,
         throwOnError: true,
-        timeout,
       }) as any
-      
-      addProgressStep("Generating forecasts...")
-      addProgressStep(`Model ${model} trained successfully!`)
-      addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
 
-      if (response?.metrics) {
-        const metrics = response.metrics
-        const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
-        if (metricStrs.length) {
-          addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
-        }
+      const taskId = response?.task_id
+      if (!taskId) {
+        throw new Error('No task ID returned from server')
       }
 
-      await load()
+      addProgressStep("Training queued, waiting for completion...")
+      
+      // Poll for status
+      let status = 'pending'
+      let attempts = 0
+      const maxAttempts = 120 // 10 minutes max (5s intervals)
+      
+      while (status === 'pending' || status === 'running') {
+        if (attempts >= maxAttempts) {
+          throw new Error('Training timed out')
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, 5000))
+        
+        const statusResponse = await apiFetch(`/v1/forecasts/train/status/${taskId}`, {
+          parseJson: true,
+          throwOnError: true,
+        }) as any
+        
+        status = statusResponse?.status
+        const progress = statusResponse?.progress ?? 0
+        const message = statusResponse?.message ?? ''
+        
+        if (message) {
+          // Update last progress step or add new one
+          const lastIndex = progressSteps.value.length - 1
+          if (lastIndex >= 0 && progressSteps.value[lastIndex].startsWith(message.split(' ')[0])) {
+            progressSteps.value[lastIndex] = message
+          } else {
+            addProgressStep(message)
+          }
+        }
+        
+        attempts++
+      }
 
-      setTimeout(() => {
-        showProgressModal.value = false
-      }, 2000)
+      if (status === 'completed') {
+        addProgressStep(`Model ${model} trained successfully!`)
+        addProgressStep(`Generated ${statusResponse?.count || 0} forecast records`)
+        
+        if (statusResponse?.metrics) {
+          const metrics = statusResponse.metrics
+          const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
+          if (metricStrs.length) {
+            addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
+          }
+        }
+
+        await load()
+
+        setTimeout(() => {
+          showProgressModal.value = false
+        }, 2000)
+      } else if (status === 'failed') {
+        throw new Error(statusResponse?.message || 'Training failed')
+      }
     } catch (e: any) {
       progressError.value = e?.message || "Failed to run model"
       addProgressStep(`Error: ${progressError.value}`)
