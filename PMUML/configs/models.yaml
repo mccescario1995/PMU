@@ -10,7 +10,6 @@ arima:
   q: 1
   fit_options:
     method: "lbfgs"
-    maxiter: 200
 
 sarima:
   model_type: sarimax

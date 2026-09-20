@@ -39,6 +39,11 @@ function downloadReport(url: string, type: string, dateMonthYear: string) {
       Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     },
   }).then((response) => {
+    if (!response.ok) {
+      return response.text().then((text) => {
+        throw new Error(`Export failed: ${response.status} ${response.statusText} - ${text}`);
+      });
+    }
     return response.blob();
   }).then((blob) => {
     const url = window.URL.createObjectURL(blob);
@@ -51,6 +56,7 @@ function downloadReport(url: string, type: string, dateMonthYear: string) {
     document.body.removeChild(a);
   }).catch((error) => {
     console.error("Export failed:", error);
+    alert(`Failed to export report: ${error.message}`);
   });
 }
 </script>
