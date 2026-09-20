@@ -323,8 +323,7 @@ const columns: TableColumn<Transactions>[] = [
     accessorKey: "type",
     header: "Type(s)",
     cell: ({ row }) => {
-      const tx = data.value.find((t: any) => t.id === row.getValue("id"));
-      return formatFeeTypes(tx?.items ?? []);
+      return formatFeeTypes(row.original.items ?? []);
     },
   },
   {
@@ -349,12 +348,11 @@ const columns: TableColumn<Transactions>[] = [
     accessorKey: "revenue_impact",
     header: "Revenue Impact",
     cell: ({ row }) => {
-      const tx = data.value.find((t: any) => t.id === row.getValue("id"));
-      if (!tx) return "-";
-      if (tx.status === "completed") {
+      if (!row.original) return "-";
+      if (row.original.status === "completed") {
         return h("span", { class: "text-sm font-semibold text-success" }, "● Revenue Active");
       }
-      if (tx.status === "cancelled") {
+      if (row.original.status === "cancelled") {
         return h("span", { class: "text-sm font-semibold text-error" }, "● Revenue Reversed");
       }
       return h("span", { class: "text-sm font-semibold text-slate-400" }, "● Pending");
