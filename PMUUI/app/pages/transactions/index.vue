@@ -43,6 +43,9 @@ const {
       `/v1/transactions?${params.toString()}`,
       { parseJson: true },
     );
+    console.log("API response:", result);
+    console.log("Fetched transactions:", result.data);
+    console.log("Total transactions:", result.meta.total);
     return { data: result.data, total: result.meta.total };
   },
 });
