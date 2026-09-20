@@ -159,7 +159,7 @@ export function useForecast(endpoint: string = '/v1/forecasts', model: string = 
 
     addProgressStep(`Initializing ${model} model...`)
 
-    const days = (model === "sarima" || model === "samira") ? 180 : 365
+    const days = (model === "sarima" || model === "samira") ? 30 : 180
     const pmuModel = model === 'arima' ? 'amira' : model === 'sarima' ? 'samira' : model
 
     try {
