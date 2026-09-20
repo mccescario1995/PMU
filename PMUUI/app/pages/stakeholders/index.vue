@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from "~/composables/useApiFetch";
-import { onMounted, ref, computed, watch, h } from "vue";
+import { onMounted, ref, computed, watch, h, reactive } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
@@ -130,7 +130,7 @@ function validateForm(): boolean {
     errors.status = "";
   }
 
-  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+  if (form.email && form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
     errors.email = "Invalid email format";
     isValid = false;
   } else {
@@ -259,7 +259,7 @@ const columns: TableColumn<Stakeholder>[] = [
     cell: ({ row }) => {
       const rawType = row.getValue("type");
       const typeName = row.original.stakeholder_type?.name ?? rawType;
-      const color = typeColor[rawType as keyof typeof typeColor];
+      const color = typeColor[rawType as keyof typeof typeColor] ?? "neutral";
 
       return h(
         UBadge,
