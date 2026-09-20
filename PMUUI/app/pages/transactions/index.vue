@@ -43,6 +43,7 @@ const {
       `/v1/transactions?${params.toString()}`,
       { parseJson: true },
     );
+    
     return { data: result.data, total: result.meta.total };
   },
 });

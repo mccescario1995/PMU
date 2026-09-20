@@ -14,6 +14,10 @@ definePageMeta({
 const { can } = usePermissions();
 const toast = useToast();
 
+onMounted(() => {
+  loadTypes();
+});
+
 const UBadge = resolveComponent("UBadge");
 
 const typeColor = {
@@ -45,17 +49,17 @@ const {
     if (searchQuery.value) {
       params.set("search", searchQuery.value);
     }
-    console.log("Fetching stakeholders with params:", params.toString());
     if (typeFilter.value) {
-      params.set("type", typeFilter.value);
+      const typeObj = types.value.find(
+        (t: any) => t.name.toLowerCase() === typeFilter.value,
+      );
+      if (typeObj) {
+        params.set("stakeholder_type_id", String(typeObj.id));
+      }
     }
-    console.log("Fetching stakeholders with type filter:", typeFilter.value);
     const result = await apiFetch(`/v1/stakeholders?${params.toString()}`, {
       parseJson: true,
     });
-    console.log("API response:", result);
-    console.log("Fetched stakeholders:", result.data);
-    console.log("Total stakeholders:", result.meta.total);
     return { data: result.data, total: result.meta.total };
   },
 });
@@ -65,8 +69,9 @@ watch(searchQuery, () => {
   refresh();
 });
 
-watch(typeFilter, () => {
+watch(typeFilter, async () => {
   page.value = 1;
+  await loadTypes();
   refresh();
 });
 
@@ -261,13 +266,12 @@ const columns: TableColumn<Stakeholder>[] = [
     header: "Name",
   },
   {
-    accessorKey: "type",
+    accessorKey: "stakeholder_type_id",
     header: "Type",
     cell: ({ row }) => {
-      const rawType = row.getValue("type");
-      const typeName = row.original.stakeholder_type?.name ?? rawType;
+      const typeName = row.original.stakeholder_type?.name ?? "Unknown";
+      const rawType = typeName.toLowerCase();
       const color = typeColor[rawType as keyof typeof typeColor] ?? "neutral";
-
       return h(
         UBadge,
         { class: "capitalize", variant: "subtle", color },
