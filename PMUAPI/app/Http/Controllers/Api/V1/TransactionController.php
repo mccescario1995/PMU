@@ -19,6 +19,18 @@ class TransactionController extends Controller
     {
         $query = Transaction::with(['stakeholder', 'items.feeType', 'recordedBy'])->latest();
 
+        if ($orNumber = trim((string) request('or_number', ''))) {
+            $query->where('or_number', 'like', "%{$orNumber}%");
+        }
+
+        if ($dateFrom = request('date_from')) {
+            $query->whereDate('transaction_date', '>=', $dateFrom);
+        }
+
+        if ($dateTo = request('date_to')) {
+            $query->whereDate('transaction_date', '<=', $dateTo);
+        }
+
         if (request()->has('page')) {
             return TransactionResource::collection($query->paginate(request('per_page', 10)));
         }

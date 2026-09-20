@@ -43,9 +43,6 @@ const {
       `/v1/transactions?${params.toString()}`,
       { parseJson: true },
     );
-    console.log("API response:", result);
-    console.log("Fetched transactions:", result.data);
-    console.log("Total transactions:", result.meta.total);
     return { data: result.data, total: result.meta.total };
   },
 });
@@ -222,6 +219,23 @@ function calculateTotal() {
   return form.items.reduce((sum, item) => sum + calculateSubtotal(item), 0);
 }
 
+function resetPageAndRefresh() {
+  if (page.value !== 1) {
+    page.value = 1;
+    return;
+  }
+
+  goToPageInput.value = 1;
+  refresh();
+}
+
+function clearFilters() {
+  searchQuery.value = "";
+  dateFilter.value = "";
+  dateFilterEnd.value = "";
+  resetPageAndRefresh();
+}
+
 async function save() {
   saving.value = true;
   try {
@@ -309,10 +323,7 @@ const columns: TableColumn<Transactions>[] = [
   {
     accessorKey: "or",
     header: "OR #",
-    cell: ({ row }) => {
-      const tx = data.value.find((t: any) => t.id === row.getValue("id"));
-      return tx ? (tx.or_number ?? "-") : "-";
-    },
+    cell: ({ row }) => row.original.or_number ?? "-",
   },
   {
     accessorKey: "stakeholder",
@@ -398,7 +409,7 @@ onMounted(() => {
         v-model="searchQuery"
         placeholder="Search by OR Number"
         class="w-64"
-        @keyup.enter="refresh"
+        @keyup.enter="resetPageAndRefresh"
       >
         <template #leading>
           <UIcon name="i-lucide-search" />
@@ -409,16 +420,16 @@ onMounted(() => {
         type="date"
         placeholder="From Date"
         class="w-40"
-        @change="refresh"
+        @change="resetPageAndRefresh"
       />
       <UInput
         v-model="dateFilterEnd"
         type="date"
         placeholder="To Date"
         class="w-40"
-        @change="refresh"
+        @change="resetPageAndRefresh"
       />
-      <UButton variant="outline" @click="searchQuery = ''; dateFilter = ''; dateFilterEnd = ''; refresh()">
+      <UButton variant="outline" @click="clearFilters">
         <UIcon name="i-lucide-x" class="mr-1" /> Clear
       </UButton>
     </div>
