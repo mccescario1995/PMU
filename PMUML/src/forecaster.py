@@ -59,16 +59,20 @@ class Forecaster:
             if canonical_model_name == "arima":
                 cfg = self.config.get_model_config("arima")
                 self._models[canonical_model_name] = ARIMAModel(
-                    order=(cfg.get("p", 1), cfg.get("d", 1), cfg.get("q", 1))
+                    order=(cfg.get("p", 1), cfg.get("d", 1), cfg.get("q", 1)),
+                    fit_options=cfg.get("fit_options", {}),
                 )
             elif canonical_model_name == "sarima":
                 cfg = self.config.get_model_config("sarima")
                 p, d, q = cfg.get("p", 1), cfg.get("d", 1), cfg.get("q", 1)
-                m = cfg.get("m", 7)
+                P, D, Q = cfg.get("P", 1), cfg.get("D", 1), cfg.get("Q", 1)
+                m = cfg.get("m", 12)
+                fit_options = cfg.get("fit_options", {})
                 self._models[canonical_model_name] = SARIMAModel(
                     order=(p, d, q),
-                    seasonal_order=(1, d, 1, m),
+                    seasonal_order=(P, D, Q, m),
                     max_training_rows=cfg.get("training_days"),
+                    fit_options=fit_options,
                 )
             elif canonical_model_name == "linear_regression":
                 cfg = self.config.get_model_config("linear_regression")
