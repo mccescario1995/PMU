@@ -20,6 +20,10 @@ class StakeholderController extends Controller
             $query->where('type', $type);
         }
 
+        if ($stakeholder_type_id = request('stakeholder_type_id')) {
+            $query->where('stakeholder_type_id', $stakeholder_type_id);
+        }
+
         if ($search = request('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
