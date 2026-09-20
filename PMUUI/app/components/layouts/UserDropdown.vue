@@ -14,6 +14,11 @@ const dropdownItems = [
       icon: 'i-lucide-settings',
       to: '/settings',
     },
+    {
+      label: 'Change Password',
+      icon: 'i-lucide-lock',
+      to: '/profile/change_password',
+    },
   ],
   [
     {
