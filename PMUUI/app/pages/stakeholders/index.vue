@@ -45,12 +45,17 @@ const {
     if (searchQuery.value) {
       params.set("search", searchQuery.value);
     }
+    console.log("Fetching stakeholders with params:", params.toString());
     if (typeFilter.value) {
       params.set("type", typeFilter.value);
     }
+    console.log("Fetching stakeholders with type filter:", typeFilter.value);
     const result = await apiFetch(`/v1/stakeholders?${params.toString()}`, {
       parseJson: true,
     });
+    console.log("API response:", result);
+    console.log("Fetched stakeholders:", result.data);
+    console.log("Total stakeholders:", result.meta.total);
     return { data: result.data, total: result.meta.total };
   },
 });
