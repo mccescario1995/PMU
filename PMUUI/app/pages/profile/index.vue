@@ -211,8 +211,6 @@ async function handleProfilePictureUpload() {
             <div class="flex flex-col items-center space-y-4 pb-4 border-b border-slate-200">
                 <UAvatar :src="profilePictureUrl" :name="form.name || 'User'" size="xl"
                     class="ring-4 ring-primary/10" />
-
-                    {{ profilePictureUrl }}
                 <div class="flex gap-2">
                     <input type="file" ref="profilePictureInput" class="hidden" accept="image/*"
                         @change="handleProfilePictureUpload" />
