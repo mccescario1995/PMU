@@ -4,7 +4,7 @@ import { onMounted, watch, ref, reactive, computed } from 'vue'
 import { usePermissions } from '~/composables/usePermissions'
 import { useToast } from '#imports'
 
-export function useForecast(endpoint: string = '/v1/forecasts', model: string = '') {
+export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: string = '/v1/forecasts/run-model', model: string = '') {
   const { can } = usePermissions()
   const toast = useToast()
 
@@ -159,107 +159,28 @@ export function useForecast(endpoint: string = '/v1/forecasts', model: string = 
 
     addProgressStep(`Initializing ${model} model...`)
 
+    const timeout = model === "sarima" || model === "samira" ? 240000 : 60000
     const days = (model === "sarima" || model === "samira") ? 180 : 365
-    const pmuModel = model === 'arima' ? 'amira' : model === 'sarima' ? 'samira' : model
-
-    // Try direct PMUML call first, fallback to Laravel proxy
-    let pmumlResponse: any = null
-    let usedFallback = false
-
-    const tryDirectPmuml = async (): Promise<any> => {
-      const pmumlUrl = 'https://pmuml.onrender.com/forecast'
-      return await $fetch(`${pmumlUrl}?model=${pmuModel}&days=${days}&post_to_api=false`, {
-        method: 'POST',
-        body: {},
-        timeout: 300000,
-      })
-    }
-
-    const tryLaravelProxy = async (): Promise<any> => {
-      // Use Laravel's train endpoint with sync=true to get results directly
-      const response = await apiFetch('/v1/forecasts/run-model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, days, sync: true }),
-        parseJson: true,
-        throwOnError: true,
-        timeout: 300000,
-      }) as any
-      return response
-    }
 
     try {
-      addProgressStep("Fetching historical data from PMUML...")
-      
-      // Try direct call with retry
-      let lastError: any = null
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          pmumlResponse = await tryDirectPmuml()
-          break
-        } catch (e: any) {
-          lastError = e
-          if (attempt < 2) {
-            addProgressStep(`Retrying... (attempt ${attempt + 1})`)
-            await new Promise(r => setTimeout(r, 2000))
-          }
-        }
-      }
-
-      // Fallback to Laravel proxy if direct call fails
-      if (!pmumlResponse && lastError) {
-        addProgressStep("Direct PMUML call failed, trying Laravel proxy...")
-        usedFallback = true
-        try {
-          pmumlResponse = await tryLaravelProxy()
-        } catch (fallbackError: any) {
-          throw new Error(`Both direct and proxy calls failed: ${fallbackError.message}`)
-        }
-      }
-
-      if (!pmumlResponse) {
-        throw new Error('Failed to get response from PMUML')
-      }
-
+      addProgressStep("Fetching historical data...")
       addProgressStep("Training model...")
       
-      if (!pmumlResponse?.forecasts || !Array.isArray(pmumlResponse.forecasts)) {
-        throw new Error('Invalid PMUML response format')
-      }
-
+      const response = await apiFetch(trainEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, days }),
+        parseJson: true,
+        throwOnError: true,
+        timeout,
+      }) as any
+      
       addProgressStep("Generating forecasts...")
+      addProgressStep(`Model ${model} trained successfully!`)
+      addProgressStep(`Generated ${response?.saved_forecasts?.length || 0} forecast records`)
 
-      const saved = []
-      for (const item of pmumlResponse.forecasts) {
-        const forecastDate = item.date
-        const predicted = item.predicted_revenue
-        
-        if (!forecastDate || predicted === null) continue
-
-        const month = new Date(forecastDate).getMonth() + 1
-        const peakMonths = [11, 12, 1, 2, 3, 4]
-        const season = peakMonths.includes(month) ? 'Peak' : 'Off-Peak'
-
-        const response = await apiFetch('/v1/forecasts/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            forecast_date: forecastDate,
-            predicted_revenue: Number(predicted),
-            season,
-            model_version: `${model}-v1`,
-          }),
-          parseJson: true,
-          throwOnError: true,
-        })
-        saved.push(response)
-      }
-
-      addProgressStep(`Model ${model.toUpperCase()} trained successfully!`)
-      addProgressStep(`Generated ${saved.length} forecast records`)
-
-      if (pmumlResponse?.metrics) {
-        const metrics = pmumlResponse.metrics
+      if (response?.metrics) {
+        const metrics = response.metrics
         const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
         if (metricStrs.length) {
           addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
@@ -361,5 +282,6 @@ export function useForecast(endpoint: string = '/v1/forecasts', model: string = 
     columns,
     can,
     load,
+    trainEndpoint,
   }
 }

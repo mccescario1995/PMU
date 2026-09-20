@@ -8,8 +8,6 @@ arima:
   p: 1
   d: 1
   q: 1
-  fit_options:
-    method: "lbfgs"
 
 sarima:
   model_type: sarimax
@@ -22,9 +20,3 @@ sarima:
   m: 12
   training_days: 365
   exog: true
-  fit_options:
-    method: "lbfgs"
-    maxiter: 300
-    disp: false
-    ftol: 1e-6
-    gtol: 1e-6

@@ -24,14 +24,7 @@ class SARIMAModel(BaseModel):
         self.order = order
         self.seasonal_order = seasonal_order
         self.max_training_rows = max_training_rows
-        # Better default fit options for convergence
-        self.fit_options = {
-            "method": "lbfgs",
-            "maxiter": 200,
-            "disp": False,
-            "ftol": 1e-6,
-            "gtol": 1e-6,
-        }
+        self.fit_options = {"method": "lbfgs", "maxiter": 50}
         if fit_options:
             self.fit_options.update(fit_options)
         self._SARIMAX = None

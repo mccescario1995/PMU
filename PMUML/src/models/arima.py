@@ -12,20 +12,9 @@ except ImportError:
 
 
 class ARIMAModel(BaseModel):
-    def __init__(
-        self,
-        order: tuple = (1, 1, 1),
-        max_training_rows: Optional[int] = None,
-        fit_options: Optional[Dict[str, Any]] = None,
-        **kwargs,
-    ):
+    def __init__(self, order: tuple = (1, 1, 1), **kwargs):
         super().__init__(model_name="arima")
         self.order = order
-        self.max_training_rows = max_training_rows
-        # ARIMA fit() - only use method parameter to avoid optimizer-specific kwargs
-        self.fit_options = {"method": "lbfgs"}
-        if fit_options and "method" in fit_options:
-            self.fit_options["method"] = fit_options["method"]
 
     def fit(
         self,
@@ -47,14 +36,11 @@ class ARIMAModel(BaseModel):
         train, test = series.iloc[:split], series.iloc[split:]
         self.y_test = test
 
-        if self.max_training_rows is not None and self.max_training_rows > 0 and len(train) > self.max_training_rows:
-            train = train.iloc[-self.max_training_rows:]
-
         try:
-            self.result = _ARIMA(train, order=self.order).fit(**self.fit_options)
+            self.result = _ARIMA(train, order=self.order).fit()
         except Exception as e:
             logger.warning(f"ARIMA fit failed with order {self.order}, falling back to (1,1,0): {e}")
-            self.result = _ARIMA(train, order=(1, 1, 0)).fit(**self.fit_options)
+            self.result = _ARIMA(train, order=(1, 1, 0)).fit()
 
         self._is_fitted = True
         return self

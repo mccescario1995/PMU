@@ -240,7 +240,6 @@ Route::prefix('v1')->group(function () {
             Route::post('/train/arima', [ForecastController::class, 'runModel'])->defaults('model', 'arima');
             Route::post('/train/sarima', [ForecastController::class, 'runModel'])->defaults('model', 'sarima');
             Route::post('/train/linear-regression', [ForecastController::class, 'runModel'])->defaults('model', 'linear_regression');
-            Route::get('/train/status/{taskId}', [ForecastController::class, 'trainStatus']);
         });
 
         /*
