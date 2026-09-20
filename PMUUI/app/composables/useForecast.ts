@@ -4,7 +4,7 @@ import { onMounted, watch, ref, reactive, computed } from 'vue'
 import { usePermissions } from '~/composables/usePermissions'
 import { useToast } from '#imports'
 
-export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: string = '/v1/forecasts/run-model', model: string = '') {
+export function useForecast(endpoint: string = '/v1/forecasts', model: string = '') {
   const { can } = usePermissions()
   const toast = useToast()
 
@@ -159,78 +159,76 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
 
     addProgressStep(`Initializing ${model} model...`)
 
+    const days = (model === "sarima" || model === "samira") ? 180 : 365
+    const pmuModel = model === 'arima' ? 'amira' : model === 'sarima' ? 'samira' : model
+
     try {
-      addProgressStep("Starting training job...")
+      addProgressStep("Fetching historical data from PMUML...")
       
-      const response = await apiFetch(trainEndpoint, {
+      // Call PMUML directly (bypasses Hostinger proxy timeout)
+      const pmumlUrl = 'https://pmuml.onrender.com/forecast'
+      const pmumlResponse = await $fetch(`${pmumlUrl}?model=${pmuModel}&days=${days}&post_to_api=false`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, days: (model === "sarima" || model === "samira") ? 180 : 365 }),
-        parseJson: true,
-        throwOnError: true,
+        body: {},
+        timeout: 300000, // 5 min
       }) as any
 
-      const taskId = response?.task_id
-      if (!taskId) {
-        throw new Error('No task ID returned from server')
+      addProgressStep("Training model...")
+      
+      if (!pmumlResponse?.forecasts || !Array.isArray(pmumlResponse.forecasts)) {
+        throw new Error('Invalid PMUML response format')
       }
 
-      addProgressStep("Training queued, waiting for completion...")
+      addProgressStep("Generating forecasts...")
+
+      // Save forecasts via Laravel generate endpoint
+      const forecastClass = model === 'arima' ? 'amira' : model === 'sarima' ? 'samira' : 'linear_regression'
       
-      // Poll for status
-      let status = 'pending'
-      let attempts = 0
-      const maxAttempts = 120 // 10 minutes max (5s intervals)
+      // Clear existing forecasts for this model first
+      // Note: This requires a backend endpoint or we save individually
       
-      while (status === 'pending' || status === 'running') {
-        if (attempts >= maxAttempts) {
-          throw new Error('Training timed out')
-        }
+      const saved = []
+      for (const item of pmumlResponse.forecasts) {
+        const forecastDate = item.date
+        const predicted = item.predicted_revenue
         
-        await new Promise(resolve => setTimeout(resolve, 5000))
-        
-        const statusResponse = await apiFetch(`/v1/forecasts/train/status/${taskId}`, {
+        if (!forecastDate || predicted === null) continue
+
+        const month = new Date(forecastDate).getMonth() + 1
+        const peakMonths = [11, 12, 1, 2, 3, 4] // Approximate - should come from backend
+        const season = peakMonths.includes(month) ? 'Peak' : 'Off-Peak'
+
+        const response = await apiFetch('/v1/forecasts/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            forecast_date: forecastDate,
+            predicted_revenue: Number(predicted),
+            season,
+            model_version: `${model}-v1`,
+          }),
           parseJson: true,
           throwOnError: true,
-        }) as any
-        
-        status = statusResponse?.status
-        const progress = statusResponse?.progress ?? 0
-        const message = statusResponse?.message ?? ''
-        
-        if (message) {
-          // Update last progress step or add new one
-          const lastIndex = progressSteps.value.length - 1
-          if (lastIndex >= 0 && progressSteps.value[lastIndex].startsWith(message.split(' ')[0])) {
-            progressSteps.value[lastIndex] = message
-          } else {
-            addProgressStep(message)
-          }
-        }
-        
-        attempts++
+        })
+        saved.push(response)
       }
 
-      if (status === 'completed') {
-        addProgressStep(`Model ${model} trained successfully!`)
-        addProgressStep(`Generated ${statusResponse?.count || 0} forecast records`)
-        
-        if (statusResponse?.metrics) {
-          const metrics = statusResponse.metrics
-          const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
-          if (metricStrs.length) {
-            addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
-          }
+      addProgressStep(`Model ${model.toUpperCase()} trained successfully!`)
+      addProgressStep(`Generated ${saved.length} forecast records`)
+
+      if (pmumlResponse?.metrics) {
+        const metrics = pmumlResponse.metrics
+        const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
+        if (metricStrs.length) {
+          addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
         }
-
-        await load()
-
-        setTimeout(() => {
-          showProgressModal.value = false
-        }, 2000)
-      } else if (status === 'failed') {
-        throw new Error(statusResponse?.message || 'Training failed')
       }
+
+      await load()
+
+      setTimeout(() => {
+        showProgressModal.value = false
+      }, 2000)
     } catch (e: any) {
       progressError.value = e?.message || "Failed to run model"
       addProgressStep(`Error: ${progressError.value}`)
@@ -321,6 +319,5 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     columns,
     can,
     load,
-    trainEndpoint,
   }
 }
