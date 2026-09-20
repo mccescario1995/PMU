@@ -22,11 +22,11 @@ class ARIMAModel(BaseModel):
         super().__init__(model_name="arima")
         self.order = order
         self.max_training_rows = max_training_rows
-        # ARIMA fit() - only pass known safe params
-        self.fit_options = {"method": "lbfgs", "disp": False}
+        # ARIMA fit() - only pass known safe params (statsmodels ARIMA.fit params)
+        self.fit_options = {"method": "lbfgs"}
         if fit_options:
-            # Only allow known params to avoid unexpected keyword errors
-            allowed = {"method", "disp", "maxiter", "ftol", "gtol", "tol"}
+            # Only allow known params for ARIMA.fit()
+            allowed = {"method", "maxiter", "ftol", "gtol", "tol", "full_output", "start_params", "cov_type", "cov_kwds"}
             self.fit_options.update({k: v for k, v in fit_options.items() if k in allowed})
 
     def fit(

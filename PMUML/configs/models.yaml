@@ -11,7 +11,6 @@ arima:
   fit_options:
     method: "lbfgs"
     maxiter: 200
-    disp: false
 
 sarima:
   model_type: sarimax
