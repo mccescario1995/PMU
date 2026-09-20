@@ -200,6 +200,88 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     }
   }
 
+  // Direct SARIMA training: PMUUI -> PMUML (bypasses Laravel proxy timeout)
+  async function runSarimaDirect() {
+    modelLoading.value = true
+    modelError.value = ""
+    clearProgress()
+    showProgressModal.value = true
+
+    addProgressStep("Initializing SARIMA model...")
+
+    const pmuModel = 'samira'
+    const days = 30
+
+    try {
+      addProgressStep("Fetching historical data from PMUML...")
+      
+      // Call PMUML directly (bypasses Hostinger proxy timeout)
+      const pmumlUrl = 'https://pmuml.onrender.com/forecast'
+      const pmumlResponse = await $fetch(`${pmumlUrl}?model=${pmuModel}&days=${days}&post_to_api=false`, {
+        method: 'POST',
+        body: {},
+        timeout: 300000, // 5 min
+      }) as any
+
+      addProgressStep("Training model...")
+      
+      if (!pmumlResponse?.forecasts || !Array.isArray(pmumlResponse.forecasts)) {
+        throw new Error('Invalid PMUML response format')
+      }
+
+      addProgressStep("Generating forecasts...")
+
+      // Save forecasts via Laravel generate endpoint
+      const saved = []
+      for (const item of pmumlResponse.forecasts) {
+        const forecastDate = item.date
+        const predicted = item.predicted_revenue
+        
+        if (!forecastDate || predicted === null) continue
+
+        const month = new Date(forecastDate).getMonth() + 1
+        const peakMonths = [11, 12, 1, 2, 3, 4]
+        const season = peakMonths.includes(month) ? 'Peak' : 'Off-Peak'
+
+        const response = await apiFetch('/v1/forecasts/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            forecast_date: forecastDate,
+            predicted_revenue: Number(predicted),
+            season,
+            model_version: 'sarima-v1',
+          }),
+          parseJson: true,
+          throwOnError: true,
+        })
+        saved.push(response)
+      }
+
+      addProgressStep(`Model SARIMA trained successfully!`)
+      addProgressStep(`Generated ${saved.length} forecast records`)
+
+      if (pmumlResponse?.metrics) {
+        const metrics = pmumlResponse.metrics
+        const metricStrs = Object.entries(metrics).map(([k, v]) => `${k}: ${v}`)
+        if (metricStrs.length) {
+          addProgressStep(`Metrics: ${metricStrs.join(', ')}`)
+        }
+      }
+
+      await load()
+
+      setTimeout(() => {
+        showProgressModal.value = false
+      }, 2000)
+    } catch (e: any) {
+      progressError.value = e?.message || "Failed to run model"
+      addProgressStep(`Error: ${progressError.value}`)
+    } finally {
+      modelLoading.value = false
+    }
+  }
+
   async function remove(row: any) {
     if (!confirm('Delete this forecast?')) return
     const deleteUrl = model
@@ -270,6 +352,7 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     reset,
     submit,
     runModel,
+    runSarimaDirect,
     remove,
     openCreate,
     openView,

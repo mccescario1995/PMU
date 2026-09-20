@@ -24,7 +24,7 @@ const {
   viewing,
   reset,
   submit,
-  runModel,
+  runSarimaDirect,
   remove,
   openCreate,
   openView,
@@ -68,7 +68,7 @@ const UBadge = resolveComponent('UBadge')
         <UButton
           icon="i-lucide-wand-2"
           :loading="modelLoading"
-          @click="runModel('sarima')"
+          @click="runSarimaDirect"
         >
           Run {{ modelLabel }}
         </UButton>
