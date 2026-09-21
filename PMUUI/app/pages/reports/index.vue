@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import * as XLSX from "xlsx";
 import { apiFetch } from "~/composables/useApiFetch";
 
 definePageMeta({
@@ -12,104 +11,12 @@ const selectedMonth = ref(new Date().toISOString().slice(0, 7));
 const selectedYear = ref(new Date().getFullYear());
 const isLoading = ref(false);
 
-async function fetchReport(type: string, dateMonthYear: string) {
-  let endpoint = "";
-  if (type === "daily") {
-    endpoint = `/v1/reports/daily?date=${dateMonthYear}`;
-  } else if (type === "monthly") {
-    endpoint = `/v1/reports/monthly?month=${dateMonthYear}`;
-  } else if (type === "yearly") {
-    endpoint = `/v1/reports/yearly?year=${dateMonthYear}`;
-  }
-  
-  const response = await apiFetch<any>(endpoint, { parseJson: true });
-  return (response as any).transactions ?? [];
-}
-
-function getFeeTypes(transactions: any[]): string[] {
-  const feeTypeSet = new Set<string>();
-  transactions.forEach((t) => {
-    t.items?.forEach((item: any) => {
-      if (item.fee_type?.fee_name) {
-        feeTypeSet.add(item.fee_type.fee_name);
-      }
-    });
-  });
-  return Array.from(feeTypeSet).sort();
-}
-
-function generateExcel(transactions: any[], type: string, label: string) {
-  const feeTypes = getFeeTypes(transactions);
-  
-  // Build header row
-  const headers = ["Date", "Time", "Transaction ID", "Stakeholder", "Status", ...feeTypes, "Total"];
-  
-  // Build data rows
-  const rows = transactions.map((t) => {
-    const row: Record<string, any> = {
-      Date: t.transaction_date?.slice(0, 10) || "",
-      Time: t.transaction_date?.slice(11, 19) || "",
-      "Transaction ID": t.id || "",
-      Stakeholder: t.stakeholder?.name || "",
-      Status: t.status || "",
-    };
-    
-    // Initialize fee type columns to 0
-    feeTypes.forEach(ft => row[ft] = 0);
-    
-    // Fill in fee type amounts from items
-    t.items?.forEach((item: any) => {
-      const feeName = item.fee_type?.fee_name;
-      if (feeName && feeTypes.includes(feeName)) {
-        row[feeName] = Number(item.subtotal) || 0;
-      }
-    });
-    
-    row.Total = Number(t.total_amount) || 0;
-    
-    // Convert to array in header order
-    return headers.map(h => row[h]);
-  });
-  
-  // Create worksheet
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Transactions");
-
-  // Auto-size columns
-  const colWidths = headers.map((h, i) => {
-    let maxLen = h.length;
-    rows.forEach(r => {
-      const val = r[i]?.toString() || "";
-      if (val.length > maxLen) maxLen = val.length;
-    });
-    return { wch: Math.min(maxLen + 2, 30) };
-  });
-  ws["!cols"] = colWidths;
-
-  // Write to buffer and download
-  const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${type}-report-${label}.xlsx`;
-  document.body.appendChild(a);
-  a.click();
-  window.URL.revokeObjectURL(url);
-  document.body.removeChild(a);
-}
-
 async function exportDaily() {
   isLoading.value = true;
   try {
     const date = selectedDate.value;
-    const transactions = await fetchReport("daily", date);
-    if (transactions.length === 0) {
-      alert("No transactions found for this date");
-      return;
-    }
-    generateExcel(transactions, "daily", date);
+    const endpoint = `/v1/reports/transaction/xlsx?type=daily&date=${date}`;
+    await downloadReport(endpoint, "daily", date);
   } catch (error: any) {
     console.error("Export failed:", error);
     alert(`Failed to export daily report: ${error.message || error}`);
@@ -122,12 +29,8 @@ async function exportMonthly() {
   isLoading.value = true;
   try {
     const month = selectedMonth.value; // format: YYYY-MM
-    const transactions = await fetchReport("monthly", month);
-    if (transactions.length === 0) {
-      alert("No transactions found for this month");
-      return;
-    }
-    generateExcel(transactions, "monthly", month);
+    const endpoint = `/v1/reports/transaction/xlsx?type=monthly&month=${month}`;
+    await downloadReport(endpoint, "monthly", month);
   } catch (error: any) {
     console.error("Export failed:", error);
     alert(`Failed to export monthly report: ${error.message || error}`);
@@ -140,18 +43,48 @@ async function exportYearly() {
   isLoading.value = true;
   try {
     const year = selectedYear.value;
-    const transactions = await fetchReport("yearly", String(year));
-    if (transactions.length === 0) {
-      alert("No transactions found for this year");
-      return;
-    }
-    generateExcel(transactions, "yearly", String(year));
+    const endpoint = `/v1/reports/transaction/xlsx?type=yearly&year=${year}`;
+    await downloadReport(endpoint, "yearly", String(year));
   } catch (error: any) {
     console.error("Export failed:", error);
     alert(`Failed to export yearly report: ${error.message || error}`);
   } finally {
     isLoading.value = false;
   }
+}
+
+async function downloadReport(endpoint: string, type: string, dateMonthYear: string) {
+  const config = useRuntimeConfig();
+  const baseURL = config.public.apiBase + "/api";
+  const fullUrl = `${baseURL}${endpoint}`;
+
+  const token = useAuth().accessToken.value;
+  const headers: HeadersInit = {
+    Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(fullUrl, {
+    method: "GET",
+    headers,
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Export failed: ${response.status} ${response.statusText} - ${text}`);
+  }
+
+  const blob = await response.blob();
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = downloadUrl;
+  a.download = `${type}-report-${dateMonthYear}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(downloadUrl);
+  document.body.removeChild(a);
 }
 </script>
 
