@@ -12,68 +12,82 @@ const selectedMonth = ref(new Date().toISOString().slice(0, 7));
 const selectedYear = ref(new Date().getFullYear());
 const isLoading = ref(false);
 
-async function fetchTransactions(startDate: string, endDate: string) {
-  const allTransactions: any[] = [];
-  let page = 1;
-  const perPage = 200;
-
-  while (true) {
-    const response = await apiFetch<any>(`/v1/transactions?page=${page}&per_page=${perPage}`, {
-      parseJson: true,
-    });
-
-    let data: any[] = [];
-    if (response && typeof response === "object") {
-      data = (response as any).data || response;
-    }
-
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      break;
-    }
-
-    const filtered = data.filter((t: any) => {
-      const txnDate = t.transaction_date?.slice(0, 10);
-      return txnDate && txnDate >= startDate && txnDate <= endDate;
-    });
-
-    allTransactions.push(...filtered);
-
-    if (data.length < perPage) {
-      break;
-    }
-    page++;
+async function fetchReport(type: string, dateMonthYear: string) {
+  let endpoint = "";
+  if (type === "daily") {
+    endpoint = `/v1/reports/daily?date=${dateMonthYear}`;
+  } else if (type === "monthly") {
+    endpoint = `/v1/reports/monthly?month=${dateMonthYear}`;
+  } else if (type === "yearly") {
+    endpoint = `/v1/reports/yearly?year=${dateMonthYear}`;
   }
+  
+  const response = await apiFetch<any>(endpoint, { parseJson: true });
+  return (response as any).transactions ?? [];
+}
 
-  return allTransactions;
+function getFeeTypes(transactions: any[]): string[] {
+  const feeTypeSet = new Set<string>();
+  transactions.forEach((t) => {
+    t.items?.forEach((item: any) => {
+      if (item.fee_type?.fee_name) {
+        feeTypeSet.add(item.fee_type.fee_name);
+      }
+    });
+  });
+  return Array.from(feeTypeSet).sort();
 }
 
 function generateExcel(transactions: any[], type: string, label: string) {
-  const exportData = transactions.map((t) => ({
-    Date: t.transaction_date?.slice(0, 10) || "",
-    Time: t.transaction_date?.slice(11, 19) || "",
-    Amount: Number(t.total_amount) || 0,
-    "Payment Method": t.payment_method || "",
-    "Station ID": t.station_id || "",
-    "Vehicle Type": t.vehicle_type || "",
-    "Transaction ID": t.id || "",
-  }));
-
-  const ws = XLSX.utils.json_to_sheet(exportData);
+  const feeTypes = getFeeTypes(transactions);
+  
+  // Build header row
+  const headers = ["Date", "Time", "Transaction ID", "Stakeholder", "Status", ...feeTypes, "Total"];
+  
+  // Build data rows
+  const rows = transactions.map((t) => {
+    const row: Record<string, any> = {
+      Date: t.transaction_date?.slice(0, 10) || "",
+      Time: t.transaction_date?.slice(11, 19) || "",
+      "Transaction ID": t.id || "",
+      Stakeholder: t.stakeholder?.name || "",
+      Status: t.status || "",
+    };
+    
+    // Initialize fee type columns to 0
+    feeTypes.forEach(ft => row[ft] = 0);
+    
+    // Fill in fee type amounts from items
+    t.items?.forEach((item: any) => {
+      const feeName = item.fee_type?.fee_name;
+      if (feeName && feeTypes.includes(feeName)) {
+        row[feeName] = Number(item.subtotal) || 0;
+      }
+    });
+    
+    row.Total = Number(t.total_amount) || 0;
+    
+    // Convert to array in header order
+    return headers.map(h => row[h]);
+  });
+  
+  // Create worksheet
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Transactions");
 
   // Auto-size columns
-  const colWidths = [
-    { wch: 12 }, // Date
-    { wch: 10 }, // Time
-    { wch: 12 }, // Amount
-    { wch: 18 }, // Payment Method
-    { wch: 12 }, // Station ID
-    { wch: 15 }, // Vehicle Type
-    { wch: 20 }, // Transaction ID
-  ];
+  const colWidths = headers.map((h, i) => {
+    let maxLen = h.length;
+    rows.forEach(r => {
+      const val = r[i]?.toString() || "";
+      if (val.length > maxLen) maxLen = val.length;
+    });
+    return { wch: Math.min(maxLen + 2, 30) };
+  });
   ws["!cols"] = colWidths;
 
+  // Write to buffer and download
   const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
   const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
   const url = window.URL.createObjectURL(blob);
@@ -90,7 +104,7 @@ async function exportDaily() {
   isLoading.value = true;
   try {
     const date = selectedDate.value;
-    const transactions = await fetchTransactions(date, date);
+    const transactions = await fetchReport("daily", date);
     if (transactions.length === 0) {
       alert("No transactions found for this date");
       return;
@@ -108,10 +122,7 @@ async function exportMonthly() {
   isLoading.value = true;
   try {
     const month = selectedMonth.value; // format: YYYY-MM
-    const [year, monthNum] = month.split("-").map(Number);
-    const startDate = `${year}-${String(monthNum).padStart(2, "0")}-01`;
-    const endDate = new Date(year, monthNum, 0).toISOString().slice(0, 10); // last day of month
-    const transactions = await fetchTransactions(startDate, endDate);
+    const transactions = await fetchReport("monthly", month);
     if (transactions.length === 0) {
       alert("No transactions found for this month");
       return;
@@ -129,9 +140,7 @@ async function exportYearly() {
   isLoading.value = true;
   try {
     const year = selectedYear.value;
-    const startDate = `${year}-01-01`;
-    const endDate = `${year}-12-31`;
-    const transactions = await fetchTransactions(startDate, endDate);
+    const transactions = await fetchReport("yearly", String(year));
     if (transactions.length === 0) {
       alert("No transactions found for this year");
       return;
