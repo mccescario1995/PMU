@@ -112,6 +112,10 @@ function togglePerm(name: string, checked: boolean) {
   }
 }
 
+function hasPerm(name: string): boolean {
+  return roleForm.permissions.includes(name);
+}
+
 async function saveRole() {
   const payload = { name: roleForm.name, permissions: roleForm.permissions };
   try {
@@ -394,17 +398,17 @@ const userStatus = ref<SelectItem[]>([
                     {{ group.resource }}
                   </p>
                   <div class="flex flex-wrap gap-3">
-                    <UCheckbox
-                      v-for="perm in group.permissions"
-                      :key="perm.name"
-                      :model-value="roleForm.permissions.includes(perm.name)"
-                      :label="perm.action"
-                      :ui="{ label: 'capitalize' }"
-                      :disabled="viewingRole"
-                      @update:model-value="
-                        (val: boolean) => togglePerm(perm.name, val)
-                      "
-                    />
+<UCheckbox
+  v-for="perm in group.permissions"
+  :key="perm.name"
+  :model-value="hasPerm(perm.name)"
+  :label="perm.action"
+  :ui="{ label: 'capitalize' }"
+  :disabled="viewingRole"
+  @update:model-value="
+    (val: boolean) => togglePerm(perm.name, val)
+  "
+/>
                   </div>
                 </div>
               </div>
