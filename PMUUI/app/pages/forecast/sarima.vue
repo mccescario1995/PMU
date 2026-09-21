@@ -66,7 +66,7 @@ const UBadge = resolveComponent('UBadge')
       </div>
       <div class="flex gap-2">
         <UButton
-          icon="i-lucide-wand-2"
+          icon="i-lucide-brain"
           :loading="modelLoading"
           @click="runSarimaDirect"
         >
@@ -80,7 +80,7 @@ const UBadge = resolveComponent('UBadge')
     <UModal v-model:open="showProgressModal" :dismissible="false">
       <template #header>
         <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-wand-2" class="w-5 h-5 text-primary" />
+          <UIcon name="i-lucide-brain" class="w-5 h-5 text-primary" />
           <span>Training {{ modelLabel }} Model</span>
         </div>
       </template>
