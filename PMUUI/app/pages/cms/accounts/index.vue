@@ -112,9 +112,27 @@ function togglePerm(name: string, checked: boolean) {
   }
 }
 
-function hasPerm(name: string): boolean {
-  return roleForm.permissions.includes(name);
-}
+const permChecks = computed(() => {
+  const obj: Record<string, { get: () => boolean; set: (v: boolean) => void }> = {};
+  for (const perm of roleForm.permissions) {
+    obj[perm] = {
+      get: () => roleForm.permissions.includes(perm),
+      set: (v: boolean) => togglePerm(perm, v),
+    };
+  }
+  // Also include all available permissions so unchecked ones are tracked
+  for (const group of permissionGroups) {
+    for (const perm of group.permissions) {
+      if (!obj[perm.name]) {
+        obj[perm.name] = {
+          get: () => roleForm.permissions.includes(perm.name),
+          set: (v: boolean) => togglePerm(perm.name, v),
+        };
+      }
+    }
+  }
+  return obj;
+});
 
 async function saveRole() {
   const payload = { name: roleForm.name, permissions: roleForm.permissions };
@@ -345,28 +363,15 @@ const userStatus = ref<SelectItem[]>([
     </div>
 
     <div class="flex gap-2">
-      <UButton
-        :variant="tab === 'roles' ? 'solid' : 'soft'"
-        @click="tab = 'roles'"
-        >Roles &amp; Permissions</UButton
-      >
-      <UButton
-        :variant="tab === 'users' ? 'solid' : 'soft'"
-        @click="tab = 'users'"
-        >Users</UButton
-      >
+      <UButton :variant="tab === 'roles' ? 'solid' : 'soft'" @click="tab = 'roles'">Roles &amp; Permissions</UButton>
+      <UButton :variant="tab === 'users' ? 'solid' : 'soft'" @click="tab = 'users'">Users</UButton>
     </div>
 
     <!-- Roles -->
     <section v-if="tab === 'roles'" class="space-y-4">
       <div class="flex justify-end">
-        <UButton
-          v-if="can('create roles')"
-          icon="i-lucide-plus"
-          title="Add Role"
-          @click="openNewRoleModal"
-          >Add Role</UButton
-        >
+        <UButton v-if="can('create roles')" icon="i-lucide-plus" title="Add Role" @click="openNewRoleModal">Add Role
+        </UButton>
       </div>
 
       <UModal v-model:open="openRoleModal">
@@ -379,36 +384,19 @@ const userStatus = ref<SelectItem[]>([
         <template #body>
           <div class="space-y-4">
             <UFormField label="Role Name">
-              <UInput
-                class="w-full"
-                v-model="roleForm.name"
-                placeholder="e.g. Inventory Clerk"
-                :disabled="viewingRole"
-              />
+              <UInput class="w-full" v-model="roleForm.name" placeholder="e.g. Inventory Clerk"
+                :disabled="viewingRole" />
             </UFormField>
 
             <UFormField label="Permissions">
               <div class="space-y-3">
-                <div
-                  v-for="group in permissionGroups"
-                  :key="group.resource"
-                  class="rounded-lg border p-3"
-                >
+                <div v-for="group in permissionGroups" :key="group.resource" class="rounded-lg border p-3">
                   <p class="mb-2 text-sm font-semibold capitalize">
                     {{ group.resource }}
                   </p>
                   <div class="flex flex-wrap gap-3">
-<UCheckbox
-  v-for="perm in group.permissions"
-  :key="perm.name"
-  :model-value="hasPerm(perm.name)"
-  :label="perm.action"
-  :ui="{ label: 'capitalize' }"
-  :disabled="viewingRole"
-  @update:model-value="
-    (val: boolean) => togglePerm(perm.name, val)
-  "
-/>
+                    <UCheckbox v-for="perm in group.permissions" :key="perm.name" v-model="permChecks[perm.name]"
+                      :label="perm.action" :ui="{ label: 'capitalize' }" :disabled="viewingRole" />
                   </div>
                 </div>
               </div>
@@ -418,45 +406,23 @@ const userStatus = ref<SelectItem[]>([
 
         <template #footer>
           <div class="flex justify-end gap-2">
-            <UButton variant="ghost" @click="openRoleModal = false"
-              >Close</UButton
-            >
+            <UButton variant="ghost" @click="openRoleModal = false">Close</UButton>
             <UButton v-if="!viewingRole" @click="saveRole">Save</UButton>
           </div>
         </template>
       </UModal>
 
-      <UTable
-        :data="roles"
-        :columns="roleColumns"
-        :loading="loading"
+      <UTable :data="roles" :columns="roleColumns" :loading="loading"
         :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
-        v-model:pagination="roleTablePagination"
-      >
+        v-model:pagination="roleTablePagination">
         <template #action-cell="{ row }">
           <div class="flex gap-2">
-            <UButton
-              v-if="can('view roles')"
-              size="xs"
-              color="info"
-              variant="ghost"
-              @click="openViewRoleModal(row.original)"
-              icon="i-lucide-eye"
-            />
-            <UButton
-              v-if="can('edit roles')"
-              size="xs"
-              color="secondary"
-              icon="i-lucide-edit"
-              @click="openEditRoleModal(row.original)"
-            />
-            <UButton
-              v-if="can('delete roles')"
-              size="xs"
-              color="error"
-              icon="i-lucide-trash"
-              @click="removeRole(row.original)"
-            />
+            <UButton v-if="can('view roles')" size="xs" color="info" variant="ghost"
+              @click="openViewRoleModal(row.original)" icon="i-lucide-eye" />
+            <UButton v-if="can('edit roles')" size="xs" color="secondary" icon="i-lucide-edit"
+              @click="openEditRoleModal(row.original)" />
+            <UButton v-if="can('delete roles')" size="xs" color="error" icon="i-lucide-trash"
+              @click="removeRole(row.original)" />
           </div>
         </template>
       </UTable>
@@ -464,40 +430,22 @@ const userStatus = ref<SelectItem[]>([
       <div class="flex items-center justify-between mt-4">
         <div class="flex items-center gap-2">
           <span class="text-sm text-slate-500">Rows per page:</span>
-          <USelect
-            v-model="rolePageSize"
-            :items="[5, 10, 20, 30, 50]"
-            class="w-20"
-          />
+          <USelect v-model="rolePageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
         </div>
         <div class="flex items-center gap-2">
           <span class="text-sm text-slate-500">Go to page:</span>
-          <UInput
-            v-model="roleGoToPageInput"
-            type="number"
-            :min="1"
-            :max="roleTotalPages"
-            class="w-16"
-            @keyup.enter="roleHandleGoToPage"
-          />
+          <UInput v-model="roleGoToPageInput" type="number" :min="1" :max="roleTotalPages" class="w-16"
+            @keyup.enter="roleHandleGoToPage" />
           <UButton size="sm" @click="roleHandleGoToPage">Go</UButton>
         </div>
-        <UPagination
-          :total="roles.length"
-          v-model:page="rolePage"
-          :items-per-page="rolePageSize"
-        />
+        <UPagination :total="roles.length" v-model:page="rolePage" :items-per-page="rolePageSize" />
       </div>
     </section>
 
     <!-- Users -->
     <section v-else class="space-y-4">
       <div class="flex justify-end">
-        <UButton
-          v-if="can('create users')"
-          icon="i-lucide-plus"
-          @click="openCreateUser"
-        >
+        <UButton v-if="can('create users')" icon="i-lucide-plus" @click="openCreateUser">
           Add User
         </UButton>
       </div>
@@ -512,102 +460,47 @@ const userStatus = ref<SelectItem[]>([
         <template #body>
           <div class="space-y-4">
             <UFormField label="Name" class="mb-3">
-              <UInput
-                v-model="userForm.name"
-                class="w-full"
-                placeholder="Enter Name"
-                :disabled="viewingUser"
-              />
+              <UInput v-model="userForm.name" class="w-full" placeholder="Enter Name" :disabled="viewingUser" />
             </UFormField>
             <UFormField label="Email" class="mb-3">
-              <UInput
-                class="w-full"
-                placeholder="Enter Email"
-                v-model="userForm.email"
-                :disabled="viewingUser || !!editingUser"
-                type="email"
-              />
+              <UInput class="w-full" placeholder="Enter Email" v-model="userForm.email"
+                :disabled="viewingUser || !!editingUser" type="email" />
             </UFormField>
-            <UFormField
-              class="mb-3"
-              :label="
-                editingUser ? 'New Password (leave blank to keep)' : 'Password'
-              "
-            >
-              <UInput
-                class="w-full"
-                v-model="userForm.password"
-                type="password"
-                :placeholder="
-                  editingUser ? 'Leave blank to keep current' : 'Enter password'
-                "
-                :disabled="viewingUser"
-              />
+            <UFormField class="mb-3" :label="editingUser ? 'New Password (leave blank to keep)' : 'Password'
+              ">
+              <UInput class="w-full" v-model="userForm.password" type="password" :placeholder="editingUser ? 'Leave blank to keep current' : 'Enter password'
+                " :disabled="viewingUser" />
             </UFormField>
             <div class="flex flex-col">
               <UFormField label="Status" class="mb-3">
-                <USelect
-                  class="w-full"
-                  v-model="userForm.status"
-                  :items="userStatus"
-                  :disabled="viewingUser"
-                />
+                <USelect class="w-full" v-model="userForm.status" :items="userStatus" :disabled="viewingUser" />
               </UFormField>
               <UFormField label="Roles">
-                <USelect
-                  class="w-full"
-                  v-model="userForm.roles"
-                  :items="roleOptions"
-                  value-key="name"
-                  label-key="name"
-                  multiple
-                  :disabled="viewingUser"
-                />
+                <USelect class="w-full" v-model="userForm.roles" :items="roleOptions" value-key="name" label-key="name"
+                  multiple :disabled="viewingUser" />
               </UFormField>
             </div>
           </div>
         </template>
         <template #footer>
           <div class="flex justify-end gap-2">
-            <UButton variant="ghost" @click="showUserModal = false"
-              >Close</UButton
-            >
+            <UButton variant="ghost" @click="showUserModal = false">Close</UButton>
             <UButton v-if="!viewingUser" @click="saveUser">Save</UButton>
           </div>
         </template>
       </UModal>
 
-      <UTable
-        :data="users"
-        :columns="userColumns"
-        :loading="loading"
+      <UTable :data="users" :columns="userColumns" :loading="loading"
         :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
-        v-model:pagination="userTablePagination"
-      >
+        v-model:pagination="userTablePagination">
         <template #action-cell="{ row }">
           <div class="flex gap-2">
-            <UButton
-              v-if="can('view users')"
-              size="xs"
-              color="info"
-              variant="ghost"
-              @click="openViewUser(row.original)"
-              icon="i-lucide-eye"
-            />
-            <UButton
-              v-if="can('edit users')"
-              size="xs"
-              color="secondary"
-              @click="openEditUser(row.original)"
-              icon="i-lucide-edit"
-            />
-            <UButton
-              v-if="can('delete users')"
-              size="xs"
-              color="error"
-              @click="removeUser(row.original)"
-              icon="i-lucide-trash"
-            />
+            <UButton v-if="can('view users')" size="xs" color="info" variant="ghost" @click="openViewUser(row.original)"
+              icon="i-lucide-eye" />
+            <UButton v-if="can('edit users')" size="xs" color="secondary" @click="openEditUser(row.original)"
+              icon="i-lucide-edit" />
+            <UButton v-if="can('delete users')" size="xs" color="error" @click="removeUser(row.original)"
+              icon="i-lucide-trash" />
           </div>
         </template>
       </UTable>
@@ -615,29 +508,15 @@ const userStatus = ref<SelectItem[]>([
       <div class="flex items-center justify-between mt-4">
         <div class="flex items-center gap-2">
           <span class="text-sm text-slate-500">Rows per page:</span>
-          <USelect
-            v-model="userPageSize"
-            :items="[5, 10, 20, 30, 50]"
-            class="w-20"
-          />
+          <USelect v-model="userPageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
         </div>
         <div class="flex items-center gap-2">
           <span class="text-sm text-slate-500">Go to page:</span>
-          <UInput
-            v-model="userGoToPageInput"
-            type="number"
-            :min="1"
-            :max="userTotalPages"
-            class="w-16"
-            @keyup.enter="userHandleGoToPage"
-          />
+          <UInput v-model="userGoToPageInput" type="number" :min="1" :max="userTotalPages" class="w-16"
+            @keyup.enter="userHandleGoToPage" />
           <UButton size="sm" @click="userHandleGoToPage">Go</UButton>
         </div>
-        <UPagination
-          :total="users.length"
-          v-model:page="userPage"
-          :items-per-page="userPageSize"
-        />
+        <UPagination :total="users.length" v-model:page="userPage" :items-per-page="userPageSize" />
       </div>
     </section>
   </div>
