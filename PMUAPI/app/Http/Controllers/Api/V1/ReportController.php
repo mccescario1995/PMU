@@ -429,9 +429,9 @@ class ReportController extends Controller
             $col++;
         }
 
-        $sheet->setCellValue($col, 'Total');
+        $sheet->setCellValue($col . '6', 'Total');
         $col++;
-        $sheet->setCellValue($col, 'Remarks');
+        $sheet->setCellValue($col . '6', 'Remarks');
 
         $row = 7;
         foreach ($transactions as $tx) {
@@ -446,15 +446,15 @@ class ReportController extends Controller
                 $c++;
             }
 
-            $sheet->setCellValue($c, $tx->total_amount);
+            $sheet->setCellValue($c . $row, $tx->total_amount);
             $c++;
-            $sheet->setCellValue($c, $tx->remarks ?? '');
+            $sheet->setCellValue($c . $row, $tx->remarks ?? '');
             $row++;
         }
 
         // Total row
         $sheet->setCellValue('A' . $row, 'TOTAL');
-        $sheet->setCellValue($col, $transactions->sum('total_amount'));
+        $sheet->setCellValue($col . $row, $transactions->sum('total_amount'));
 
         $writer = new Xlsx($spreadsheet);
         $tempPath = tempnam(sys_get_temp_dir(), 'transaction_report_') . '.xlsx';
