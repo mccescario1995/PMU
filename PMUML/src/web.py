@@ -2,6 +2,8 @@ import os
 import sys
 import socket
 import requests
+from datetime import date
+from io import BytesIO
                                                                                                                                                   
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -177,6 +179,119 @@ def weather_status():
         })
     except Exception as e:
         logger.error(f"weather status error: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/v1/reports/transaction/xlsx", methods=["GET"])
+def export_transaction_report():
+    try:
+        report_type = request.args.get("type", "daily")
+        
+        if report_type == "daily":
+            date_str = request.args.get("date")
+            if not date_str:
+                return jsonify({"error": "date parameter required for daily report"}), 400
+            start = end = date.fromisoformat(date_str)
+        elif report_type == "monthly":
+            month_str = request.args.get("month")
+            if not month_str:
+                return jsonify({"error": "month parameter required for monthly report"}), 400
+            year, month = map(int, month_str.split("-"))
+            start = date(year, month, 1)
+            if month == 12:
+                end = date(year + 1, 1, 1)
+            else:
+                end = date(year, month + 1, 1)
+            # We'll filter to end of month in the data
+        elif report_type == "yearly":
+            year_str = request.args.get("year")
+            if not year_str:
+                return jsonify({"error": "year parameter required for yearly report"}), 400
+            year = int(year_str)
+            start = date(year, 1, 1)
+            end = date(year + 1, 1, 1)
+        else:
+            return jsonify({"error": "Invalid type. Use daily, monthly, or yearly"}), 400
+
+        if not pmu_client:
+            return jsonify({"error": "PMU API not configured"}), 500
+
+        # Fetch transactions
+        transactions = pmu_client.get_transactions(start, end)
+        
+        if not transactions:
+            return jsonify({"error": "No transactions found for the specified period"}), 404
+
+        # Convert to DataFrame
+        df = pd.DataFrame(transactions)
+        df["date"] = pd.to_datetime(df["transaction_date"]).dt.date
+        
+        # Filter by date range
+        if report_type == "monthly":
+            df = df[(df["date"] >= start) & (df["date"] < end)]
+        elif report_type == "yearly":
+            df = df[(df["date"] >= start) & (df["date"] < end)]
+        else:  # daily
+            df = df[df["date"] == start]
+
+        if df.empty:
+            return jsonify({"error": "No transactions found for the specified period"}), 404
+
+        # Prepare data for Excel
+        df = df.rename(columns={"total_amount": "revenue"})
+        df["revenue"] = pd.to_numeric(df["revenue"], errors="coerce")
+        
+        # Select and order columns
+        cols = ["transaction_date", "revenue"]
+        if "payment_method" in df.columns:
+            cols.append("payment_method")
+        if "station_id" in df.columns:
+            cols.append("station_id")
+        if "vehicle_type" in df.columns:
+            cols.append("vehicle_type")
+        
+        export_df = df[cols].sort_values("transaction_date").reset_index(drop=True)
+        export_df = export_df.rename(columns={
+            "transaction_date": "Date",
+            "revenue": "Amount",
+            "payment_method": "Payment Method",
+            "station_id": "Station ID",
+            "vehicle_type": "Vehicle Type"
+        })
+
+        # Generate Excel
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            export_df.to_excel(writer, index=False, sheet_name="Transactions")
+            
+            # Auto-adjust column widths
+            worksheet = writer.sheets["Transactions"]
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = min(max_length + 2, 50)
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+        
+        output.seek(0)
+        
+        from flask import send_file
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=f"{report_type}-report.xlsx"
+        )
+
+    except ValueError as e:
+        return jsonify({"error": f"Invalid date format: {str(e)}"}), 400
+    except Exception as e:
+        logger.error(f"export_transaction_report error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 

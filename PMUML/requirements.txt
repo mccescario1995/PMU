@@ -13,3 +13,4 @@ gunicorn>=21.0
 pymysql>=1.1.0
 sqlalchemy>=2.0.0
 requests>=2.31
+openpyxl>=3.1
