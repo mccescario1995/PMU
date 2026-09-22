@@ -61,7 +61,13 @@ type Inventory = {
   category: string;
   category_type: string;
   quantity: number;
+  unit: string;
+  minimum_stock: number;
+  reorder_quantity: number;
+  average_daily_usage: number;
   status: string;
+  stock_status: string;
+  days_remaining: number | null;
 };
 
 const statusColor = {
@@ -80,24 +86,6 @@ const columns: TableColumn<Inventory>[] = [
     accessorKey: "item_name",
     header: "Name",
   },
-  // {
-  //   accessorKey: "category_type",
-  //   header: "Type",
-  //   cell: ({ row }) => {
-  //     const type = row.getValue("category_type");
-  //     const color =
-  //       type === "equipment"
-  //         ? "primary"
-  //         : type === "materials"
-  //           ? "success"
-  //           : "warning";
-  //     return h(
-  //       UBadge,
-  //       { class: "capitalize", variant: "subtle", color },
-  //       () => type,
-  //     );
-  //   },
-  // },
   {
     accessorKey: "category",
     header: "Category",
@@ -107,13 +95,37 @@ const columns: TableColumn<Inventory>[] = [
     header: "Quantity",
   },
   {
-    accessorKey: "status",
-    header: "Status",
+    accessorKey: "unit",
+    header: "Unit",
+  },
+  {
+    accessorKey: "minimum_stock",
+    header: "Min Stock",
+  },
+  {
+    accessorKey: "reorder_quantity",
+    header: "Reorder Qty",
+  },
+  {
+    accessorKey: "average_daily_usage",
+    header: "Avg Daily Usage",
+  },
+  {
+    accessorKey: "stock_status",
+    header: "Stock Status",
     cell: ({ row }) => {
-      const value = row.getValue("status") as string;
+      const value = row.getValue("stock_status") as string;
       const color = statusColor[value as keyof typeof statusColor] ?? "neutral";
       const label = value.replace(/_/g, " ");
       return h(UBadge, { class: "capitalize", color }, () => label);
+    },
+  },
+  {
+    accessorKey: "days_remaining",
+    header: "Days Remaining",
+    cell: ({ row }) => {
+      const value = row.getValue("days_remaining") as number | null;
+      return value !== null && value !== undefined ? value.toFixed(1) : "N/A";
     },
   },
   { accessorKey: "action", header: "Action" },
@@ -127,7 +139,7 @@ const categoryTypeOptions: SelectItem[] = [
 
 const statusOptions: SelectItem[] = [
   { label: "Available", value: "available" },
-  { label: "Low Stock", value: "low_stock" },
+  { label: "Inactive", value: "inactive" },
   { label: "Damaged", value: "damaged" },
 ];
 
@@ -143,6 +155,9 @@ const form = reactive({
   quantity: 0,
   unit: "pcs",
   status: "available",
+  minimum_stock: 0,
+  reorder_quantity: 0,
+  average_daily_usage: 0,
 });
 
 function openCreate() {
@@ -154,6 +169,9 @@ function openCreate() {
   form.quantity = 0;
   form.unit = "pcs";
   form.status = "available";
+  form.minimum_stock = 0;
+  form.reorder_quantity = 0;
+  form.average_daily_usage = 0;
   showModal.value = true;
 }
 
@@ -166,6 +184,9 @@ function openView(row: any) {
   form.quantity = row.quantity;
   form.unit = row.unit ?? "pcs";
   form.status = row.status;
+  form.minimum_stock = row.minimum_stock ?? 0;
+  form.reorder_quantity = row.reorder_quantity ?? 0;
+  form.average_daily_usage = row.average_daily_usage ?? 0;
   showModal.value = true;
 }
 
@@ -178,6 +199,9 @@ function openEdit(row: any) {
   form.quantity = row.quantity;
   form.unit = row.unit ?? "pcs";
   form.status = row.status;
+  form.minimum_stock = row.minimum_stock ?? 0;
+  form.reorder_quantity = row.reorder_quantity ?? 0;
+  form.average_daily_usage = row.average_daily_usage ?? 0;
   showModal.value = true;
 }
 
@@ -247,7 +271,7 @@ async function remove(row: any) {
           :items="[
             { label: 'All', value: 'all' },
             { label: 'Available', value: 'available' },
-            { label: 'Low Stock', value: 'low_stock' },
+            { label: 'Inactive', value: 'inactive' },
             { label: 'Damaged', value: 'damaged' },
           ]"
           placeholder="Status"
@@ -358,6 +382,20 @@ async function remove(row: any) {
 
               <UFormField label="Unit" class="mb-3 w-full">
                 <UInput v-model="form.unit" :disabled="modalMode === 'view'" class="w-full" />
+              </UFormField>
+            </div>
+
+            <div class="flex">
+              <UFormField label="Minimum Stock" class="mb-3 w-full mr-3">
+                <UInput type="number" v-model="form.minimum_stock" :disabled="modalMode === 'view'" class="w-full" />
+              </UFormField>
+
+              <UFormField label="Reorder Quantity" class="mb-3 w-full mr-3">
+                <UInput type="number" v-model="form.reorder_quantity" :disabled="modalMode === 'view'" class="w-full" />
+              </UFormField>
+
+              <UFormField label="Avg Daily Usage" class="mb-3 w-full">
+                <UInput type="number" step="0.01" v-model="form.average_daily_usage" :disabled="modalMode === 'view'" class="w-full" />
               </UFormField>
             </div>
 

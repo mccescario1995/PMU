@@ -16,6 +16,9 @@ const form = reactive({
   quantity: 0,
   unit: "pcs",
   status: "available",
+  minimum_stock: 0,
+  reorder_quantity: 0,
+  average_daily_usage: 0,
 });
 
 onMounted(async () => {
@@ -27,6 +30,9 @@ onMounted(async () => {
     quantity: item.data.quantity,
     unit: item.data.unit ?? "pcs",
     status: item.data.status,
+    minimum_stock: item.data.minimum_stock ?? 0,
+    reorder_quantity: item.data.reorder_quantity ?? 0,
+    average_daily_usage: item.data.average_daily_usage ?? 0,
   });
 });
 
@@ -61,8 +67,8 @@ const status = ref<SelectItem[]>([
     value: "available",
   },
   {
-    label: "Low Stock",
-    value: "low_stock",
+    label: "Inactive",
+    value: "inactive",
   },
   {
     label: "Damaged",
@@ -97,8 +103,22 @@ const status = ref<SelectItem[]>([
           <UInput type="number" v-model="form.quantity" class="w-full" />
         </UFormField>
 
-        <UFormField label="Unit" class="mb-3">
+        <UFormField label="Unit" class="mb-3 w-full">
           <UInput v-model="form.unit" class="w-full" />
+        </UFormField>
+      </div>
+
+      <div class="flex">
+        <UFormField label="Minimum Stock" class="mb-3 w-full mr-3">
+          <UInput type="number" v-model="form.minimum_stock" class="w-full" />
+        </UFormField>
+
+        <UFormField label="Reorder Quantity" class="mb-3 w-full mr-3">
+          <UInput type="number" v-model="form.reorder_quantity" class="w-full" />
+        </UFormField>
+
+        <UFormField label="Avg Daily Usage" class="mb-3 w-full">
+          <UInput type="number" step="0.01" v-model="form.average_daily_usage" class="w-full" />
         </UFormField>
       </div>
 

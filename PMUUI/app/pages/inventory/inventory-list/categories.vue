@@ -24,7 +24,7 @@ onMounted(async () => {
     }
     counts[type].count++
     counts[type].quantity += it.quantity
-    if (it.status === 'low_stock' || it.status === 'damaged') {
+    if (it.quantity <= (it.minimum_stock ?? 0) || it.status === 'damaged') {
       counts[type].low_stock++
     }
   }

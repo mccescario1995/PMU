@@ -31,7 +31,13 @@ type Stock = {
   category: string
   category_type: string
   quantity: number
+  unit: string
+  minimum_stock: number
+  reorder_quantity: number
+  average_daily_usage: number
   status: keyof typeof statusColor
+  stock_status: string
+  days_remaining: number | null
 }
 
 const columns: TableColumn<Stock>[] = [
@@ -52,13 +58,26 @@ const columns: TableColumn<Stock>[] = [
     header: 'Quantity',
     meta: { class: { th: "text-right", td: "text-right font-mono" } },
   },
+  { accessorKey: 'unit', header: 'Unit' },
+  { accessorKey: 'minimum_stock', header: 'Min Stock', meta: { class: { th: "text-right", td: "text-right font-mono" } } },
+  { accessorKey: 'reorder_quantity', header: 'Reorder Qty', meta: { class: { th: "text-right", td: "text-right font-mono" } } },
+  { accessorKey: 'average_daily_usage', header: 'Avg Daily Usage', meta: { class: { th: "text-right", td: "text-right font-mono" } } },
   {
-    accessorKey: 'status',
-    header: 'Status',
+    accessorKey: 'stock_status',
+    header: 'Stock Status',
     cell: ({ row }) => {
-      const status = row.getValue('status') as keyof typeof statusColor
+      const status = row.getValue('stock_status') as keyof typeof statusColor
       return h(UBadge, { class: "capitalize", variant: "subtle", color: statusColor[status] }, () => status)
     },
+  },
+  {
+    accessorKey: 'days_remaining',
+    header: 'Days Remaining',
+    cell: ({ row }) => {
+      const value = row.getValue('days_remaining') as number | null
+      return value !== null && value !== undefined ? value.toFixed(1) : 'N/A'
+    },
+    meta: { class: { th: "text-right", td: "text-right font-mono" } },
   },
   { accessorKey: 'action', header: 'Action' },
 ]

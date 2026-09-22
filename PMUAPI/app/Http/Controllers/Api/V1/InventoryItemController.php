@@ -44,12 +44,15 @@ class InventoryItemController extends Controller
             'category_type' => 'required|in:equipment,materials,supplies',
             'quantity' => 'nullable|integer|min:0',
             'unit' => 'nullable|string',
-            'status' => 'nullable|in:available,low_stock,damaged',
+            'status' => 'nullable|in:available,inactive,damaged',
+            'minimum_stock' => 'nullable|integer|min:0',
+            'reorder_quantity' => 'nullable|integer|min:0',
+            'average_daily_usage' => 'nullable|numeric|min:0',
         ]);
 
         $item = InventoryItem::create($data);
 
-        $this->logAudit('create', 'inventory_items', $item->id, null, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status']));
+        $this->logAudit('create', 'inventory_items', $item->id, null, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status', 'minimum_stock', 'reorder_quantity', 'average_daily_usage']));
 
         return new InventoryItemResource($item);
     }
@@ -67,21 +70,24 @@ class InventoryItemController extends Controller
             'category_type' => 'sometimes|required|in:equipment,materials,supplies',
             'quantity' => 'nullable|integer|min:0',
             'unit' => 'nullable|string',
-            'status' => 'nullable|in:available,low_stock,damaged',
+            'status' => 'nullable|in:available,inactive,damaged',
+            'minimum_stock' => 'nullable|integer|min:0',
+            'reorder_quantity' => 'nullable|integer|min:0',
+            'average_daily_usage' => 'nullable|numeric|min:0',
         ]);
 
-        $oldValues = $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status']);
+        $oldValues = $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status', 'minimum_stock', 'reorder_quantity', 'average_daily_usage']);
 
         $item->update($data);
 
-        $this->logAudit('update', 'inventory_items', $item->id, $oldValues, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status']));
+        $this->logAudit('update', 'inventory_items', $item->id, $oldValues, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status', 'minimum_stock', 'reorder_quantity', 'average_daily_usage']));
 
         return new InventoryItemResource($item);
     }
 
     public function destroy(InventoryItem $item)
     {
-        $this->logAudit('delete', 'inventory_items', $item->id, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status']), null);
+        $this->logAudit('delete', 'inventory_items', $item->id, $this->modelToArray($item, ['item_name', 'category', 'category_type', 'quantity', 'unit', 'status', 'minimum_stock', 'reorder_quantity', 'average_daily_usage']), null);
 
         $item->delete();
 
@@ -131,9 +137,7 @@ class InventoryItemController extends Controller
 
         $item->decrement('quantity', $data['quantity']);
 
-        $status = $item->quantity <= 0
-            ? 'damaged'
-            : ($item->quantity < 10 ? 'low_stock' : 'available');
+        $status = $item->quantity <= 0 ? 'damaged' : 'available';
         $item->update(['status' => $status]);
 
         InventoryLog::create([

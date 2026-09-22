@@ -27,9 +27,10 @@ class DashboardController extends Controller
             'yearly_revenue' => (float) TransactionRevenue::where('year_num', now()->subYear())->sum('revenue_target'),
             'transactions_today' => Transaction::whereDate('transaction_date', today())->count(),
             'active_stakeholders' => Stakeholder::where('status', 'active')->count(),
-            'low_stock_items' => InventoryItem::where('status', 'low_stock')
-                ->orWhere('quantity', '<=', 0)
-                ->count(),
+            'low_stock_items' => InventoryItem::where(function ($q) {
+                $q->whereRaw('quantity <= minimum_stock')
+                  ->orWhere('status', 'damaged');
+            })->count(),
             'latest_weather' => $latestWeather ? [
                 'weather_date' => $latestWeather->weather_date,
                 'temperature' => (float) $latestWeather->temperature,

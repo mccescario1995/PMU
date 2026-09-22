@@ -15,7 +15,16 @@ class InventoryItemResource extends JsonResource
             'category_type' => $this->category_type,
             'quantity' => $this->quantity,
             'unit' => $this->unit,
+            'minimum_stock' => $this->minimum_stock,
+            'reorder_quantity' => $this->reorder_quantity,
+            'average_daily_usage' => (float) $this->average_daily_usage,
             'status' => $this->status,
+            'stock_status' => $this->status === 'damaged'
+                ? 'damaged'
+                : ($this->quantity <= $this->minimum_stock ? 'low_stock' : 'available'),
+            'days_remaining' => $this->average_daily_usage > 0
+                ? (float) ($this->quantity / $this->average_daily_usage)
+                : null,
             'created_at' => $this->created_at,
         ];
     }

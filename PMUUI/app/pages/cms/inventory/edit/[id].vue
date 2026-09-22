@@ -15,6 +15,9 @@ const form = reactive({
   quantity: 0,
   unit: "pcs",
   status: "available",
+  minimum_stock: 0,
+  reorder_quantity: 0,
+  average_daily_usage: 0,
 })
 
 onMounted(async () => {
@@ -26,6 +29,9 @@ onMounted(async () => {
     quantity: item.quantity,
     unit: item.unit ?? "pcs",
     status: item.status,
+    minimum_stock: item.minimum_stock ?? 0,
+    reorder_quantity: item.reorder_quantity ?? 0,
+    average_daily_usage: item.average_daily_usage ?? 0,
   })
 })
 
@@ -68,10 +74,22 @@ function save() {
         <UInput v-model="form.unit" />
       </UFormField>
 
+      <UFormField label="Minimum Stock">
+        <UInput type="number" v-model="form.minimum_stock" />
+      </UFormField>
+
+      <UFormField label="Reorder Quantity">
+        <UInput type="number" v-model="form.reorder_quantity" />
+      </UFormField>
+
+      <UFormField label="Average Daily Usage">
+        <UInput type="number" step="0.01" v-model="form.average_daily_usage" />
+      </UFormField>
+
       <UFormField label="Status">
         <USelect
           v-model="form.status"
-          :items="['available', 'low_stock', 'damaged']"
+          :items="['available', 'inactive', 'damaged']"
         />
       </UFormField>
 

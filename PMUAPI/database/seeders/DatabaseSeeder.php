@@ -407,7 +407,7 @@ class DatabaseSeeder extends Seeder
 
         $statuses = [
             ['name' => 'available', 'type' => 'inventory', 'color' => 'green'],
-            ['name' => 'low_stock', 'type' => 'inventory', 'color' => 'yellow'],
+            ['name' => 'inactive', 'type' => 'inventory', 'color' => 'gray'],
             ['name' => 'damaged', 'type' => 'inventory', 'color' => 'red'],
             ['name' => 'pending', 'type' => 'transaction', 'color' => 'yellow'],
             ['name' => 'completed', 'type' => 'transaction', 'color' => 'green'],

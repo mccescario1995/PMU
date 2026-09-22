@@ -97,10 +97,32 @@ async function submitDeductStock() {
           <p class="text-xl font-semibold">{{ item.quantity }} {{ item.unit }}</p>
         </UCard>
         <UCard>
-          <template #header> Status </template>
-          <UBadge :color="item.status === 'available' ? 'success' : item.status === 'low_stock' ? 'warning' : 'error'" variant="subtle" class="capitalize">
-            {{ item.status }}
+          <template #header> Stock Status </template>
+          <UBadge :color="item.stock_status === 'available' ? 'success' : item.stock_status === 'low_stock' ? 'warning' : 'error'" variant="subtle" class="capitalize">
+            {{ item.stock_status?.replace(/_/g, ' ') }}
           </UBadge>
+        </UCard>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-3">
+        <UCard>
+          <template #header> Minimum Stock </template>
+          <p class="text-xl font-semibold">{{ item.minimum_stock }}</p>
+        </UCard>
+        <UCard>
+          <template #header> Reorder Quantity </template>
+          <p class="text-xl font-semibold">{{ item.reorder_quantity }}</p>
+        </UCard>
+        <UCard>
+          <template #header> Avg Daily Usage </template>
+          <p class="text-xl font-semibold">{{ item.average_daily_usage }}</p>
+        </UCard>
+      </div>
+
+      <div v-if="item.days_remaining !== null && item.days_remaining !== undefined" class="grid gap-4 sm:grid-cols-1">
+        <UCard class="border-info">
+          <template #header> Estimated Days Remaining </template>
+          <p class="text-xl font-semibold text-info">{{ item.days_remaining.toFixed(1) }} days</p>
         </UCard>
       </div>
 

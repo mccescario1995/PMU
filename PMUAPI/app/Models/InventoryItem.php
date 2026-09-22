@@ -17,10 +17,16 @@ class InventoryItem extends Model
         'quantity',
         'unit',
         'status',
+        'minimum_stock',
+        'reorder_quantity',
+        'average_daily_usage',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
+        'minimum_stock' => 'integer',
+        'reorder_quantity' => 'integer',
+        'average_daily_usage' => 'float',
     ];
 
     public function logs(): HasMany

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from "~/composables/useApiFetch";
-import { onMounted, computed, watch } from "vue";
+import { onMounted, computed, watch, h } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { ref } from "vue";
 import { useTablePagination } from "~/composables/useTablePagination";
@@ -18,6 +18,7 @@ const statusColor = {
   available: "success" as const,
   low_stock: "warning" as const,
   damaged: "error" as const,
+  inactive: "neutral" as const,
 };
 
 const items = ref<any[]>([]);
@@ -44,7 +45,13 @@ type Inventory = {
   category: string;
   category_type: string;
   quantity: number;
-  status: keyof typeof statusColor;
+  unit: string;
+  minimum_stock: number;
+  reorder_quantity: number;
+  average_daily_usage: number;
+  status: string;
+  stock_status: string;
+  days_remaining: number | null;
 };
 
 const columns: TableColumn<Inventory>[] = [
@@ -84,15 +91,34 @@ const columns: TableColumn<Inventory>[] = [
     header: "Quantity",
   },
   {
-    accessorKey: "status",
-    header: "Status",
+    accessorKey: "minimum_stock",
+    header: "Min Stock",
+  },
+  {
+    accessorKey: "reorder_quantity",
+    header: "Reorder Qty",
+  },
+  {
+    accessorKey: "average_daily_usage",
+    header: "Avg Daily Usage",
+  },
+  {
+    accessorKey: "stock_status",
+    header: "Stock Status",
     cell: ({ row }) => {
-      const color =
-        statusColor[row.getValue("status") as keyof typeof statusColor];
-
+      const value = row.getValue("stock_status") as string;
+      const color = statusColor[value as keyof typeof statusColor] ?? "neutral";
       return h(UBadge, { class: "capitalize", variant: "subtle", color }, () =>
-        row.getValue("status"),
+        value.replace(/_/g, " "),
       );
+    },
+  },
+  {
+    accessorKey: "days_remaining",
+    header: "Days Remaining",
+    cell: ({ row }) => {
+      const value = row.getValue("days_remaining") as number | null;
+      return value !== null && value !== undefined ? value.toFixed(1) : "N/A";
     },
   },
   { accessorKey: "action", header: "Action" },

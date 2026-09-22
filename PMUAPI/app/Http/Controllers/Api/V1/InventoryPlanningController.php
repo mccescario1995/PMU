@@ -21,7 +21,7 @@ class InventoryPlanningController extends Controller
             return [
                 'total_items' => $group->count(),
                 'total_quantity' => $group->sum('quantity'),
-                'low_stock_count' => $group->whereIn('status', ['low_stock', 'damaged'])->count(),
+                'low_stock_count' => $group->filter(fn ($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged')->count(),
             ];
         });
 
@@ -51,7 +51,7 @@ class InventoryPlanningController extends Controller
                 'total_items' => $items->count(),
                 'total_quantity' => (int) $inventoryValue,
                 'by_category_type' => $byCategoryType,
-                'low_stock_items' => $items->whereIn('status', ['low_stock', 'damaged'])->count(),
+                'low_stock_items' => $items->filter(fn ($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged')->count(),
             ],
             'recommended_stock' => $recommendedStock,
             'budget_guidance' => $this->generateBudgetGuidance($items, $forecasts),
@@ -63,7 +63,7 @@ class InventoryPlanningController extends Controller
         $items = InventoryItem::orderBy('category')->orderBy('item_name')->get();
         $forecasts = RevenueForecastSamira::orderBy('forecast_date')->get();
 
-        $lowStockItems = $items->whereIn('status', ['low_stock', 'damaged']);
+        $lowStockItems = $items->filter(fn ($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged');
 
         $forecastByMonth = [];
         foreach ($forecasts as $f) {
@@ -106,39 +106,18 @@ class InventoryPlanningController extends Controller
         $offPeakRevenue = $forecasts->filter(fn ($f) => $this->isOffPeakSeason($f->forecast_date))->sum('predicted_revenue');
         $totalRevenue = $peakRevenue + $offPeakRevenue;
 
-        $peakDemandMultiplier = $totalRevenue > 0 ? ($peakRevenue / $totalRevenue) * 2 : 1;
-        $offPeakDemandMultiplier = $totalRevenue > 0 ? ($offPeakRevenue / $totalRevenue) * 2 : 1;
-
-        $categoryTurnoverRates = [
-            'Equipment' => ['turnover' => 0.5, 'lead_time_months' => 2, 'safety_factor' => 1.5],
-            'Materials' => ['turnover' => 2, 'lead_time_months' => 1, 'safety_factor' => 1.3],
-            'Supplies' => ['turnover' => 5, 'lead_time_months' => 1, 'safety_factor' => 1.2],
-        ];
+        $seasonMultiplier = $totalRevenue > 0 ? ($peakRevenue / $totalRevenue) : 0.5;
 
         foreach ($items as $item) {
-            $categoryConfig = $categoryTurnoverRates[$item->category] ?? ['turnover' => 1, 'lead_time_months' => 1, 'safety_factor' => 1.3];
+            $baseMin = max(5, (int) ($item->quantity * 0.3));
+            $seasonAdjustment = $item->category === 'Equipment' ? 1.5 : ($item->category === 'Materials' ? 1.2 : 1.0);
+            $recommendedMin = (int) ($baseMin * $seasonAdjustment * (1 + $seasonMultiplier));
+            $recommendedMin = max(5, min($recommendedMin, $item->quantity * 3));
 
-            $monthlyTurnover = $categoryConfig['turnover'];
-            $leadTimeMonths = $categoryConfig['lead_time_months'];
-            $safetyFactor = $categoryConfig['safety_factor'];
-
-            $avgMonthlyRevenue = $totalRevenue > 0 ? $totalRevenue / 12 : 0;
-            $revenueShare = $avgMonthlyRevenue > 0 ? ($item->quantity / $items->sum('quantity')) : (1 / max($items->count(), 1));
-
-            $baseMonthlyUsage = max(1, (int) ($monthlyTurnover * $revenueShare * 100));
-
-            $peakMonthlyUsage = (int) ($baseMonthlyUsage * $peakDemandMultiplier);
-            $offPeakMonthlyUsage = (int) ($baseMonthlyUsage * $offPeakDemandMultiplier);
-            $estimatedMonthlyUsage = max($peakMonthlyUsage, $offPeakMonthlyUsage, 1);
-
-            $leadTimeDemand = $estimatedMonthlyUsage * $leadTimeMonths;
-            $safetyStock = (int) ($leadTimeDemand * ($safetyFactor - 1));
-            $recommendedMin = $leadTimeDemand + $safetyStock;
-            $recommendedMin = max(5, min($recommendedMin, $item->quantity * 4));
-
-            $reorderPoint = (int) ceil($recommendedMin * 1.15);
-
+            $reorderPoint = (int) ($recommendedMin * 1.2);
             $needsReorder = $item->quantity <= $reorderPoint;
+
+            $estimatedMonthlyUsage = max(1, (int) ($recommendedMin / 1.5));
 
             $recommended[] = [
                 'item_id' => $item->id,
