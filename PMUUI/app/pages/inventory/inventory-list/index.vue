@@ -106,10 +106,10 @@ const columns: TableColumn<Inventory>[] = [
     accessorKey: "reorder_quantity",
     header: "Reorder Qty",
   },
-  {
-    accessorKey: "average_daily_usage",
-    header: "Avg Daily Usage",
-  },
+  // {
+  //   accessorKey: "average_daily_usage",
+  //   header: "Avg Daily Usage",
+  // },
   {
     accessorKey: "stock_status",
     header: "Stock Status",
@@ -120,14 +120,14 @@ const columns: TableColumn<Inventory>[] = [
       return h(UBadge, { class: "capitalize", color }, () => label);
     },
   },
-  {
-    accessorKey: "days_remaining",
-    header: "Days Remaining",
-    cell: ({ row }) => {
-      const value = row.getValue("days_remaining") as number | null;
-      return value !== null && value !== undefined ? value.toFixed(1) : "N/A";
-    },
-  },
+  // {
+  //   accessorKey: "days_remaining",
+  //   header: "Days Remaining",
+  //   cell: ({ row }) => {
+  //     const value = row.getValue("days_remaining") as number | null;
+  //     return value !== null && value !== undefined ? value.toFixed(1) : "N/A";
+  //   },
+  // },
   { accessorKey: "action", header: "Action" },
 ];
 

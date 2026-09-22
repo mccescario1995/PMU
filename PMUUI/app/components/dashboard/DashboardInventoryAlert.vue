@@ -25,7 +25,7 @@ const lowStock = computed(() => items.value.filter((i) => i.stock_status === "lo
       >
         <div>
           <p class="text-sm font-medium">{{ item.item_name }}</p>
-          <p class="text-xs text-gray-500">{{ item.category_type }} • {{ item.category }}</p>
+          <p class="text-xs text-gray-500">{{ item.category }}</p>
         </div>
         <UBadge :color="item.quantity <= 0 ? 'error' : 'warning'" variant="subtle">
           {{ item.quantity <= 0 ? 'Out of stock' : `${item.quantity} left` }}

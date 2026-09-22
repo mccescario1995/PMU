@@ -109,17 +109,17 @@ const columns: TableColumn<any>[] = [
       return h('span', { class: qty <= 5 ? 'text-warning font-semibold' : '' }, () => qty)
     }
   },
-  { accessorKey: 'minimum_stock', header: 'Min Stock', cell: ({ row }) => row.getValue('minimum_stock') ?? 0 },
-  { accessorKey: 'reorder_quantity', header: 'Reorder Qty', cell: ({ row }) => row.getValue('reorder_quantity') ?? 0 },
+  // { accessorKey: 'minimum_stock', header: 'Min Stock', cell: ({ row }) => row.getValue('minimum_stock') ?? 0 },
+  // { accessorKey: 'reorder_quantity', header: 'Reorder Qty', cell: ({ row }) => row.getValue('reorder_quantity') ?? 0 },
   { accessorKey: 'average_daily_usage', header: 'Avg Daily Usage', cell: ({ row }) => row.getValue('average_daily_usage') ?? 0 },
-  { accessorKey: 'estimated_monthly_usage', header: 'Est. Monthly Usage' },
+  // { accessorKey: 'estimated_monthly_usage', header: 'Est. Monthly Usage' },
   { accessorKey: 'recommended_min', header: 'Recommended Min' },
-  { accessorKey: 'reorder_point', header: 'Reorder Point' },
+  // { accessorKey: 'reorder_point', header: 'Reorder Point' },
   {
     accessorKey: 'stock_status', header: 'Stock Status', cell: ({ row }) => {
       const item = row.original
       const s = computeStockStatus(item)
-      return h('UBadge', { variant: 'subtle', color: statusColor[s] || 'neutral' }, () => s.replace(/_/g, ' '))
+      return h('UBadge', { variant: 'subtle', color: statusColor[s] || 'neutral' }, () => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
     }
   },
   {
