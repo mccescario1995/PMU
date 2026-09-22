@@ -16,6 +16,20 @@ const loading = ref(true)
 const currency = (v: number) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(v)
 
+const normalizeCategoryType = (type: string): string => {
+  return type.toLowerCase().replace(/\s+/g, '_')
+}
+
+const getCategoryColor = (type: string): string => {
+  const normalized = normalizeCategoryType(type)
+  const categoryTypeColors: Record<string, string> = {
+    equipment: 'primary',
+    materials: 'success',
+    supplies: 'warning',
+  }
+  return categoryTypeColors[normalized] || 'neutral'
+}
+
 onMounted(async () => {
   loading.value = true
   const [overview, view] = await Promise.all([
@@ -35,29 +49,16 @@ const offPeakRevenue = computed(() => planning.value?.off_peak_season?.total_rev
 const totalItems = computed(() => planning.value?.inventory_summary?.total_items ?? 0)
 const lowStockCount = computed(() => planning.value?.inventory_summary?.low_stock_items ?? 0)
 const totalQuantity = computed(() => planning.value?.inventory_summary?.total_quantity ?? 0)
-// const forecastOverview = computed(() =>
-//   (planning.value?.forecasts ?? [])
-//     .filter((forecast: any) => {
-//       const month = Number(String(forecast.forecast_date).slice(5, 7))
-//       return month >= 7 && month <= 12
-//     })
-//     .slice(0, 6)
-// )
 
-const categoryTypeColors: Record<string, string> = {
-  equipment: 'primary',
-  materials: 'success',
-  supplies: 'warning',
-}
-
-const categoryTypes = computed(() =>
-  Object.entries(planning.value?.inventory_summary?.by_category_type ?? {}).map(([type, data]: [string, any]) => ({
+const categoryTypes = computed(() => {
+  const byCategory = planning.value?.inventory_summary?.by_category_type ?? {}
+  return Object.entries(byCategory).map(([type, data]: [string, any]) => ({
     type,
     totalItems: data.total_items ?? 0,
     totalQuantity: data.total_quantity ?? 0,
     lowStockCount: data.low_stock_count ?? 0,
   }))
-)
+})
 
 const statusColor: Record<string, string> = {
   available: 'success',
@@ -65,21 +66,39 @@ const statusColor: Record<string, string> = {
   damaged: 'error',
 }
 
+const lowStockItemsArray = computed(() => {
+  const items = planning.value?.low_stock_items
+  if (!items) return []
+  if (Array.isArray(items)) return items
+  if (typeof items.toArray === 'function') return items.toArray()
+  return Object.values(items)
+})
+
+const recommendedStockArray = computed(() => {
+  const stock = planning.value?.recommended_stock
+  if (!stock) return []
+  if (Array.isArray(stock)) return stock
+  if (typeof stock.toArray === 'function') return stock.toArray()
+  return Object.values(stock)
+})
+
 const columns: TableColumn<any>[] = [
   { accessorKey: 'item_name', header: 'Item Name' },
   {
     accessorKey: 'category_type', header: 'Category', cell: ({ row }) => {
       const type = row.getValue('category_type')
-      return h('UBadge', { variant: 'subtle', color: categoryTypeColors[type] || 'neutral' }, () => type)
+      return h('UBadge', { variant: 'subtle', color: getCategoryColor(type) }, () => type)
     }
   },
   {
-    accessorKey: 'quantity', header: 'Current Qty', cell: ({ row }) => {
-      const qty = row.getValue('quantity')
+    accessorKey: 'current_quantity', header: 'Current Qty', cell: ({ row }) => {
+      const qty = row.getValue('current_quantity')
       return h('span', { class: qty <= 5 ? 'text-warning font-semibold' : '' }, () => qty)
     }
   },
+  { accessorKey: 'estimated_monthly_usage', header: 'Est. Monthly Usage' },
   { accessorKey: 'recommended_min', header: 'Recommended Min' },
+  { accessorKey: 'reorder_point', header: 'Reorder Point' },
   {
     accessorKey: 'status', header: 'Status', cell: ({ row }) => {
       const s = row.getValue('status')
@@ -133,7 +152,7 @@ const columns: TableColumn<any>[] = [
       <!-- Recommended Stock Levels -->
       <UCard>
         <template #header>Recommended Stock Levels</template>
-        <UTable :data="Array.isArray(planning.recommended_stock) ? planning.recommended_stock : []" :columns="columns"
+        <UTable :data="recommendedStockArray" :columns="columns"
           :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
           v-model:pagination="overviewTablePagination" />
 
@@ -148,16 +167,17 @@ const columns: TableColumn<any>[] = [
               @keyup.enter="overviewHandleGoToPage" />
             <UButton size="sm" @click="overviewHandleGoToPage">Go</UButton>
           </div>
-          <UPagination :total="Array.isArray(planning.recommended_stock) ? planning.recommended_stock.length : 0"
+          <UPagination :total="recommendedStockArray.length"
             v-model:page="overviewPage" :items-per-page="overviewPageSize" />
         </div>
       </UCard>
 
+      <!-- Inventory by Category Type -->
       <UCard v-if="categoryTypes.length">
         <template #header>Inventory by Category Type</template>
         <div class="grid gap-4 sm:grid-cols-3">
           <div v-for="category in categoryTypes" :key="category.type" class="rounded-lg border p-4"
-            :style="{ borderLeftColor: categoryTypeColors[category.type] ? `var(--color-${categoryTypeColors[category.type]})` : 'var(--color-neutral)', borderLeftStyle: 'solid', borderLeftWidth: '4px' }">
+            :style="{ borderLeftColor: getCategoryColor(category.type) ? `var(--color-${getCategoryColor(category.type)})` : 'var(--color-neutral)', borderLeftStyle: 'solid', borderLeftWidth: '4px' }">
             <p class="text-sm font-semibold capitalize">{{ category.type.replace(/_/g, ' ') }}</p>
             <p class="text-2xl font-bold">{{ category.totalItems }} items</p>
             <p class="text-sm text-slate-500">{{ category.totalQuantity }} total qty</p>
@@ -169,15 +189,15 @@ const columns: TableColumn<any>[] = [
       <!-- Low Stock Alerts -->
       <UCard>
         <template #header>Low Stock Alerts</template>
-        <div v-if="planning.low_stock_items?.length" class="space-y-3">
-          <div v-for="item in planning.low_stock_items" :key="item.id"
+        <div v-if="lowStockItemsArray.length" class="space-y-3">
+          <div v-for="item in lowStockItemsArray" :key="item.id || item.item_name"
             class="flex items-center justify-between py-2 border-b last:border-0">
             <div>
               <p class="text-sm font-medium">{{ item.item_name }}</p>
-              <p class="text-xs text-slate-500 capitalize">{{ item.category_type }} • {{ item.category }}</p>
+              <p class="text-xs text-slate-500 capitalize">{{ item.category_type || item.category }} • {{ item.category }}</p>
             </div>
             <UBadge :color="item.status === 'damaged' ? 'error' : 'warning'" variant="subtle">
-              {{ item.quantity }} left
+              {{ item.current_quantity ?? item.quantity }} left
             </UBadge>
           </div>
         </div>

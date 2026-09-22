@@ -106,9 +106,39 @@ class InventoryPlanningController extends Controller
         $offPeakRevenue = $forecasts->filter(fn ($f) => $this->isOffPeakSeason($f->forecast_date))->sum('predicted_revenue');
         $totalRevenue = $peakRevenue + $offPeakRevenue;
 
+        $peakDemandMultiplier = $totalRevenue > 0 ? ($peakRevenue / $totalRevenue) * 2 : 1;
+        $offPeakDemandMultiplier = $totalRevenue > 0 ? ($offPeakRevenue / $totalRevenue) * 2 : 1;
+
+        $categoryTurnoverRates = [
+            'Equipment' => ['turnover' => 0.5, 'lead_time_months' => 2, 'safety_factor' => 1.5],
+            'Materials' => ['turnover' => 2, 'lead_time_months' => 1, 'safety_factor' => 1.3],
+            'Supplies' => ['turnover' => 5, 'lead_time_months' => 1, 'safety_factor' => 1.2],
+        ];
+
         foreach ($items as $item) {
-            $ratio = $totalRevenue > 0 ? ($item->quantity / $totalRevenue) : 0;
-            $seasonFactor = $ratio > 0.01 ? 1.2 : 0.8;
+            $categoryConfig = $categoryTurnoverRates[$item->category] ?? ['turnover' => 1, 'lead_time_months' => 1, 'safety_factor' => 1.3];
+
+            $monthlyTurnover = $categoryConfig['turnover'];
+            $leadTimeMonths = $categoryConfig['lead_time_months'];
+            $safetyFactor = $categoryConfig['safety_factor'];
+
+            $avgMonthlyRevenue = $totalRevenue > 0 ? $totalRevenue / 12 : 0;
+            $revenueShare = $avgMonthlyRevenue > 0 ? ($item->quantity / $items->sum('quantity')) : (1 / max($items->count(), 1));
+
+            $baseMonthlyUsage = max(1, (int) ($monthlyTurnover * $revenueShare * 100));
+
+            $peakMonthlyUsage = (int) ($baseMonthlyUsage * $peakDemandMultiplier);
+            $offPeakMonthlyUsage = (int) ($baseMonthlyUsage * $offPeakDemandMultiplier);
+            $estimatedMonthlyUsage = max($peakMonthlyUsage, $offPeakMonthlyUsage, 1);
+
+            $leadTimeDemand = $estimatedMonthlyUsage * $leadTimeMonths;
+            $safetyStock = (int) ($leadTimeDemand * ($safetyFactor - 1));
+            $recommendedMin = $leadTimeDemand + $safetyStock;
+            $recommendedMin = max(5, min($recommendedMin, $item->quantity * 4));
+
+            $reorderPoint = (int) ceil($recommendedMin * 1.15);
+
+            $needsReorder = $item->quantity <= $reorderPoint;
 
             $recommended[] = [
                 'item_id' => $item->id,
@@ -116,8 +146,10 @@ class InventoryPlanningController extends Controller
                 'current_quantity' => $item->quantity,
                 'category_type' => $item->category,
                 'status' => $item->status,
-                'recommended_min' => max(1, (int) ($item->quantity * $seasonFactor)),
-                'needs_reorder' => $item->quantity <= 10,
+                'recommended_min' => $recommendedMin,
+                'reorder_point' => $reorderPoint,
+                'needs_reorder' => $needsReorder,
+                'estimated_monthly_usage' => $estimatedMonthlyUsage,
             ];
         }
 
@@ -129,9 +161,9 @@ class InventoryPlanningController extends Controller
         $peakRevenue = $forecasts->filter(fn ($f) => $this->isPeakSeason($f->forecast_date))->sum('predicted_revenue');
         $offPeakRevenue = $forecasts->filter(fn ($f) => $this->isOffPeakSeason($f->forecast_date))->sum('predicted_revenue');
 
-        $equipmentTotal = $items->where('category', 'equipment')->sum('quantity');
-        $materialsTotal = $items->where('category', 'materials')->sum('quantity');
-        $suppliesTotal = $items->where('category', 'supplies')->sum('quantity');
+        $equipmentTotal = $items->where('category', 'Equipment')->sum('quantity');
+        $materialsTotal = $items->where('category', 'Materials')->sum('quantity');
+        $suppliesTotal = $items->where('category', 'Supplies')->sum('quantity');
 
         return [
             'peak_budget_allocation' => [
