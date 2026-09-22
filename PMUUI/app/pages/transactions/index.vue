@@ -43,7 +43,7 @@ const {
       `/v1/transactions?${params.toString()}`,
       { parseJson: true },
     );
-    
+
     return { data: result.data, total: result.meta.total };
   },
 });
@@ -384,7 +384,7 @@ const columns: TableColumn<Transactions>[] = [
       );
     },
   },
-  
+
   { accessorKey: "action", header: "Action" },
 ];
 
@@ -406,30 +406,13 @@ onMounted(() => {
     </div>
 
     <div class="flex flex-wrap gap-3 mb-4">
-      <UInput
-        v-model="searchQuery"
-        placeholder="Search by OR Number"
-        class="w-64"
-        @keyup.enter="resetPageAndRefresh"
-      >
+      <UInput v-model="searchQuery" placeholder="Search by OR Number" class="w-64" @keyup.enter="resetPageAndRefresh">
         <template #leading>
           <UIcon name="i-lucide-search" />
         </template>
       </UInput>
-      <UInput
-        v-model="dateFilter"
-        type="date"
-        placeholder="From Date"
-        class="w-40"
-        @change="resetPageAndRefresh"
-      />
-      <UInput
-        v-model="dateFilterEnd"
-        type="date"
-        placeholder="To Date"
-        class="w-40"
-        @change="resetPageAndRefresh"
-      />
+      <UInput v-model="dateFilter" type="date" placeholder="From Date" class="w-40" @change="resetPageAndRefresh" />
+      <UInput v-model="dateFilterEnd" type="date" placeholder="To Date" class="w-40" @change="resetPageAndRefresh" />
       <UButton variant="outline" @click="clearFilters">
         <UIcon name="i-lucide-x" class="mr-1" /> Clear
       </UButton>
@@ -437,30 +420,12 @@ onMounted(() => {
 
     <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton
-          class="me-2"
-          v-if="can('view transactions')"
-          size="xs"
-          color="info"
-          variant="ghost"
-          @click="openView(row.original)"
-          icon="i-lucide-eye"
-        ></UButton>
-        <UButton
-          class="me-2"
-          v-if="can('edit transactions')"
-          size="xs"
-          color="secondary"
-          @click="openEdit(row.original)"
-          icon="i-lucide-edit"
-        ></UButton>
-        <UButton
-          v-if="can('delete transactions')"
-          size="xs"
-          color="error"
-          @click="remove(row.original)"
-          icon="i-lucide-trash"
-        ></UButton>
+        <UButton class="me-2" v-if="can('view transactions')" size="xs" color="info" variant="ghost"
+          @click="openView(row.original)" icon="i-lucide-eye"></UButton>
+        <UButton class="me-2" v-if="can('edit transactions')" size="xs" color="secondary"
+          @click="openEdit(row.original)" icon="i-lucide-edit"></UButton>
+        <UButton v-if="can('delete transactions')" size="xs" color="error" @click="remove(row.original)"
+          icon="i-lucide-trash"></UButton>
       </template>
     </UTable>
 
@@ -471,133 +436,99 @@ onMounted(() => {
       </div>
       <div class="flex items-center gap-2">
         <span class="text-sm text-slate-500">Go to page:</span>
-        <UInput
-          v-model="goToPageInput"
-          type="number"
-          :min="1"
-          :max="totalPages"
-          class="w-16"
-          @keyup.enter="handleGoToPage"
-        />
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16"
+          @keyup.enter="handleGoToPage" />
         <UButton size="sm" @click="handleGoToPage">Go</UButton>
       </div>
-      <UPagination
-        :total="totalItems"
-        v-model:page="page"
-        :items-per-page="pageSizeNumber"
-      />
+      <UPagination :total="totalItems" v-model:page="page" :items-per-page="pageSizeNumber" />
     </div>
 
     <UModal v-model:open="showModal">
-        <template #header>
-          {{
-            modalMode === "view"
-              ? "View Transaction"
-              : modalMode === "edit"
-                ? "Edit Transaction"
-                : "New Transaction"
-          }}
-        </template>
-        <template #body>
-          <div class="space-y-4">
-            <UFormField label="Stakeholder" class="mb-3">
-              <USelect
+      <template #header>
+        {{
+          modalMode === "view"
+            ? "View Transaction"
+            : modalMode === "edit"
+              ? "Edit Transaction"
+              : "New Transaction"
+        }}
+      </template>
+      <template #body>
+        <div class="space-y-4">
+          <UFormField label="Stakeholder" class="mb-3">
+            <!-- <USelectMenu
                 v-model="form.stakeholder_id"
                 :items="stakeholders.map((s) => ({ label: s.name, value: s.id }))"
                 placeholder="Select stakeholder"
                 :disabled="modalMode === 'view'"
                 :filterable="true"
                 @update:open="(isOpen: boolean) => isOpen && loadStakeholders()"
-              />
-            </UFormField>
+              /> -->
+            <USelectMenu v-model="form.stakeholder_id" value-key="value"
+              :items="stakeholders.map((s) => ({ label: s.name, value: s.id }))" placeholder="Select stakeholder"
+              :disabled="modalMode === 'view'" @update:open="(isOpen: boolean) => isOpen && loadStakeholders()">
+              <template #empty="{ searchTerm }">
+                <p v-if="searchTerm" class="text-center text-sm text-muted p-2">
+                  Input the registered stakeholder.
+                </p>
+                <p v-else class="text-center text-sm text-muted p-2">
+                  No stakeholders available.
+                </p>
+              </template>
+            </USelectMenu>
+          </UFormField>
 
-            <UFormField label="OR Number" class="mb-3">
-              <UInput
-                v-model="form.or_number"
-                placeholder="Enter OR Number"
-                maxlength="50"
-                :disabled="modalMode === 'view'"
-              />
-            </UFormField>
+          <UFormField label="OR Number" class="mb-3">
+            <UInput v-model="form.or_number" placeholder="Enter OR Number" maxlength="50"
+              :disabled="modalMode === 'view'" />
+          </UFormField>
 
-            <UFormField label="Transaction Items" class="mb-4">
-              <div
-                v-for="(item, index) in form.items"
-                :key="index"
-                class="flex gap-2 mb-2 items-end"
-              >
-                <USelect
-                  v-model="item.fee_type_id"
-                  :items="feeTypes.map((f) => ({ label: f.fee_name, value: f.id }))"
-                  placeholder="Fee Type"
-                  class="w-[30%]"
-                  :disabled="modalMode === 'view'"
-                  @update:open="(isOpen: boolean) => isOpen && loadFeeTypes()"
-                />
-                <UInputNumber
-                  v-model="item.quantity"
-                  :min="1"
-                  placeholder="Qty"
-                  class="w-[20%]"
-                  :disabled="modalMode === 'view'"
-                />
-                <UInputNumber
-                  v-model="item.unit_price"
-                  :step="0.01"
-                  :min="0"
-                  placeholder="Unit Price"
-                  class="w-[20%]"
-                  :disabled="modalMode === 'view'"
-                />
-                <span class="w-auto font-mono text-right text-primary">
-                  {{ formatCurrency(calculateSubtotal(item)) }}
-                </span>
-                <UButton
-                  v-if="modalMode !== 'view' && form.items.length > 1"
-                  size="xs"
-                  color="error"
-                  variant="outline"
-                  icon="i-lucide-trash-2"
-                  @click="removeItem(index)"
-                />
-              </div>
-              <UButton
-                v-if="modalMode !== 'view'"
-                type="button"
-                variant="outline"
-                icon="i-lucide-plus"
-                class="w-fit"
-                @click="addItem"
-              >
-                Add Item
-              </UButton>
-            </UFormField>
-
-            <UFormField label="Total Amount" class="mb-3">
-              <span class="text-2xl font-bold text-success">
-                {{ formatCurrency(calculateTotal()) }}
+          <UFormField label="Transaction Items" class="mb-4">
+            <div v-for="(item, index) in form.items" :key="index" class="flex gap-2 mb-2 items-end">
+              <USelect v-model="item.fee_type_id" :items="feeTypes.map((f) => ({ label: f.fee_name, value: f.id }))"
+                placeholder="Fee Type" class="w-[30%]" :disabled="modalMode === 'view'"
+                @update:open="(isOpen: boolean) => isOpen && loadFeeTypes()" />
+              <UInputNumber v-model="item.quantity" :min="1" placeholder="Qty" class="w-[20%]"
+                :disabled="modalMode === 'view'" />
+              <UInputNumber v-model="item.unit_price" :step="0.01" :min="0" placeholder="Unit Price" class="w-[20%]"
+                :disabled="modalMode === 'view'" />
+              <span class="w-auto font-mono text-right text-primary">
+                {{ formatCurrency(calculateSubtotal(item)) }}
               </span>
+              <UButton v-if="modalMode !== 'view' && form.items.length > 1" size="xs" color="error" variant="outline"
+                icon="i-lucide-trash-2" @click="removeItem(index)" />
+            </div>
+            <UButton v-if="modalMode !== 'view'" type="button" variant="outline" icon="i-lucide-plus" class="w-fit"
+              @click="addItem">
+              Add Item
+            </UButton>
+          </UFormField>
+
+          <UFormField label="Total Amount" class="mb-3">
+            <span class="text-2xl font-bold text-success">
+              {{ formatCurrency(calculateTotal()) }}
+            </span>
+          </UFormField>
+
+          <div class="flex flex-row">
+            <UFormField label="Date" class="mb-3 me-3 w-full">
+              <UInput type="date" v-model="form.transaction_date" class="w-full" :disabled="modalMode === 'view'" />
             </UFormField>
 
-            <div class="flex flex-row">
-              <UFormField label="Date" class="mb-3 me-3 w-full">
-                <UInput type="date" v-model="form.transaction_date" class="w-full" :disabled="modalMode === 'view'" />
-              </UFormField>
-
-              <UFormField label="Status" class="mb-3 w-full">
-                <USelect v-model="form.status" :items="statusOptions" class="w-full" :disabled="modalMode === 'view'" />
-              </UFormField>
-            </div>
+            <UFormField label="Status" class="mb-3 w-full">
+              <USelect v-model="form.status" :items="statusOptions" class="w-full" :disabled="modalMode === 'view'" />
+            </UFormField>
           </div>
-        </template>
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton variant="ghost" @click="showModal = false">Close</UButton>
-            <UButton v-if="modalMode !== 'view'" @click="save" :loading="saving">
-              Save
-            </UButton>
-          </div>
-        </template>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" @click="showModal = false">Close</UButton>
+          <UButton v-if="modalMode !== 'view'" @click="save" :loading="saving">
+            Save
+          </UButton>
+        </div>
+      </template>
 
     </UModal>
   </div>

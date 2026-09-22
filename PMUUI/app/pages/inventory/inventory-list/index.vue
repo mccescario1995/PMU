@@ -19,6 +19,7 @@ const UBadge = resolveComponent("UBadge");
 const items = ref<any[]>([]);
 const searchName = ref("");
 const searchStatus = ref("all");
+const searchCategory = ref("all");
 
 const {
   page,
@@ -39,6 +40,7 @@ const {
     });
     if (searchName.value) params.append("name", searchName.value);
     if (searchStatus.value && searchStatus.value !== "all") params.append("status", searchStatus.value);
+    if (searchCategory.value && searchCategory.value !== "all") params.append("category", searchCategory.value);
 
     const result = await apiFetch(
       `/v1/inventory/items?${params.toString()}`,
@@ -48,7 +50,7 @@ const {
   },
 });
 
-watch([searchName, searchStatus], () => {
+watch([searchName, searchStatus, searchCategory], () => {
   page.value = 1;
   refresh();
 });
@@ -249,6 +251,17 @@ async function remove(row: any) {
             { label: 'Damaged', value: 'damaged' },
           ]"
           placeholder="Status"
+          class="w-full"
+        />
+      </UFormField>
+      <UFormField label="Filter by Category" class="w-48">
+        <USelect
+          v-model="searchCategory"
+          :items="[
+            { label: 'All', value: 'all' },
+            ...new Set(data.value.map((i: any) => i.category).filter(Boolean))
+          ]"
+          placeholder="Category"
           class="w-full"
         />
       </UFormField>

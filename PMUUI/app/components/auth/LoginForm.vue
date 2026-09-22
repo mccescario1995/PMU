@@ -72,7 +72,7 @@ const handleSubmit = async () => {
 <template>
   <div class="mx-auto w-full max-w-md"> 
     <div class="mb-3">
-      <UButton icon="i-lucide-arrow-left" variant="ghost" to="/">Back</UButton>
+      <UButton icon="i-lucide-arrow-left" variant="outline" to="/">Back</UButton>
     </div>
     <!-- <RoleBadge :role="role" /> -->
 

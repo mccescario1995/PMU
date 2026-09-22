@@ -112,28 +112,6 @@ function togglePerm(name: string, checked: boolean) {
   }
 }
 
-const permChecks = computed(() => {
-  const obj: Record<string, { get: () => boolean; set: (v: boolean) => void }> = {};
-  for (const perm of roleForm.permissions) {
-    obj[perm] = {
-      get: () => roleForm.permissions.includes(perm),
-      set: (v: boolean) => togglePerm(perm, v),
-    };
-  }
-  // Also include all available permissions so unchecked ones are tracked
-  for (const group of permissionGroups) {
-    for (const perm of group.permissions) {
-      if (!obj[perm.name]) {
-        obj[perm.name] = {
-          get: () => roleForm.permissions.includes(perm.name),
-          set: (v: boolean) => togglePerm(perm.name, v),
-        };
-      }
-    }
-  }
-  return obj;
-});
-
 async function saveRole() {
   const payload = { name: roleForm.name, permissions: roleForm.permissions };
   try {
@@ -395,8 +373,10 @@ const userStatus = ref<SelectItem[]>([
                     {{ group.resource }}
                   </p>
                   <div class="flex flex-wrap gap-3">
-                    <UCheckbox v-for="perm in group.permissions" :key="perm.name" v-model="permChecks[perm.name]"
-                      :label="perm.action" :ui="{ label: 'capitalize' }" :disabled="viewingRole" />
+<UCheckbox v-for="perm in group.permissions" :key="perm.name"
+  :model-value="roleForm.permissions.includes(perm.name)"
+  @update:model-value="(val: boolean) => togglePerm(perm.name, val)"
+  :label="perm.action" :ui="{ label: 'capitalize' }" :disabled="viewingRole" />
                   </div>
                 </div>
               </div>
