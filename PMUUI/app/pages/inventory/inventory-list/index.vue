@@ -131,10 +131,10 @@ const columns: TableColumn<Inventory>[] = [
   { accessorKey: "action", header: "Action" },
 ];
 
-const categoryTypeOptions: SelectItem[] = [
-  { label: "Equipment", value: "equipment" },
-  { label: "Materials", value: "materials" },
-  { label: "Supplies", value: "supplies" },
+const categoryOptions: SelectItem[] = [
+  { label: 'Equipment', value: 'Equipment' },
+  { label: 'Materials', value: 'Materials' },
+  { label: 'Office Supplies', value: 'Office Supplies' },
 ];
 
 const statusOptions: SelectItem[] = [
@@ -151,7 +151,6 @@ const editingItem = ref<any>(null);
 const form = reactive({
   item_name: "",
   category: "",
-  category_type: "supplies",
   quantity: 0,
   unit: "pcs",
   status: "available",
@@ -165,7 +164,6 @@ function openCreate() {
   editingItem.value = null;
   form.item_name = "";
   form.category = "";
-  form.category_type = "supplies";
   form.quantity = 0;
   form.unit = "pcs";
   form.status = "available";
@@ -180,7 +178,6 @@ function openView(row: any) {
   editingItem.value = row;
   form.item_name = row.item_name;
   form.category = row.category;
-  form.category_type = row.category_type ?? "supplies";
   form.quantity = row.quantity;
   form.unit = row.unit ?? "pcs";
   form.status = row.status;
@@ -195,7 +192,6 @@ function openEdit(row: any) {
   editingItem.value = row;
   form.item_name = row.item_name;
   form.category = row.category;
-  form.category_type = row.category_type ?? "supplies";
   form.quantity = row.quantity;
   form.unit = row.unit ?? "pcs";
   form.status = row.status;
@@ -208,11 +204,21 @@ function openEdit(row: any) {
 async function save() {
   saving.value = true;
   try {
+    // Map category to category_type
+    const categoryTypeMap: Record<string, string> = {
+      'Equipment': 'equipment',
+      'Materials': 'materials',
+      'Office Supplies': 'supplies',
+    };
+    const category_type = categoryTypeMap[form.category] || 'supplies';
+
+    const payload = { ...form, category_type };
+
     if (modalMode.value === "edit" && editingItem.value) {
       await apiFetch(`/v1/inventory/items/${editingItem.value.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
         parseJson: true,
       });
       toast.add({ title: "Inventory item updated", color: "success" });
@@ -220,7 +226,7 @@ async function save() {
       await apiFetch("/v1/inventory/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
         parseJson: true,
       });
       toast.add({ title: "Inventory item created", color: "success" });
@@ -363,13 +369,9 @@ async function remove(row: any) {
             </UFormField>
 
             <UFormField label="Category" class="mb-3">
-              <UInput v-model="form.category" :disabled="modalMode === 'view'" class="w-full" />
-            </UFormField>
-
-            <UFormField label="Category Type" class="mb-3">
               <USelect
-                v-model="form.category_type"
-                :items="categoryTypeOptions"
+                v-model="form.category"
+                :items="categoryOptions"
                 class="w-full"
                 :disabled="modalMode === 'view'"
               />
