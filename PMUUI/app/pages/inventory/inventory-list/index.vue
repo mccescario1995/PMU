@@ -259,7 +259,7 @@ async function remove(row: any) {
           v-model="searchCategory"
           :items="[
             { label: 'All', value: 'all' },
-            ...new Set(data.value.map((i: any) => i.category).filter(Boolean))
+            ...(data.value ? new Set(data.value.map((i: any) => i.category).filter(Boolean)) : [])
           ]"
           placeholder="Category"
           class="w-full"
