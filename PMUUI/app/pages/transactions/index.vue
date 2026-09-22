@@ -406,14 +406,20 @@ onMounted(() => {
     </div>
 
     <div class="flex flex-wrap gap-3 mb-4">
-      <UInput v-model="searchQuery" placeholder="Search by OR Number" class="w-64" @keyup.enter="resetPageAndRefresh">
-        <template #leading>
-          <UIcon name="i-lucide-search" />
-        </template>
-      </UInput>
-      <UInput v-model="dateFilter" type="date" placeholder="From Date" class="w-40" @change="resetPageAndRefresh" />
-      <UInput v-model="dateFilterEnd" type="date" placeholder="To Date" class="w-40" @change="resetPageAndRefresh" />
-      <UButton variant="outline" @click="clearFilters">
+      <UFormField label="OR Number" class="w-64">
+        <UInput v-model="searchQuery" placeholder="Search by OR Number" class="w-full" @keyup.enter="resetPageAndRefresh">
+          <template #leading>
+            <UIcon name="i-lucide-search" />
+          </template>
+        </UInput>
+      </UFormField>
+      <UFormField label="From Date" class="w-40">
+        <UInput v-model="dateFilter" type="date" placeholder="From Date" class="w-full" @change="resetPageAndRefresh" />
+      </UFormField>
+      <UFormField label="To Date" class="w-40">
+        <UInput v-model="dateFilterEnd" type="date" placeholder="To Date" class="w-full" @change="resetPageAndRefresh" />
+      </UFormField>
+      <UButton variant="outline" @click="clearFilters" class="self-end">
         <UIcon name="i-lucide-x" class="mr-1" /> Clear
       </UButton>
     </div>
