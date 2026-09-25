@@ -244,6 +244,7 @@ jobs:
               -maxdepth 1 \
               ! -name "api" \
               ! -name ".well-known" \
+              ! -name "feedsight" \
               -exec rm -rf {} +
 
             cp -a "$UI_ROOT/.output/public/." "$WEB_ROOT/"

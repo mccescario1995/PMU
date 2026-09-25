@@ -160,7 +160,7 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     addProgressStep(`Initializing ${model} model...`)
 
     const timeout = model === "sarima" || model === "samira" ? 240000 : 60000
-    const days = (model === "sarima" || model === "samira") ? 180 : 365
+    const days = (model === "sarima" || model === "samira") ? 365 : 365
 
     try {
       addProgressStep("Fetching historical data...")
@@ -210,7 +210,7 @@ export function useForecast(endpoint: string = '/v1/forecasts', trainEndpoint: s
     addProgressStep("Initializing SARIMA model...")
 
     const pmuModel = 'samira'
-    const days = 30
+    const days = 365
 
     try {
       addProgressStep("Fetching historical data from PMUML...")

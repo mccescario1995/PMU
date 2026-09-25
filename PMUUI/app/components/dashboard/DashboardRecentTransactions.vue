@@ -33,7 +33,7 @@ const currency = (v: number) =>
       >
         <div>
           <p class="text-sm font-medium">
-            {{ tx.stakeholder?.name ?? `#${tx.stakeholder_id}` }}
+            {{ tx.stakeholder?.name ? tx.stakeholder.name : (tx.stakeholder_id ? `#${tx.stakeholder_id}` : 'Unknown Stakeholder') }}
           </p>
           <p class="text-xs text-gray-500">
             {{ new Date(tx.transaction_date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) }}

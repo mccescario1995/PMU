@@ -485,7 +485,7 @@ onMounted(() => {
           </UFormField>
 
           <UFormField label="OR Number" class="mb-3">
-            <UInput v-model="form.or_number" placeholder="Enter OR Number" maxlength="50"
+            <UInput v-model="form.or_number" placeholder="Enter OR Number" minlength="7" maxlength="7" type="number"
               :disabled="modalMode === 'view'" />
           </UFormField>
 

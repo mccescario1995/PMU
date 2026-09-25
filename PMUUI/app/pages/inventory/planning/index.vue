@@ -122,13 +122,13 @@ const columns: TableColumn<any>[] = [
       return h('UBadge', { variant: 'subtle', color: statusColor[s] || 'neutral' }, () => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
     }
   },
-  {
-    accessorKey: 'days_remaining', header: 'Days Remaining', cell: ({ row }) => {
-      const item = row.original
-      const days = computeDaysRemaining(item)
-      return days !== null ? days.toFixed(1) : 'N/A'
-    }
-  },
+  // {
+  //   accessorKey: 'days_remaining', header: 'Days Remaining', cell: ({ row }) => {
+  //     const item = row.original
+  //     const days = computeDaysRemaining(item)
+  //     return days !== null ? days.toFixed(1) : 'N/A'
+  //   }
+  // },
   {
     accessorKey: 'needs_reorder', header: 'Reorder?', cell: ({ row }) => {
       return row.getValue('needs_reorder') ? 'Yes' : 'No'

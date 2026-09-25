@@ -58,8 +58,12 @@ class Forecaster:
         if canonical_model_name not in self._models:
             if canonical_model_name == "arima":
                 cfg = self.config.get_model_config("arima")
+                p, d, q = cfg.get("p", 1), cfg.get("d", 0), cfg.get("q", 1)
+                P, D, Q, m = cfg.get("P", 0), cfg.get("D", 0), cfg.get("Q", 0), cfg.get("m", 7)
                 self._models[canonical_model_name] = ARIMAModel(
-                    order=(cfg.get("p", 1), cfg.get("d", 1), cfg.get("q", 1))
+                    order=(p, d, q),
+                    seasonal_order=(P, D, Q, m),
+                    max_training_rows=cfg.get("training_days"),
                 )
             elif canonical_model_name == "sarima":
                 cfg = self.config.get_model_config("sarima")
@@ -197,8 +201,8 @@ class Forecaster:
                     df.iloc[-1], steps=days, weather_df=weather_df
                 )
                 forecasts = model.predict(df, steps=days, future_features=future_df)
-            elif canonical_model_name == "sarima":
-                cfg = self.config.get_model_config("sarima")
+            elif canonical_model_name in ("sarima", "arima"):
+                cfg = self.config.get_model_config(canonical_model_name)
                 exog_col = None
                 if cfg.get("exog"):
                     if wm is not None and "temp_celsius" in df.columns:
@@ -227,9 +231,6 @@ class Forecaster:
                 else:
                     future_exog = None
                 forecasts = model.predict(steps=days, future_exog=future_exog)
-            else:
-                model.fit(df, target="revenue_target")
-                forecasts = model.predict(steps=days)
 
             metrics = model.evaluate()
             return ForecastResult(model_name=model_name, forecasts=forecasts, metrics=metrics)

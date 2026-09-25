@@ -6,8 +6,14 @@ linear_regression:
 arima:
   model_type: arima
   p: 1
-  d: 1
+  d: 0
   q: 1
+  P: 1
+  D: 0
+  Q: 1
+  m: 7
+  training_days: 365
+  exog: true
 
 sarima:
   model_type: sarimax

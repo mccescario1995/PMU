@@ -23,9 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withSchedule(function (Schedule $schedule) {
         // Build features daily at 2 AM (after data entry)
-        $schedule->command('ml:build-features')->dailyAt('02:00');
-
-        
+        $schedule->command('ml:build-features')->dailyAt('02:00'); 
     })
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(HandleCors::class);

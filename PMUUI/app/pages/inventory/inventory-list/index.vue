@@ -148,6 +148,10 @@ const modalMode = ref<"create" | "edit" | "view">("create");
 const saving = ref(false);
 const editingItem = ref<any>(null);
 
+const showDeleteModal = ref(false);
+const deletingItem = ref<any>(null);
+const deleting = ref(false);
+
 const form = reactive({
   item_name: "",
   category: "",
@@ -244,12 +248,29 @@ async function save() {
   }
 }
 
+async function confirmDelete(row: any) {
+  deletingItem.value = row;
+  showDeleteModal.value = true;
+}
+
 async function remove(row: any) {
-  if (!confirm("Delete this inventory item?")) return;
-  await apiFetch(`/v1/inventory/items/${row.id}`, { method: "DELETE" });
-  data.value = data.value.filter((i: any) => i.id !== row.id);
-  totalItems.value = Math.max(0, totalItems.value - 1);
-  toast.add({ title: "Inventory item deleted", color: "success" });
+  deleting.value = true;
+  try {
+    await apiFetch(`/v1/inventory/items/${row.id}`, { method: "DELETE" });
+    data.value = data.value.filter((i: any) => i.id !== row.id);
+    totalItems.value = Math.max(0, totalItems.value - 1);
+    toast.add({ title: "Inventory item deleted", color: "success" });
+  } catch (e: any) {
+    toast.add({
+      title: "Failed to delete item",
+      description: e.message ?? "Please try again.",
+      color: "error",
+    });
+  } finally {
+    showDeleteModal.value = false;
+    deletingItem.value = null;
+    deleting.value = false;
+  }
 }
 </script>
 
@@ -322,7 +343,7 @@ async function remove(row: any) {
           v-if="can('delete inventory')"
           size="xs"
           color="error"
-          @click="remove(row.original)"
+          @click="confirmDelete(row.original)"
           icon="i-lucide-trash"
         ></UButton>
       </template>
@@ -419,6 +440,23 @@ async function remove(row: any) {
             </UButton>
           </div>
         </template>
+    </UModal>
+
+    <UModal v-model:open="showDeleteModal">
+      <template #header>
+        Confirm Delete
+      </template>
+      <template #body>
+        <p class="text-center">Are you sure you want to delete this item?</p>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
+          <UButton color="error" @click="remove(deletingItem)" :loading="deleting">
+            Delete
+          </UButton>
+        </div>
+      </template>
     </UModal>
   </div>
 </template>

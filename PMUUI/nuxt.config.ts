@@ -12,4 +12,13 @@ export default defineNuxtConfig({
   ssr: false,
   css: ["~/assets/css/main.css"],
 
+  vite: {
+    optimizeDeps: {
+      include: [
+        '@vue/devtools-core',
+        '@vue/devtools-kit',
+      ]
+    }
+  }
+
 })
