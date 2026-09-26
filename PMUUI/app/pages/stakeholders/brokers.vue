@@ -9,6 +9,14 @@ definePageMeta({
 });
 
 const brokers = ref<any[]>([])
+const brokerTypeId = ref<string | null>(null)
+
+onMounted(async () => {
+  const types = ((await apiFetch('/v1/dropdowns/stakeholder-types', { parseJson: true })) as any).data
+  const brokerType = types.find((t: any) => t.name.toLowerCase() === 'broker')
+  if (brokerType) brokerTypeId.value = String(brokerType.id)
+})
+
 const {
   page,
   pageSize, pageSizeNumber,
@@ -20,7 +28,14 @@ const {
   loading,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
-    const result = await apiFetch(`/v1/stakeholders?page=${page}&per_page=${pageSize}&type=broker`, { parseJson: true })
+    const params = new URLSearchParams({
+      page: String(page),
+      per_page: String(pageSize),
+    })
+    if (brokerTypeId.value) {
+      params.set('stakeholder_type_id', brokerTypeId.value)
+    }
+    const result = await apiFetch(`/v1/stakeholders?${params.toString()}`, { parseJson: true })
     return { data: result.data, total: result.meta.total }
   }
 })
@@ -28,8 +43,7 @@ const {
 type Broker = {
   id: number
   name: string
-  contact_no: string
-  email: string
+  official_receipt: string
 }
 
 const columns: TableColumn<Broker>[] = [
@@ -39,8 +53,7 @@ const columns: TableColumn<Broker>[] = [
     cell: ({ row }) => `#${row.getValue('id')}`,
   },
   { accessorKey: 'name', header: 'Name' },
-  { accessorKey: 'contact_no', header: 'Contact' },
-  { accessorKey: 'email', header: 'Email' },
+  { accessorKey: 'official_receipt', header: 'Official Receipt' },
   { accessorKey: 'action', header: 'Action' },
 ]
 </script>

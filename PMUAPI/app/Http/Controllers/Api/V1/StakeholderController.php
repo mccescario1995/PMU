@@ -16,10 +16,6 @@ class StakeholderController extends Controller
     {
         $query = Stakeholder::with('stakeholderType');
 
-        if ($type = request('type')) {
-            $query->where('type', $type);
-        }
-
         if ($stakeholder_type_id = request('stakeholder_type_id')) {
             $query->where('stakeholder_type_id', $stakeholder_type_id);
         }
@@ -27,7 +23,7 @@ class StakeholderController extends Controller
         if ($search = request('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('contact_no', 'like', "%{$search}%");
+                  ->orWhere('official_receipt', 'like', "%{$search}%");
             });
         }
 
@@ -42,29 +38,14 @@ class StakeholderController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string',
-            'type' => 'sometimes|required|in:buyer,broker,renter',
+            'official_receipt' => 'required|string|size:7|regex:/^\d{7}$/|unique:stakeholders,official_receipt',
             'stakeholder_type_id' => 'nullable|exists:stakeholder_types,id',
-            'contact_no' => 'nullable|string|max:30',
-            'email' => 'nullable|email',
-            'address' => 'nullable|string',
             'status' => 'nullable|in:active,inactive',
         ]);
 
-        // if (empty($data['stakeholder_type_id'])) {
-        //     $typeName = ucfirst($data['type']);
-        //     $type = StakeholderType::firstOrCreate(['name' => $typeName]);
-        //     $data['stakeholder_type_id'] = $type->id;
-        // }
-
-        if (empty($data['stakeholder_type_id']) && ! empty($data['type'])) {
-            $typeName = ucfirst($data['type']);
-            $type = StakeholderType::firstOrCreate(['name' => $typeName]);
-            $data['stakeholder_type_id'] = $type->getKey();
-        }
-
         $stakeholder = Stakeholder::create($data);
 
-        $this->logAudit('create', 'stakeholders', $stakeholder->id, null, $this->modelToArray($stakeholder, ['name', 'type', 'stakeholder_type_id', 'contact_no', 'email', 'address', 'status']));
+        $this->logAudit('create', 'stakeholders', $stakeholder->id, null, $this->modelToArray($stakeholder, ['name', 'official_receipt', 'stakeholder_type_id', 'status']));
 
         return new StakeholderResource($stakeholder);
     }
@@ -78,32 +59,23 @@ class StakeholderController extends Controller
     {
         $data = $request->validate([
             'name' => 'sometimes|required|string',
-            'type' => 'sometimes|required|in:buyer,broker,renter',
+            'official_receipt' => 'sometimes|required|string|size:7|regex:/^\d{7}$/|unique:stakeholders,official_receipt,'.$stakeholder->id,
             'stakeholder_type_id' => 'nullable|exists:stakeholder_types,id',
-            'contact_no' => 'nullable|string|max:30',
-            'email' => 'nullable|email',
-            'address' => 'nullable|string',
             'status' => 'nullable|in:active,inactive',
         ]);
 
-        $oldValues = $this->modelToArray($stakeholder, ['name', 'type', 'stakeholder_type_id', 'contact_no', 'email', 'address', 'status']);
-
-        if (empty($data['stakeholder_type_id']) && ! empty($data['type'])) {
-            $typeName = ucfirst($data['type']);
-            $type = StakeholderType::firstOrCreate(['name' => $typeName]);
-            $data['stakeholder_type_id'] = $type->getKey();
-        }
+        $oldValues = $this->modelToArray($stakeholder, ['name', 'official_receipt', 'stakeholder_type_id', 'status']);
 
         $stakeholder->update($data);
 
-        $this->logAudit('update', 'stakeholders', $stakeholder->id, $oldValues, $this->modelToArray($stakeholder, ['name', 'type', 'stakeholder_type_id', 'contact_no', 'email', 'address', 'status']));
+        $this->logAudit('update', 'stakeholders', $stakeholder->id, $oldValues, $this->modelToArray($stakeholder, ['name', 'official_receipt', 'stakeholder_type_id', 'status']));
 
         return new StakeholderResource($stakeholder->load('stakeholderType'));
     }
 
     public function destroy(Stakeholder $stakeholder)
     {
-        $this->logAudit('delete', 'stakeholders', $stakeholder->id, $this->modelToArray($stakeholder, ['name', 'type', 'stakeholder_type_id', 'contact_no', 'email', 'address', 'status']), null);
+        $this->logAudit('delete', 'stakeholders', $stakeholder->id, $this->modelToArray($stakeholder, ['name', 'official_receipt', 'stakeholder_type_id', 'status']), null);
 
         $stakeholder->delete();
 

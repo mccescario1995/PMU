@@ -17,14 +17,10 @@ class DropdownController extends Controller
     {
         $query = Stakeholder::query()->orderBy('name');
 
-        if ($type = request('type')) {
-            $query->where('type', $type);
-        }
-
         if ($search = request('search')) {
             $query->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('contact_no', 'like', "%{$search}%");
+                    ->orWhere('official_receipt', 'like', "%{$search}%");
             });
         }
 

@@ -14,11 +14,8 @@ class Stakeholder extends Model
 
     protected $fillable = [
         'name',
-        'type',
+        'official_receipt',
         'stakeholder_type_id',
-        'contact_no',
-        'email',
-        'address',
         'status',
     ];
 

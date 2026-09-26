@@ -6,6 +6,7 @@ import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
 import type { SelectItem } from "@nuxt/ui";
+import * as XLSX from "xlsx";
 
 definePageMeta({
   layout: "dashboard",
@@ -19,12 +20,6 @@ onMounted(() => {
 });
 
 const UBadge = resolveComponent("UBadge");
-
-const typeColor = {
-  buyer: "success" as const,
-  broker: "warning" as const,
-  renter: "neutral" as const,
-};
 
 const stakeholders = ref<any[]>([]);
 const searchQuery = ref("");
@@ -50,12 +45,7 @@ const {
       params.set("search", searchQuery.value);
     }
     if (typeFilter.value) {
-      const typeObj = types.value.find(
-        (t: any) => t.name.toLowerCase() === typeFilter.value,
-      );
-      if (typeObj) {
-        params.set("stakeholder_type_id", String(typeObj.id));
-      }
+      params.set("stakeholder_type_id", typeFilter.value);
     }
     const result = await apiFetch(`/v1/stakeholders?${params.toString()}`, {
       parseJson: true,
@@ -69,9 +59,8 @@ watch(searchQuery, () => {
   refresh();
 });
 
-watch(typeFilter, async () => {
+watch(typeFilter, () => {
   page.value = 1;
-  await loadTypes();
   refresh();
 });
 
@@ -85,19 +74,15 @@ const typesLoaded = ref(false);
 
 const form = reactive({
   name: "",
+  official_receipt: "",
   stakeholder_type_id: null as number | null,
-  contact_no: "",
-  email: "",
-  address: "",
   status: "active",
 });
 
 const errors = reactive({
   name: "",
+  official_receipt: "",
   stakeholder_type_id: "",
-  contact_no: "",
-  email: "",
-  address: "",
   status: "",
 });
 
@@ -111,28 +96,21 @@ function validateForm(): boolean {
     errors.name = "";
   }
 
+  if (!form.official_receipt.trim()) {
+    errors.official_receipt = "Official receipt is required";
+    isValid = false;
+  } else if (!/^\d{7}$/.test(form.official_receipt.trim())) {
+    errors.official_receipt = "Official receipt must be exactly 7 digits";
+    isValid = false;
+  } else {
+    errors.official_receipt = "";
+  }
+
   if (!form.stakeholder_type_id) {
     errors.stakeholder_type_id = "Stakeholder type is required";
     isValid = false;
   } else {
     errors.stakeholder_type_id = "";
-  }
-
-  if (!form.contact_no.trim()) {
-    errors.contact_no = "Contact number is required";
-    isValid = false;
-  } else if (!/^09\d{9}$/.test(form.contact_no.trim())) {
-    errors.contact_no = "Contact number must be 11 digits and start with 09";
-    isValid = false;
-  } else {
-    errors.contact_no = "";
-  }
-
-  if (!form.address.trim()) {
-    errors.address = "Address is required";
-    isValid = false;
-  } else {
-    errors.address = "";
   }
 
   if (!form.status) {
@@ -142,23 +120,14 @@ function validateForm(): boolean {
     errors.status = "";
   }
 
-  if (form.email && form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-    errors.email = "Invalid email format";
-    isValid = false;
-  } else {
-    errors.email = "";
-  }
-
   return isValid;
 }
 
 const isFormValid = computed(() => {
   if (!form.name.trim()) return false;
+  if (!form.official_receipt.trim() || !/^\d{7}$/.test(form.official_receipt.trim())) return false;
   if (!form.stakeholder_type_id) return false;
-  if (!form.contact_no.trim() || !/^09\d{9}$/.test(form.contact_no.trim())) return false;
-  if (!form.address.trim()) return false;
   if (!form.status) return false;
-  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return false;
   return true;
 });
 
@@ -185,16 +154,12 @@ function openCreate() {
   modalMode.value = "create";
   editingStakeholder.value = null;
   form.name = "";
+  form.official_receipt = "";
   form.stakeholder_type_id = null;
-  form.contact_no = "";
-  form.email = "";
-  form.address = "";
   form.status = "active";
   errors.name = "";
+  errors.official_receipt = "";
   errors.stakeholder_type_id = "";
-  errors.contact_no = "";
-  errors.email = "";
-  errors.address = "";
   errors.status = "";
   showModal.value = true;
   loadTypes();
@@ -204,16 +169,12 @@ function openView(row: any) {
   modalMode.value = "view";
   editingStakeholder.value = row;
   form.name = row.name;
+  form.official_receipt = row.official_receipt ?? "";
   form.stakeholder_type_id = row.stakeholder_type_id;
-  form.contact_no = row.contact_no ?? "";
-  form.email = row.email ?? "";
-  form.address = row.address ?? "";
   form.status = row.status ?? "active";
   errors.name = "";
+  errors.official_receipt = "";
   errors.stakeholder_type_id = "";
-  errors.contact_no = "";
-  errors.email = "";
-  errors.address = "";
   errors.status = "";
   showModal.value = true;
   loadTypes();
@@ -223,16 +184,12 @@ function openEdit(row: any) {
   modalMode.value = "edit";
   editingStakeholder.value = row;
   form.name = row.name;
+  form.official_receipt = row.official_receipt ?? "";
   form.stakeholder_type_id = row.stakeholder_type_id;
-  form.contact_no = row.contact_no ?? "";
-  form.email = row.email ?? "";
-  form.address = row.address ?? "";
   form.status = row.status ?? "active";
   errors.name = "";
+  errors.official_receipt = "";
   errors.stakeholder_type_id = "";
-  errors.contact_no = "";
-  errors.email = "";
-  errors.address = "";
   errors.status = "";
   showModal.value = true;
   loadTypes();
@@ -280,11 +237,26 @@ async function remove(row: any) {
   toast.add({ title: "Stakeholder deleted", color: "success" });
 }
 
+function exportToExcel() {
+  const exportData = data.value.map((item: any) => ({
+    ID: item.id,
+    Name: item.name,
+    "Official Receipt": item.official_receipt,
+    Type: item.stakeholder_type?.name ?? "Unknown",
+    Status: item.status,
+    Created: item.created_at,
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Stakeholders");
+  XLSX.writeFile(wb, `stakeholders_${new Date().toISOString().split('T')[0]}.xlsx`);
+}
+
 type Stakeholder = {
   id: number;
   name: string;
-  type: string;
-  contact_no: string;
+  official_receipt: string;
 };
 
 const columns: TableColumn<Stakeholder>[] = [
@@ -298,22 +270,25 @@ const columns: TableColumn<Stakeholder>[] = [
     header: "Name",
   },
   {
+    accessorKey: "official_receipt",
+    header: "Official Receipt",
+  },
+  {
     accessorKey: "stakeholder_type_id",
     header: "Type",
     cell: ({ row }) => {
       const typeName = row.original.stakeholder_type?.name ?? "Unknown";
-      const rawType = typeName.toLowerCase();
-      const color = typeColor[rawType as keyof typeof typeColor] ?? "neutral";
-      return h(
-        UBadge,
-        { class: "capitalize", variant: "subtle", color },
-        () => typeName,
-      );
+      return h(UBadge, { class: "capitalize", variant: "subtle", color: "primary" }, () => typeName);
     },
   },
   {
-    accessorKey: "contact_no",
-    header: "Contact",
+    accessorKey: "status",
+    header: "Status",
+    cell: ({ row }) => {
+      const status = row.getValue("status");
+      const color = status === "active" ? "success" : "error";
+      return h(UBadge, { variant: "subtle", color }, () => status);
+    },
   },
   {
     accessorKey: "action",
@@ -324,7 +299,7 @@ const columns: TableColumn<Stakeholder>[] = [
 
 <template>
   <div class="p-6 space-y-5">
-    <div class="flex justify-between items-center gap-4">
+    <div class="flex justify-between items-center gap-4 flex-wrap">
       <div class="flex flex-col">
         <h1 class="text-2xl font-bold mb-3">Stakeholders</h1>
         <UInput
@@ -336,23 +311,38 @@ const columns: TableColumn<Stakeholder>[] = [
         />
       </div>
 
-      <UButton
-        v-if="can('create stakeholders')"
-        icon="i-lucide-plus"
-        @click="openCreate"
-      >
-        Add Stakeholder
-      </UButton>
+      <div class="flex items-center gap-2">
+        <UButton
+          v-if="can('create stakeholders')"
+          icon="i-lucide-plus"
+          @click="openCreate"
+        >
+          Add Stakeholder
+        </UButton>
+        <UButton
+          icon="i-lucide-download"
+          @click="exportToExcel"
+          variant="outline"
+        >
+          Export
+        </UButton>
+      </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-2 mt-2">
       <UButton
-        v-for="type in [null, 'buyer', 'broker', 'renter']"
-        :key="type"
-        :label="type === null ? 'All' : type.charAt(0).toUpperCase() + type.slice(1)"
+        v-for="type in types"
+        :key="type.id"
+        :label="type.name"
         variant="outline"
-        :color="typeFilter === type ? 'primary' : undefined"
-        @click="typeFilter = type"
+        :color="typeFilter === String(type.id) ? 'primary' : undefined"
+        @click="typeFilter = typeFilter === String(type.id) ? null : String(type.id)"
+      />
+      <UButton
+        :label="'All'"
+        variant="outline"
+        :color="typeFilter === null ? 'primary' : undefined"
+        @click="typeFilter = null"
       />
     </div>
 
@@ -385,7 +375,7 @@ const columns: TableColumn<Stakeholder>[] = [
       </template>
     </UTable>
 
-    <div class="flex items-center justify-between mt-4">
+    <div class="flex items-center justify-between mt-4 flex-wrap gap-4">
       <div class="flex items-center gap-2">
         <span class="text-sm text-slate-500">Rows per page:</span>
         <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
@@ -425,6 +415,20 @@ const columns: TableColumn<Stakeholder>[] = [
               <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" @input="clearError('name')" />
             </UFormField>
 
+            <UFormField label="Official Receipt" class="mb-3" :error="errors.official_receipt" required>
+              <UInput
+                v-model="form.official_receipt"
+                :disabled="modalMode === 'view'"
+                class="w-full"
+                type="text"
+                inputmode="numeric"
+                maxlength="7"
+                @input="form.official_receipt = form.official_receipt.replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
+                placeholder="7 digits only"
+              />
+              <template #description>Exactly 7 digits</template>
+            </UFormField>
+
             <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id" required>
               <USelect
                 v-model="form.stakeholder_type_id"
@@ -435,19 +439,6 @@ const columns: TableColumn<Stakeholder>[] = [
                 :disabled="modalMode === 'view'"
                 @change="clearError('stakeholder_type_id')"
               />
-            </UFormField>
-
-            <UFormField label="Contact" class="mb-3" :error="errors.contact_no" required>
-              <UInput v-model="form.contact_no" :disabled="modalMode === 'view'" class="w-full" type="tel" inputmode="numeric" maxlength="11" @input="form.contact_no = form.contact_no.replace(/\D/g, ''); clearError('contact_no')" />
-            </UFormField>
-
-            <UFormField label="Email" class="mb-3" :error="errors.email">
-              <UInput v-model="form.email" type="email" :disabled="modalMode === 'view'" class="w-full" @input="clearError('email')" />
-              <template #description>Email (optional)</template>
-            </UFormField>
-
-            <UFormField label="Address" class="mb-3" :error="errors.address" required>
-              <UTextarea v-model="form.address" :disabled="modalMode === 'view'" class="w-full" @input="clearError('address')" />
             </UFormField>
 
             <UFormField label="Status" class="mb-3" :error="errors.status" required>
