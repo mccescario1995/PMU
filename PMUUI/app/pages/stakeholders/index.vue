@@ -260,18 +260,18 @@ type Stakeholder = {
 };
 
 const columns: TableColumn<Stakeholder>[] = [
+  // {
+  //   accessorKey: "id",
+  //   header: "#",
+  //   cell: ({ row }) => `#${row.getValue("id")}`,
+  // },
   {
-    accessorKey: "id",
-    header: "#",
-    cell: ({ row }) => `#${row.getValue("id")}`,
+    accessorKey: "official_receipt",
+    header: "OR",
   },
   {
     accessorKey: "name",
     header: "Name",
-  },
-  {
-    accessorKey: "official_receipt",
-    header: "Official Receipt",
   },
   {
     accessorKey: "stakeholder_type_id",
