@@ -46,13 +46,28 @@ const filteredForecasts = computed(() =>
     return mv.includes(slug) || mv.includes(model)
   })
 )
+
+const currentYearForecasts = computed(() => {
+  const now = new Date()
+  const currentYear = now.getFullYear()
+  const currentMonth = now.getMonth()
+  const periodStart = new Date(currentYear, 0, 1)
+  const periodEnd = new Date(currentYear, currentMonth + 1, 0)
+  periodEnd.setHours(23, 59, 59, 999)
+
+  return filteredForecasts.value.filter((f: any) => {
+    const forecastDate = new Date(f.forecast_date)
+    return forecastDate >= periodStart && forecastDate <= periodEnd
+  })
+})
+
 const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => filteredForecasts.value.length)
 
 const totalRevenue = computed(() =>
-  filteredForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
+  currentYearForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
 )
-const periods = computed(() => filteredForecasts.value.length)
-const latestModel = computed(() => filteredForecasts.value[0]?.model_version ?? "-")
+const periods = computed(() => currentYearForecasts.value.length)
+const latestModel = computed(() => currentYearForecasts.value[0]?.model_version ?? "-")
 
 const UBadge = resolveComponent('UBadge')
 </script>

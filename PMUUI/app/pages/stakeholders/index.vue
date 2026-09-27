@@ -80,10 +80,10 @@ const form = reactive({
 });
 
 const errors = reactive({
-  name: "",
-  official_receipt: "",
-  stakeholder_type_id: "",
-  status: "",
+  name: null as string | null,
+  official_receipt: null as string | null,
+  stakeholder_type_id: null as string | null,
+  status: null as string | null,
 });
 
 function validateForm(): boolean {
@@ -93,7 +93,7 @@ function validateForm(): boolean {
     errors.name = "Name is required";
     isValid = false;
   } else {
-    errors.name = "";
+    errors.name = null;
   }
 
   if (!form.official_receipt.trim()) {
@@ -103,21 +103,21 @@ function validateForm(): boolean {
     errors.official_receipt = "Official receipt must be exactly 7 digits";
     isValid = false;
   } else {
-    errors.official_receipt = "";
+    errors.official_receipt = null;
   }
 
   if (!form.stakeholder_type_id) {
     errors.stakeholder_type_id = "Stakeholder type is required";
     isValid = false;
   } else {
-    errors.stakeholder_type_id = "";
+    errors.stakeholder_type_id = null;
   }
 
   if (!form.status) {
     errors.status = "Status is required";
     isValid = false;
   } else {
-    errors.status = "";
+    errors.status = null;
   }
 
   return isValid;
@@ -132,7 +132,7 @@ const isFormValid = computed(() => {
 });
 
 function clearError(field: keyof typeof errors) {
-  errors[field] = "";
+  errors[field] = null;
 }
 
 async function loadTypes() {
@@ -157,10 +157,10 @@ function openCreate() {
   form.official_receipt = "";
   form.stakeholder_type_id = null;
   form.status = "active";
-  errors.name = "";
-  errors.official_receipt = "";
-  errors.stakeholder_type_id = "";
-  errors.status = "";
+  errors.name = null;
+  errors.official_receipt = null;
+  errors.stakeholder_type_id = null;
+  errors.status = null;
   showModal.value = true;
   loadTypes();
 }
@@ -172,10 +172,10 @@ function openView(row: any) {
   form.official_receipt = row.official_receipt ?? "";
   form.stakeholder_type_id = row.stakeholder_type_id;
   form.status = row.status ?? "active";
-  errors.name = "";
-  errors.official_receipt = "";
-  errors.stakeholder_type_id = "";
-  errors.status = "";
+  errors.name = null;
+  errors.official_receipt = null;
+  errors.stakeholder_type_id = null;
+  errors.status = null;
   showModal.value = true;
   loadTypes();
 }
@@ -187,10 +187,10 @@ function openEdit(row: any) {
   form.official_receipt = row.official_receipt ?? "";
   form.stakeholder_type_id = row.stakeholder_type_id;
   form.status = row.status ?? "active";
-  errors.name = "";
-  errors.official_receipt = "";
-  errors.stakeholder_type_id = "";
-  errors.status = "";
+  errors.name = null;
+  errors.official_receipt = null;
+  errors.stakeholder_type_id = null;
+  errors.status = null;
   showModal.value = true;
   loadTypes();
 }
