@@ -128,9 +128,10 @@ async function loadTransactionRevenueFeatures() {
   }
 }
 
-function openCreate() {
+async function openCreate() {
   modalMode.value = "create";
   editingTransaction.value = null;
+  await loadFeeTypes();
   form.stakeholder_id = null;
   form.or_number = null;
   form.items = [
@@ -141,14 +142,14 @@ function openCreate() {
     },
   ];
   form.transaction_date = new Date().toISOString().slice(0, 10);
-  form.status = "pending";
+  form.status = "completed";
   showModal.value = true;
-  loadFeeTypes();
 }
 
-function openView(row: any) {
+async function openView(row: any) {
   modalMode.value = "view";
   editingTransaction.value = row;
+  await loadFeeTypes();
   form.stakeholder_id = row.stakeholder_id;
   form.or_number = row.or_number;
   form.items = (row.items ?? []).map((item: any) => ({
@@ -159,12 +160,12 @@ function openView(row: any) {
   form.transaction_date = (row.transaction_date ?? "").toString().slice(0, 10);
   form.status = row.status;
   showModal.value = true;
-  loadFeeTypes();
 }
 
-function openEdit(row: any) {
+async function openEdit(row: any) {
   modalMode.value = "edit";
   editingTransaction.value = row;
+  await loadFeeTypes();
   form.stakeholder_id = row.stakeholder_id;
   form.or_number = row.or_number;
   form.items = (row.items ?? []).map((item: any) => ({
@@ -175,7 +176,6 @@ function openEdit(row: any) {
   form.transaction_date = (row.transaction_date ?? "").toString().slice(0, 10);
   form.status = row.status;
   showModal.value = true;
-  loadFeeTypes();
 }
 
 function addItem() {
@@ -192,22 +192,24 @@ function removeItem(index: number) {
   }
 }
 
+function calculateSubtotal(item: any) {
+  return Number(item.quantity || 0) * Number(item.unit_price || 0);
+}
+
 watch(
   () => form.items,
   (newItems) => {
     newItems.forEach((item) => {
-      const feeType = feeTypes.value.find((f) => f.id === item.fee_type_id);
-      if (feeType) {
-        item.unit_price = feeType.base_rate;
+      if (item.fee_type_id) {
+        const feeType = feeTypes.value.find((f) => f.id === item.fee_type_id);
+        if (feeType) {
+          item.unit_price = feeType.base_rate;
+        }
       }
     });
   },
   { deep: true },
 );
-
-function calculateSubtotal(item: any) {
-  return Number(item.quantity || 0) * Number(item.unit_price || 0);
-}
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-US", {
@@ -237,23 +239,47 @@ function clearFilters() {
   resetPageAndRefresh();
 }
 
+function validateForm(): string | null {
+  if (!form.stakeholder_id) {
+    return "Stakeholder is required";
+  }
+  if (!form.transaction_date) {
+    return "Transaction date is required";
+  }
+  if (form.items.length === 0) {
+    return "At least one transaction item is required";
+  }
+  for (const item of form.items) {
+    if (!item.fee_type_id) {
+      return "All items must have a fee type selected";
+    }
+    if (!item.quantity || item.quantity < 1) {
+      return "Quantity must be at least 1 for all items";
+    }
+  }
+  return null;
+}
+
 async function save() {
+  const validationError = validateForm();
+  if (validationError) {
+    toast.add({ title: validationError, color: "error" });
+    return;
+  }
+
   saving.value = true;
   try {
     const items = form.items.map((item) => ({
       fee_type_id: item.fee_type_id,
       quantity: item.quantity,
-      unit_price: item.unit_price,
-      subtotal: calculateSubtotal(item),
     }));
 
     const payload = {
       stakeholder_id: form.stakeholder_id,
-      or_number: form.or_number,
+      or_number: form.or_number ? String(form.or_number) : null,
       transaction_date: form.transaction_date,
       status: form.status,
       remarks: "",
-      total_amount: calculateTotal(),
       items: items,
     };
 
@@ -282,7 +308,7 @@ async function save() {
   } catch (e: any) {
     toast.add({
       title: modalMode.value === "edit" ? "Failed to update transaction" : "Failed to create transaction",
-      description: e.message ?? "Please try again.",
+      description: "Please try again.",
       color: "error",
     });
   } finally {
@@ -407,7 +433,8 @@ onMounted(() => {
 
     <div class="flex flex-wrap gap-3 mb-4">
       <UFormField label="OR Number" class="w-64">
-        <UInput v-model="searchQuery" placeholder="Search by OR Number" class="w-full" @keyup.enter="resetPageAndRefresh">
+        <UInput v-model="searchQuery" placeholder="Search by OR Number" class="w-full"
+          @keyup.enter="resetPageAndRefresh">
           <template #leading>
             <UIcon name="i-lucide-search" />
           </template>
@@ -417,7 +444,8 @@ onMounted(() => {
         <UInput v-model="dateFilter" type="date" placeholder="From Date" class="w-full" @change="resetPageAndRefresh" />
       </UFormField>
       <UFormField label="To Date" class="w-40">
-        <UInput v-model="dateFilterEnd" type="date" placeholder="To Date" class="w-full" @change="resetPageAndRefresh" />
+        <UInput v-model="dateFilterEnd" type="date" placeholder="To Date" class="w-full"
+          @change="resetPageAndRefresh" />
       </UFormField>
       <UButton variant="outline" @click="clearFilters" class="self-end">
         <UIcon name="i-lucide-x" class="mr-1" /> Clear
@@ -485,7 +513,7 @@ onMounted(() => {
           </UFormField>
 
           <UFormField label="OR Number" class="mb-3">
-            <UInput v-model="form.or_number" placeholder="Enter OR Number" minlength="7" maxlength="7" type="number"
+            <UInput v-model="form.or_number" placeholder="Enter OR Number" type="number" :min="0" :max="9999999"
               :disabled="modalMode === 'view'" />
           </UFormField>
 
@@ -497,7 +525,7 @@ onMounted(() => {
               <UInputNumber v-model="item.quantity" :min="1" placeholder="Qty" class="w-[20%]"
                 :disabled="modalMode === 'view'" />
               <UInputNumber v-model="item.unit_price" :step="0.01" :min="0" placeholder="Unit Price" class="w-[20%]"
-                :disabled="modalMode === 'view'" />
+                :disabled="true" readonly />
               <span class="w-auto font-mono text-right text-primary">
                 {{ formatCurrency(calculateSubtotal(item)) }}
               </span>

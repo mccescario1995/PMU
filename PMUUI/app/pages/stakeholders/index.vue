@@ -221,7 +221,7 @@ async function save() {
   } catch (e: any) {
     toast.add({
       title: modalMode.value === "edit" ? "Failed to update stakeholder" : "Failed to create stakeholder",
-      description: e.message ?? "Please try again.",
+      description: "Please try again.",
       color: "error",
     });
   } finally {
@@ -287,7 +287,7 @@ const columns: TableColumn<Stakeholder>[] = [
     cell: ({ row }) => {
       const status = row.getValue("status");
       const color = status === "active" ? "success" : "error";
-      return h(UBadge, { variant: "subtle", color }, () => status);
+      return h(UBadge, { class:"capitalize", variant: "subtle", color }, () => status);
     },
   },
   {
@@ -411,25 +411,25 @@ const columns: TableColumn<Stakeholder>[] = [
         </template>
         <template #body>
           <div class="space-y-4">
-            <UFormField label="Name" class="mb-3" :error="errors.name" required>
+            <UFormField label="Name" class="mb-3" :error="errors.name" >
               <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" @input="clearError('name')" />
             </UFormField>
 
-            <UFormField label="Official Receipt" class="mb-3" :error="errors.official_receipt" required>
+            <UFormField label="Official Receipt" class="mb-3" :error="errors.official_receipt" >
               <UInput
                 v-model="form.official_receipt"
                 :disabled="modalMode === 'view'"
                 class="w-full"
-                type="text"
+                type="number"
                 inputmode="numeric"
-                maxlength="7"
+                :min="0" :max="9999999"
                 @input="form.official_receipt = form.official_receipt.replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
                 placeholder="7 digits only"
               />
               <template #description>Exactly 7 digits</template>
             </UFormField>
 
-            <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id" required>
+            <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id" >
               <USelect
                 v-model="form.stakeholder_type_id"
                 :items="types"
@@ -441,7 +441,7 @@ const columns: TableColumn<Stakeholder>[] = [
               />
             </UFormField>
 
-            <UFormField label="Status" class="mb-3" :error="errors.status" required>
+            <UFormField label="Status" class="mb-3" :error="errors.status">
               <USelect
                 v-model="form.status"
                 :items="[

@@ -55,18 +55,18 @@ const menus = [
     icon: "i-lucide-chart-line",
     permission: "view reports",
     children: [
-      {
-        title: "Linear Regression",
-        icon: "i-lucide-trending-up",
-        to: "/forecast/linear-regression",
-        permission: "view reports",
-      },
-      {
-        title: "ARIMA",
-        icon: "i-lucide-brain",
-        to: "/forecast/arima",
-        permission: "view reports",
-      },
+      // {
+      //   title: "Linear Regression",
+      //   icon: "i-lucide-trending-up",
+      //   to: "/forecast/linear-regression",
+      //   permission: "view reports",
+      // },
+      // {
+      //   title: "ARIMA",
+      //   icon: "i-lucide-brain",
+      //   to: "/forecast/arima",
+      //   permission: "view reports",
+      // },
       {
         title: "SARIMA",
         icon: "i-lucide-wand-2",
