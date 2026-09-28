@@ -498,7 +498,7 @@ onMounted(() => {
                 :filterable="true"
                 @update:open="(isOpen: boolean) => isOpen && loadStakeholders()"
               /> -->
-            <USelectMenu v-model="form.stakeholder_id" value-key="value"
+            <USelectMenu v-model="form.stakeholder_id" value-key="value" class="w-full"
               :items="stakeholders.map((s) => ({ label: s.name, value: s.id }))" placeholder="Select stakeholder"
               :disabled="modalMode === 'view'" @update:open="(isOpen: boolean) => isOpen && loadStakeholders()">
               <template #empty="{ searchTerm }">
@@ -512,9 +512,9 @@ onMounted(() => {
             </USelectMenu>
           </UFormField>
 
-          <UFormField label="OR Number" class="mb-3">
+          <UFormField label="OR Number" class="mb-3 ">
             <UInput v-model="form.or_number" placeholder="Enter OR Number" type="number" :min="0" :max="7"
-              :disabled="modalMode === 'view'" />
+              :disabled="modalMode === 'view'" class="w-full"/>
           </UFormField>
 
           <UFormField label="Transaction Items" class="mb-4">

@@ -422,7 +422,7 @@ const columns: TableColumn<Stakeholder>[] = [
                 class="w-full"
                 type="number"
                 inputmode="numeric"
-                :min="0" :max="9999999"
+                :min="0" :max="7"
                 @input="form.official_receipt = form.official_receipt.replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
                 placeholder="7 digits only"
               />
