@@ -19,8 +19,25 @@ const stats = ref({
 
 const { daily: weatherDaily, loading: weatherLoading, error: weatherError } = useWeatherForecast();
 
-const forecastData = ref<any[]>([]);
-const maxForecast = computed(() => Math.max(...forecastData.value.map((f) => Number(f.predicted_revenue) || 0), 1));
+const nextMonthForecasts = computed(() => {
+  const now = new Date()
+  let nextMonth = now.getMonth() + 1
+  let nextYear = now.getFullYear()
+  if (nextMonth > 11) {
+    nextMonth = 0
+    nextYear++
+  }
+  const periodStart = new Date(nextYear, nextMonth, 1)
+  const periodEnd = new Date(nextYear, nextMonth + 1, 0)
+  periodEnd.setHours(23, 59, 59, 999)
+
+  return forecastData.value.filter((f: any) => {
+    const forecastDate = new Date(f.forecast_date)
+    return forecastDate >= periodStart && forecastDate <= periodEnd
+  })
+})
+
+const maxForecast = computed(() => Math.max(...nextMonthForecasts.value.map((f) => Number(f.predicted_revenue) || 0), 1));
 
 const generating = ref(false);
 const generateError = ref("");
@@ -99,11 +116,11 @@ const formatForecastDate = (dateStr) => {
       <UCard class="xl:col-span-2">
         <template #header>Revenue Forecast</template>
         <div class="flex items-end gap-1 h-40 border-b border-gray-300 pb-1">
-          <div v-for="(item, i) in forecastData" :key="i" class="flex-1 bg-success/70 hover:bg-success rounded-t"
+          <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-1 bg-success/70 hover:bg-success rounded-t"
             :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
             :title="`${formatForecastDate(item.forecast_date)}: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
         </div>
-        <p class="text-xs text-gray-400 mt-1">{{ forecastData.length }} forecast periods</p>
+        <p class="text-xs text-gray-400 mt-1">{{ nextMonthForecasts.length }} forecast periods</p>
       </UCard>
 
       <UCard>
