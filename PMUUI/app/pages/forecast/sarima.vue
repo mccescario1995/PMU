@@ -90,7 +90,7 @@ const UBadge = resolveComponent('UBadge')
         <h1 class="text-2xl font-bold">{{ modelLabel }}</h1>
         <p class="text-slate-500">Revenue projection using SARIMA model.</p>
       </div>
-      <div class="flex gap-2">
+      <!-- <div class="flex gap-2">
         <UButton
           icon="i-lucide-brain"
           :loading="modelLoading"
@@ -98,7 +98,7 @@ const UBadge = resolveComponent('UBadge')
         >
           Run {{ modelLabel }}
         </UButton>
-      </div>
+      </div> -->
     </div>
 
     <UAlert v-if="modelError" type="error" :title="modelError" class="mb-4" />
