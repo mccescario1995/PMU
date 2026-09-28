@@ -49,16 +49,27 @@ const filteredForecasts = computed(() =>
 
 const currentYearForecasts = computed(() => {
   const now = new Date()
-  const currentYear = now.getFullYear()
-  const currentMonth = now.getMonth()
-  const periodStart = new Date(currentYear, 0, 1)
-  const periodEnd = new Date(currentYear, currentMonth + 1, 0)
+  let nextMonth = now.getMonth() + 1
+  let nextYear = now.getFullYear()
+  if (nextMonth > 11) {
+    nextMonth = 0
+    nextYear++
+  }
+  const periodStart = new Date(nextYear, nextMonth, 1)
+  const periodEnd = new Date(nextYear, nextMonth + 1, 0)
   periodEnd.setHours(23, 59, 59, 999)
 
   return filteredForecasts.value.filter((f: any) => {
     const forecastDate = new Date(f.forecast_date)
     return forecastDate >= periodStart && forecastDate <= periodEnd
   })
+})
+
+const isDecemberForecast = computed(() => {
+  const now = new Date()
+  let nextMonth = now.getMonth() + 1
+  if (nextMonth > 11) nextMonth = 0
+  return nextMonth === 11
 })
 
 const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => filteredForecasts.value.length)
@@ -91,6 +102,13 @@ const UBadge = resolveComponent('UBadge')
     </div>
 
     <UAlert v-if="modelError" type="error" :title="modelError" class="mb-4" />
+
+    <UAlert v-if="isDecemberForecast" type="info" class="mb-4">
+      <template #icon>
+        <UIcon name="i-lucide-calendar" class="w-5 h-5" />
+      </template>
+      By December 1st, the model will train and forecast for the next year (January).
+    </UAlert>
 
     <UModal v-model:open="showProgressModal" :dismissible="false">
       <template #header>
