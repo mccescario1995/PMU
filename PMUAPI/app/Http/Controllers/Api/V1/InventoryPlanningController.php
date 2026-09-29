@@ -126,7 +126,7 @@ class InventoryPlanningController extends Controller
                 'current_quantity' => $item->quantity,
                 'category_type' => $item->category,
                 'status' => $item->status,
-                'recommended_min' => $recommendedMin,
+                'recommended_min' => $item->minimum_stock,
                 'reorder_point' => $reorderPoint,
                 'needs_reorder' => $needsReorder,
                 'estimated_monthly_usage' => $estimatedMonthlyUsage,
