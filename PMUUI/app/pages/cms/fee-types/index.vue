@@ -112,10 +112,18 @@ async function save() {
 
 async function remove(row: any) {
   if (!confirm("Delete this fee type?")) return;
-  await apiFetch(`/v1/fee-types/${row.id}`, { method: "DELETE" });
-  data.value = data.value.filter((f: any) => f.id !== row.id);
-  totalItems.value = Math.max(0, totalItems.value - 1);
-  toast.add({ title: "Fee type deleted", color: "success" });
+  try {
+    await apiFetch(`/v1/fee-types/${row.id}`, { method: "DELETE" });
+    data.value = data.value.filter((f: any) => f.id !== row.id);
+    totalItems.value = Math.max(0, totalItems.value - 1);
+    toast.add({ title: "Fee type deleted", color: "success" });
+  } catch (e: any) {
+    toast.add({
+      title: "Failed to delete fee type",
+      description: e.message ?? "Fee type has associated transactions.",
+      color: "error",
+    });
+  }
 }
 
 type FeeType = {

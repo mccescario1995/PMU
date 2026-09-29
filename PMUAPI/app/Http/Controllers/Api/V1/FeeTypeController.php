@@ -61,6 +61,12 @@ class FeeTypeController extends Controller
 
     public function destroy(FeeType $feeType)
     {
+        if ($feeType->transactionItems()->exists()) {
+            return response()->json([
+                'message' => 'Cannot delete fee type: it has associated transactions.',
+            ], 422);
+        }
+
         $this->logAudit('delete', 'fee_types', $feeType->id, $this->modelToArray($feeType, ['fee_name', 'base_rate', 'unit']), null);
 
         $feeType->delete();

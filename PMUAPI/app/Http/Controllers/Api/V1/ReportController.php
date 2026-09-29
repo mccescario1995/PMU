@@ -119,7 +119,17 @@ class ReportController extends Controller
         };
         $sheet->setCellValue('D11', $title);
         $sheet->mergeCells('D11:M11');
-        $sheet->getStyle('D11:M11')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('D11:M11')->applyFromArray([
+            'font' => [
+                'name' => 'Calibri',
+                'size' => 14,
+                'bold' => true,
+            ],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+            ],
+        ]);
 
         // Use all fee types from database, not just from transactions
         if ($allFeeTypes) {
@@ -158,16 +168,26 @@ class ReportController extends Controller
         }
         $sheet->setCellValue($totalCol . '13', 'TOTAL');
 
-        // Apply header formatting: center, wrap text, bold
+        // Apply header formatting: yellow background, red text, center, wrap text
         $headerRange = "A13:{$totalCol}13";
         $sheet->getStyle($headerRange)->applyFromArray([
-            'font' => ['bold' => true],
+            'font' => [
+                'name' => 'Calibri',
+                'size' => 11,
+                'bold' => true,
+                'color' => ['rgb' => 'FF0000'],
+            ],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'FFFF00'],
+            ],
             'alignment' => [
                 'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
                 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
                 'wrapText' => true,
             ],
         ]);
+        $sheet->getRowDimension(13)->setRowHeight(45);
 
         // Set column widths for fee type columns
         foreach ($feeTypeColumns as $feeName => $col) {
@@ -245,8 +265,16 @@ class ReportController extends Controller
                 ]);
             }
 
-            // Apply center alignment to data cells
-            $sheet->getStyle("A{$row}:{$totalCol}{$row}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+            // Apply center alignment and uniform font to data cells
+            $sheet->getStyle("A{$row}:{$totalCol}{$row}")->applyFromArray([
+                'font' => [
+                    'name' => 'Calibri',
+                    'size' => 11,
+                ],
+                'alignment' => [
+                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                ],
+            ]);
 
             $row++;
         }
@@ -258,9 +286,13 @@ class ReportController extends Controller
         }
         $sheet->setCellValue($totalCol . $totalRow, $grandTotal);
 
-        // Style total row: bold, centered
+        // Style total row: bold, centered, uniform font
         $sheet->getStyle("A{$totalRow}:{$totalCol}{$totalRow}")->applyFromArray([
-            'font' => ['bold' => true],
+            'font' => [
+                'name' => 'Calibri',
+                'size' => 11,
+                'bold' => true,
+            ],
             'alignment' => [
                 'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
             ],
