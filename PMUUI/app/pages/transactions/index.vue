@@ -579,7 +579,7 @@ onMounted(() => {
             </ul>
           </div>
 
-          <UFormField label="Stakeholder" class="mb-3">
+          <UFormField label="Stakeholder" class="mb-3" required>
             <USelectMenu v-model="form.stakeholder_id" value-key="value" class="w-full"
               :items="stakeholders.map((s) => ({ label: s.name, value: s.id }))" placeholder="Select stakeholder"
               :disabled="modalMode === 'view'" @update:open="(isOpen: boolean) => isOpen && loadStakeholders()">
@@ -594,13 +594,13 @@ onMounted(() => {
             </USelectMenu>
           </UFormField>
 
-          <UFormField label="OR Number" class="mb-3">
-            <UInput v-model="form.or_number" placeholder="7 digits" type="text" inputmode="numeric" :min="0"
+          <UFormField label="OR Number" class="mb-3" required>
+            <UInput v-model="form.or_number" placeholder="7 digits" type="number" inputmode="numeric" :min="0"
               :disabled="modalMode === 'view'" class="w-full"
               @input="form.or_number = form.or_number?.replace(/\D/g, '').slice(0, 7)" />
           </UFormField>
 
-          <UFormField label="Transaction Items" class="mb-4">
+          <UFormField label="Transaction Items" class="mb-4" required>
             <div v-for="(item, index) in form.items" :key="index" class="flex gap-2 mb-2 items-end">
               <USelect v-model="item.fee_type_id" :items="feeTypes.map((f) => ({ label: f.fee_name, value: f.id }))"
                 placeholder="Fee Type" class="w-[30%]" :disabled="modalMode === 'view'"
@@ -628,11 +628,11 @@ onMounted(() => {
           </UFormField>
 
           <div class="flex flex-row">
-            <UFormField label="Date" class="mb-3 me-3 w-full">
+            <UFormField label="Date" class="mb-3 me-3 w-full" required>
               <UInput type="date" v-model="form.transaction_date" class="w-full" :disabled="modalMode === 'view'" />
             </UFormField>
 
-            <UFormField label="Status" class="mb-3 w-full">
+            <UFormField label="Status" class="mb-3 w-full" required>
               <USelect v-model="form.status" :items="statusOptions" class="w-full" :disabled="modalMode === 'view'" />
             </UFormField>
           </div>

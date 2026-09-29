@@ -411,23 +411,23 @@ const columns: TableColumn<Stakeholder>[] = [
             </ul>
           </div>
 
-          <UFormField label="Name" class="mb-3">
+          <UFormField label="Name" class="mb-3" required>
             <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" />
           </UFormField>
 
-          <UFormField label="Official Receipt" class="mb-3">
-            <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="text"
+          <UFormField label="Official Receipt" class="mb-3" required>
+            <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="number"
               inputmode="numeric" :min="0"
               @input="form.official_receipt = (form.official_receipt ?? '').replace(/\D/g, '').slice(0, 7)"
-              placeholder="7 digits" />
+              placeholder="Enter Official Receipt" />
           </UFormField>
 
-          <UFormField label="Stakeholder Type" class="mb-3">
+          <UFormField label="Stakeholder Type" class="mb-3" required>
             <USelect v-model="form.stakeholder_type_id" :items="types" value-key="id" label-key="name" class="w-full"
               :disabled="modalMode === 'view'" />
           </UFormField>
 
-          <UFormField label="Status" class="mb-3">
+          <UFormField label="Status" class="mb-3" required>
             <USelect v-model="form.status" :items="[
               { label: 'Active', value: 'active' },
               { label: 'Inactive', value: 'inactive' },
