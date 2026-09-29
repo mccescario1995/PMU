@@ -31,15 +31,36 @@ const {
   openEdit,
   weatherLabel,
   currency,
-  totalRevenue,
-  periods,
-  latestModel,
   columns,
   can,
   load,
 } = useForecast()
 
-const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => forecasts.value.length)
+const nextMonthForecasts = computed(() => {
+  const now = new Date()
+  let nextMonth = now.getMonth() + 1
+  let nextYear = now.getFullYear()
+  if (nextMonth > 11) {
+    nextMonth = 0
+    nextYear++
+  }
+  const periodStart = new Date(nextYear, nextMonth, 1)
+  const periodEnd = new Date(nextYear, nextMonth + 1, 0)
+  periodEnd.setHours(23, 59, 59, 999)
+
+  return forecasts.value.filter((f: any) => {
+    const forecastDate = new Date(f.forecast_date)
+    return forecastDate >= periodStart && forecastDate <= periodEnd
+  })
+})
+
+const totalRevenue = computed(() =>
+  nextMonthForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
+)
+const periods = computed(() => nextMonthForecasts.value.length)
+const latestModel = computed(() => nextMonthForecasts.value[0]?.model_version ?? "-")
+
+const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => nextMonthForecasts.value.length)
 </script>
 
 <template>
@@ -161,7 +182,7 @@ const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPag
       </UCard>
     </div>
 
-    <UTable :data="forecasts" :columns="columns" :loading="loading" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
+    <UTable :data="nextMonthForecasts" :columns="columns" :loading="loading" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
       <template #action-cell="{ row }">
         <UButton
           v-if="can('view forecasts')"
@@ -207,7 +228,7 @@ const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPag
         />
         <UButton size="sm" @click="handleGoToPage">Go</UButton>
       </div>
-      <UPagination :total="forecasts.length" v-model:page="page" :items-per-page="pageSizeNumber" />
+      <UPagination :total="nextMonthForecasts.length" v-model:page="page" :items-per-page="pageSizeNumber" />
     </div>
   </div>
 </template>

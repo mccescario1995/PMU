@@ -344,17 +344,17 @@ class ReportController extends Controller
         return response()->streamDownload($callback, "yearly-report-{$year}.csv");
     }
 
-    public function annualXlsx()
-    {
-        $year = request('year', now()->year);
+    // public function annualXlsx()
+    // {
+    //     $year = request('year', now()->year);
 
-        $transactions = Transaction::with(['items.feeType'])
-            ->whereYear('transaction_date', $year)
-            ->orderBy('transaction_date')
-            ->get();
+    //     $transactions = Transaction::with(['items.feeType'])
+    //         ->whereYear('transaction_date', $year)
+    //         ->orderBy('transaction_date')
+    //         ->get();
 
-        return $this->generateReportFromTemplate($transactions, 'yearly', (string) $year);
-    }
+    //     return $this->generateReportFromTemplate($transactions, 'yearly', (string) $year);
+    // }
 
     public function annualPdf()
     {
@@ -396,17 +396,17 @@ class ReportController extends Controller
         return $pdf->download("monthly-report-{$month}.pdf");
     }
 
-    public function monthlyXlsx()
-    {
-        $month = request('month', now()->format('Y-m'));
+    // public function monthlyXlsx()
+    // {
+    //     $month = request('month', now()->format('Y-m'));
 
-        $transactions = Transaction::with(['items.feeType'])
-            ->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month])
-            ->orderBy('transaction_date')
-            ->get();
+    //     $transactions = Transaction::with(['items.feeType'])
+    //         ->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month])
+    //         ->orderBy('transaction_date')
+    //         ->get();
 
-        return $this->generateReportFromTemplate($transactions, 'monthly', $month);
-    }
+    //     return $this->generateReportFromTemplate($transactions, 'monthly', $month);
+    // }
 
     public function monthlyExcel()
     {
