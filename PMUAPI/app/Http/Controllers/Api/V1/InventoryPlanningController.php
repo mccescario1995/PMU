@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
 use App\Models\RevenueForecastSamira;
+use Illuminate\Http\Request;
 
 class InventoryPlanningController extends Controller
 {
@@ -163,5 +164,24 @@ class InventoryPlanningController extends Controller
             'peak_revenue' => (float) $peakRevenue,
             'off_peak_revenue' => (float) $offPeakRevenue,
         ];
+    }
+
+    public function updateMinimumStock(Request $request, InventoryItem $item)
+    {
+        $request->validate([
+            'minimum_stock' => 'required|integer|min:0',
+        ]);
+
+        $item->minimum_stock = $request->minimum_stock;
+        $item->save();
+
+        return response()->json([
+            'message' => 'Minimum stock updated successfully',
+            'item' => [
+                'id' => $item->id,
+                'item_name' => $item->item_name,
+                'minimum_stock' => $item->minimum_stock,
+            ],
+        ]);
     }
 }

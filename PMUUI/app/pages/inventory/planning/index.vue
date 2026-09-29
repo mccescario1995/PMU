@@ -57,7 +57,7 @@ async function saveEdit() {
   if (!editingItem.value) return
   saving.value = true
   try {
-    await apiFetch(`/v1/inventory/items/${editingItem.value.id}`, {
+    await apiFetch(`/v1/inventory/planning/items/${editingItem.value.id}/minimum-stock`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ minimum_stock: editForm.recommended_min }),

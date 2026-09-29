@@ -197,6 +197,11 @@ Route::prefix('v1')->group(function () {
                     '/view',
                     [InventoryPlanningController::class, 'planningView']
                 );
+
+                Route::put(
+                    '/items/{item}/minimum-stock',
+                    [InventoryPlanningController::class, 'updateMinimumStock']
+                )->middleware('can:edit inventory');
             });
         });
 
