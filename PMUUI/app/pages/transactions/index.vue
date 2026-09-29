@@ -605,9 +605,9 @@ onMounted(() => {
               <USelect v-model="item.fee_type_id" :items="feeTypes.map((f) => ({ label: f.fee_name, value: f.id }))"
                 placeholder="Fee Type" class="w-[30%]" :disabled="modalMode === 'view'"
                 @update:open="(isOpen: boolean) => isOpen && loadFeeTypes()" />
-              <UInputNumber v-model="item.quantity" :min="1" placeholder="Qty" class="w-[20%]"
+              <UInputNumber v-model="item.quantity" :min="1" placeholder="Qty" class="w-[30%]"
                 :disabled="modalMode === 'view'" />
-              <UInputNumber v-model="item.unit_price" :step="0.01" :min="0" placeholder="Unit Price" class="w-[20%]"
+              <UInputNumber v-model="item.unit_price" :step="0.01" :min="0" placeholder="Unit Price" class="w-[40%]"
                 :disabled="true" readonly />
               <span class="w-auto font-mono text-right text-primary">
                 {{ formatCurrency(calculateSubtotal(item)) }}

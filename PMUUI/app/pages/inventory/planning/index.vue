@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted, ref, computed, h } from 'vue'
+import { onMounted, ref, computed, h, reactive } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
+import { useToast } from '#imports'
+import { usePermissions } from '~/composables/usePermissions'
 
 definePageMeta({
   layout: 'dashboard',
 })
+
+const { can } = usePermissions()
+const toast = useToast()
 
 const planning = ref<any>(null)
 const { page: overviewPage, pageSize: overviewPageSize, goToPageInput: overviewGoToPageInput, tablePagination: overviewTablePagination, totalPages: overviewTotalPages, handleGoToPage: overviewHandleGoToPage } = useTablePagination(() => Array.isArray(planning.value?.recommended_stock) ? planning.value.recommended_stock.length : 0)
@@ -28,6 +33,59 @@ const getCategoryColor = (type: string): string => {
     supplies: 'warning',
   }
   return categoryTypeColors[normalized] || 'neutral'
+}
+
+const showEditModal = ref(false)
+const editingItem = ref<any>(null)
+const saving = ref(false)
+
+const editForm = reactive({
+  id: 0,
+  item_name: '',
+  recommended_min: 0,
+})
+
+async function openEdit(row: any) {
+  editingItem.value = row
+  editForm.id = row.id
+  editForm.item_name = row.item_name
+  editForm.recommended_min = row.recommended_min ?? row.minimum_stock ?? 0
+  showEditModal.value = true
+}
+
+async function saveEdit() {
+  if (!editingItem.value) return
+  saving.value = true
+  try {
+    await apiFetch(`/v1/inventory/items/${editingItem.value.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ minimum_stock: editForm.recommended_min }),
+      parseJson: true,
+    })
+    toast.add({ title: 'Minimum stock updated', color: 'success' })
+    showEditModal.value = false
+    planning.value = null
+    loading.value = true
+    const [overview, view] = await Promise.all([
+      apiFetch('/v1/inventory/planning', { parseJson: true }),
+      apiFetch('/v1/inventory/planning/view', { parseJson: true }),
+    ])
+    planning.value = {
+      ...overview,
+      low_stock_items: view.low_stock_items ?? [],
+      forecasts: view.forecasts ?? [],
+    } as any
+    loading.value = false
+  } catch (e: any) {
+    toast.add({
+      title: 'Failed to update minimum stock',
+      description: e.message ?? 'Please try again.',
+      color: 'error',
+    })
+  } finally {
+    saving.value = false
+  }
 }
 
 onMounted(async () => {
@@ -134,6 +192,7 @@ const columns: TableColumn<any>[] = [
       return row.getValue('needs_reorder') ? 'Yes' : 'No'
     }
   },
+  { accessorKey: 'action', header: 'Action' },
 ]
 </script>
 
@@ -178,7 +237,17 @@ const columns: TableColumn<any>[] = [
         <template #header>Recommended Stock Levels</template>
         <UTable :data="recommendedStockArray" :columns="columns"
           :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }"
-          v-model:pagination="overviewTablePagination" />
+          v-model:pagination="overviewTablePagination">
+        <template #action-cell="{ row }">
+          <UButton
+            v-if="can('edit inventory')"
+            size="xs"
+            color="info"
+            @click="openEdit(row.original)"
+            icon="i-lucide-edit"
+          ></UButton>
+        </template>
+      </UTable>
 
         <div class="flex items-center justify-between mt-4">
           <div class="flex items-center gap-2">
@@ -244,5 +313,28 @@ const columns: TableColumn<any>[] = [
         </div>
       </UCard> -->
     </template>
+
+    <!-- Edit Minimum Stock Modal -->
+    <UModal v-model:open="showEditModal">
+      <template #header>
+        Edit Minimum Stock
+      </template>
+      <template #body>
+        <div class="space-y-4">
+          <p class="text-sm text-slate-500">Item: <span class="font-medium">{{ editForm.item_name }}</span></p>
+          <UFormField label="Minimum Stock (Recommended Min)" class="mb-3">
+            <UInput type="number" v-model="editForm.recommended_min" class="w-full" min="0" />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" @click="showEditModal = false">Close</UButton>
+          <UButton @click="saveEdit" :loading="saving">
+            Save
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
