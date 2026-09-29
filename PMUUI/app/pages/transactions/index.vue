@@ -102,13 +102,21 @@ watch(
   () => form.or_number,
   (val) => {
     const value = val ?? "";
-    if (!value) {
+    // Clear OR conflict if empty or not 7 digits
+    if (!value || value.length !== 7) {
       orConflict.value = null;
-      return;
     }
-    if (!/^\d{7}$/.test(value)) {
-      orConflict.value = null;
+    // Validate 7 digits
+    if (value && !/^\d{7}$/.test(value)) {
+      if (!formErrors.value.includes("OR Number must be exactly 7 digits")) {
+        formErrors.value.push("OR Number must be exactly 7 digits");
+      }
     } else {
+      // Remove the 7-digit error if valid
+      formErrors.value = formErrors.value.filter(e => e !== "OR Number must be exactly 7 digits");
+    }
+    // Debounce OR availability check
+    if (value && /^\d{7}$/.test(value)) {
       if (orCheckTimeout) clearTimeout(orCheckTimeout);
       orCheckTimeout = setTimeout(() => checkOrAvailability(value), 300);
     }
@@ -118,6 +126,22 @@ watch(
 onUnmounted(() => {
   if (orCheckTimeout) clearTimeout(orCheckTimeout);
 });
+
+// Watch orConflict to show availability errors in banner
+watch(
+  () => orConflict.value,
+  (conflict) => {
+    if (conflict) {
+      const msg = `OR Number already used by ${conflict.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${conflict.name}`;
+      if (!formErrors.value.includes(msg)) {
+        formErrors.value.push(msg);
+      }
+    } else {
+      // Remove any OR conflict messages
+      formErrors.value = formErrors.value.filter(e => !e.startsWith("OR Number already used by"));
+    }
+  },
+);
 
 const statusOptions: SelectItem[] = [
   { label: "Pending", value: "pending" },
@@ -320,10 +344,6 @@ function validateForm(): boolean {
       isValid = false;
       break;
     }
-  }
-  if (orConflict.value) {
-    formErrors.value.push(`OR Number already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}`);
-    isValid = false;
   }
   return isValid;
 }

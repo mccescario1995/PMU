@@ -104,13 +104,21 @@ watch(
   () => form.official_receipt,
   (val) => {
     const value = val ?? "";
-    if (!value) {
+    // Clear OR conflict if empty or not 7 digits
+    if (!value || value.length !== 7) {
       orConflict.value = null;
-      return;
     }
-    if (!/^\d{7}$/.test(value)) {
-      orConflict.value = null;
+    // Validate 7 digits
+    if (value && !/^\d{7}$/.test(value)) {
+      if (!formErrors.value.includes("Official receipt must be exactly 7 digits")) {
+        formErrors.value.push("Official receipt must be exactly 7 digits");
+      }
     } else {
+      // Remove the 7-digit error if valid
+      formErrors.value = formErrors.value.filter(e => e !== "Official receipt must be exactly 7 digits");
+    }
+    // Debounce OR availability check
+    if (value && /^\d{7}$/.test(value)) {
       if (orCheckTimeout) clearTimeout(orCheckTimeout);
       orCheckTimeout = setTimeout(() => checkOrAvailability(value), 300);
     }
@@ -144,11 +152,6 @@ function validateForm(): boolean {
     isValid = false;
   }
 
-  if (orConflict.value) {
-    formErrors.value.push(`Official receipt already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}`);
-    isValid = false;
-  }
-
   return isValid;
 }
 
@@ -165,6 +168,22 @@ const isFormValid = computed(() => {
 onUnmounted(() => {
   if (orCheckTimeout) clearTimeout(orCheckTimeout);
 });
+
+// Watch orConflict to show availability errors in banner
+watch(
+  () => orConflict.value,
+  (conflict) => {
+    if (conflict) {
+      const msg = `Official receipt already used by ${conflict.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${conflict.name}`;
+      if (!formErrors.value.includes(msg)) {
+        formErrors.value.push(msg);
+      }
+    } else {
+      // Remove any OR conflict messages
+      formErrors.value = formErrors.value.filter(e => !e.startsWith("Official receipt already used by"));
+    }
+  },
+);
 
 async function loadTypes() {
   if (typesLoaded.value) return;
