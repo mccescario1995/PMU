@@ -47,7 +47,7 @@ const editForm = reactive({
 
 async function openEdit(row: any) {
   editingItem.value = row
-  editForm.id = row.id
+  editForm.id = row.item_id ?? row.id
   editForm.item_name = row.item_name
   editForm.recommended_min = row.recommended_min ?? row.minimum_stock ?? 0
   showEditModal.value = true
