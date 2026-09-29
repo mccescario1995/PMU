@@ -19,8 +19,6 @@ onMounted(() => {
   loadTypes();
 });
 
-const UBadge = resolveComponent("UBadge");
-
 const stakeholders = ref<any[]>([]);
 const searchQuery = ref("");
 const typeFilter = ref<string | null>(null);
@@ -94,8 +92,9 @@ async function checkOrAvailability(value: string) {
     orConflict.value = null;
     return;
   }
-  const excludeType = modalMode.value === "edit" ? "stakeholder" : undefined;
-  const excludeId = modalMode.value === "edit" && editingStakeholder.value ? editingStakeholder.value.id : undefined;
+  const isEditOrView = modalMode.value === "edit" || modalMode.value === "view";
+  const excludeType = isEditOrView ? "stakeholder" : undefined;
+  const excludeId = isEditOrView && editingStakeholder.value ? editingStakeholder.value.id : undefined;
   const params = new URLSearchParams({ or_number: value });
   if (excludeType) params.set("exclude_type", excludeType);
   if (excludeId) params.set("exclude_id", String(excludeId));
@@ -326,17 +325,18 @@ const columns: TableColumn<Stakeholder>[] = [
     header: "Type",
     cell: ({ row }) => {
       const typeName = row.original.stakeholder_type?.name ?? "Unknown";
-      return h(UBadge, { class: "capitalize", variant: "subtle", color: "primary" }, () => typeName);
+      return h("UBadge", { class: "capitalize", variant: "subtle", color: "primary" }, () => typeName);
     },
   },
-  {
+{
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
       const status = row.getValue("status");
       const color = status === "active" ? "success" : "error";
-      return h(UBadge, { class:"capitalize", variant: "subtle", color }, () => status);
+      return h("UBadge", { class:"capitalize", variant: "subtle", color }, () => status);
     },
+  },
   },
   {
     accessorKey: "action",
@@ -350,76 +350,36 @@ const columns: TableColumn<Stakeholder>[] = [
     <div class="flex justify-between items-center gap-4 flex-wrap">
       <div class="flex flex-col">
         <h1 class="text-2xl font-bold mb-3">Stakeholders</h1>
-        <UInput
-          v-model="searchQuery"
-          placeholder="Search stakeholders..."
-          icon="i-lucide-search"
-          class="max-w-xs"
-          @keyup.enter="refresh"
-        />
+        <UInput v-model="searchQuery" placeholder="Search stakeholders..." icon="i-lucide-search" class="max-w-xs"
+          @keyup.enter="refresh" />
       </div>
 
       <div class="flex items-center gap-2">
-        <UButton
-          v-if="can('create stakeholders')"
-          icon="i-lucide-plus"
-          @click="openCreate"
-        >
+        <UButton v-if="can('create stakeholders')" icon="i-lucide-plus" @click="openCreate">
           Add Stakeholder
         </UButton>
-        <UButton
-          icon="i-lucide-download"
-          @click="exportToExcel"
-          variant="outline"
-        >
+        <UButton icon="i-lucide-download" @click="exportToExcel" variant="outline">
           Export
         </UButton>
       </div>
     </div>
 
     <div class="flex flex-wrap items-center gap-2 mt-2">
-      <UButton
-        v-for="type in types"
-        :key="type.id"
-        :label="type.name"
-        variant="outline"
+      <UButton v-for="type in types" :key="type.id" :label="type.name" variant="outline"
         :color="typeFilter === String(type.id) ? 'primary' : undefined"
-        @click="typeFilter = typeFilter === String(type.id) ? null : String(type.id)"
-      />
-      <UButton
-        :label="'All'"
-        variant="outline"
-        :color="typeFilter === null ? 'primary' : undefined"
-        @click="typeFilter = null"
-      />
+        @click="typeFilter = typeFilter === String(type.id) ? null : String(type.id)" />
+      <UButton :label="'All'" variant="outline" :color="typeFilter === null ? 'primary' : undefined"
+        @click="typeFilter = null" />
     </div>
 
     <UTable :data="data" :columns="columns" :loading="loading">
       <template #action-cell="{ row }">
-        <UButton
-          class="me-2"
-          v-if="can('view stakeholders')"
-          size="xs"
-          color="info"
-          variant="ghost"
-          @click="openView(row.original)"
-          icon="i-lucide-eye"
-        ></UButton>
-        <UButton
-          class="me-2"
-          v-if="can('edit stakeholders')"
-          size="xs"
-          color="secondary"
-          @click="openEdit(row.original)"
-          icon="i-lucide-edit"
-        ></UButton>
-        <UButton
-          v-if="can('delete stakeholders')"
-          size="xs"
-          color="error"
-          @click="remove(row.original)"
-          icon="i-lucide-trash"
-        ></UButton>
+        <UButton class="me-2" v-if="can('view stakeholders')" size="xs" color="info" variant="ghost"
+          @click="openView(row.original)" icon="i-lucide-eye"></UButton>
+        <UButton class="me-2" v-if="can('edit stakeholders')" size="xs" color="secondary"
+          @click="openEdit(row.original)" icon="i-lucide-edit"></UButton>
+        <UButton v-if="can('delete stakeholders')" size="xs" color="error" @click="remove(row.original)"
+          icon="i-lucide-trash"></UButton>
       </template>
     </UTable>
 
@@ -430,86 +390,58 @@ const columns: TableColumn<Stakeholder>[] = [
       </div>
       <div class="flex items-center gap-2">
         <span class="text-sm text-slate-500">Go to page:</span>
-        <UInput
-          v-model="goToPageInput"
-          type="number"
-          :min="1"
-          :max="totalPages"
-          class="w-16"
-          @keyup.enter="handleGoToPage"
-        />
+        <UInput v-model="goToPageInput" type="number" :min="1" :max="totalPages" class="w-16"
+          @keyup.enter="handleGoToPage" />
         <UButton size="sm" @click="handleGoToPage">Go</UButton>
       </div>
-      <UPagination
-        :total="totalItems"
-        v-model:page="page"
-        :items-per-page="pageSizeNumber"
-      />
+      <UPagination :total="totalItems" v-model:page="page" :items-per-page="pageSizeNumber" />
     </div>
 
     <UModal v-model:open="showModal">
-        <template #header>
-          {{
-            modalMode === "view"
-              ? "View Stakeholder"
-              : modalMode === "edit"
-                ? "Edit Stakeholder"
-                : "New Stakeholder"
-          }}
-        </template>
-        <template #body>
-          <div class="space-y-4">
-            <UFormField label="Name" class="mb-3" :error="errors.name" >
-              <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" @input="clearError('name')" />
-            </UFormField>
+      <template #header>
+        {{
+          modalMode === "view"
+            ? "View Stakeholder"
+            : modalMode === "edit"
+              ? "Edit Stakeholder"
+              : "New Stakeholder"
+        }}
+      </template>
+      <template #body>
+        <div class="space-y-4">
+          <UFormField label="Name" class="mb-3" :error="errors.name">
+            <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" @input="clearError('name')" />
+          </UFormField>
 
-<UFormField label="Official Receipt" class="mb-3" :error="errors.official_receipt || (orConflict.value ? `Already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}` : null)" >
-              <UInput
-                v-model="form.official_receipt"
-                :disabled="modalMode === 'view'"
-                class="w-full"
-                type="number"
-                inputmode="numeric"
-                :min="0"
-                @input="form.official_receipt = form.official_receipt.replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
-                placeholder="7 digits"
-              />
-            </UFormField>
+          <UFormField label="Official Receipt" class="mb-3"
+            :error="errors.official_receipt || (orConflict.value ? `Already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}` : null)">
+            <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="number"
+              inputmode="numeric" :min="0"
+              @input="form.official_receipt = form.official_receipt.replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
+              placeholder="7 digits" />
+          </UFormField>
 
-            <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id" >
-              <USelect
-                v-model="form.stakeholder_type_id"
-                :items="types"
-                value-key="id"
-                label-key="name"
-                class="w-full"
-                :disabled="modalMode === 'view'"
-                @change="clearError('stakeholder_type_id')"
-              />
-            </UFormField>
+          <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id">
+            <USelect v-model="form.stakeholder_type_id" :items="types" value-key="id" label-key="name" class="w-full"
+              :disabled="modalMode === 'view'" @change="clearError('stakeholder_type_id')" />
+          </UFormField>
 
-            <UFormField label="Status" class="mb-3" :error="errors.status">
-              <USelect
-                v-model="form.status"
-                :items="[
-                  { label: 'Active', value: 'active' },
-                  { label: 'Inactive', value: 'inactive' },
-                ]"
-                class="w-full"
-                :disabled="modalMode === 'view'"
-                @change="clearError('status')"
-              />
-            </UFormField>
-          </div>
-        </template>
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton variant="ghost" @click="showModal = false">Close</UButton>
-            <UButton v-if="modalMode !== 'view'" @click="save" :loading="saving" :disabled="!isFormValid">
-              Save
-            </UButton>
-          </div>
-        </template>
+          <UFormField label="Status" class="mb-3" :error="errors.status">
+            <USelect v-model="form.status" :items="[
+              { label: 'Active', value: 'active' },
+              { label: 'Inactive', value: 'inactive' },
+            ]" class="w-full" :disabled="modalMode === 'view'" @change="clearError('status')" />
+          </UFormField>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <UButton variant="ghost" @click="showModal = false">Close</UButton>
+          <UButton v-if="modalMode !== 'view'" @click="save" :loading="saving" :disabled="!isFormValid">
+            Save
+          </UButton>
+        </div>
+      </template>
     </UModal>
   </div>
 </template>

@@ -83,8 +83,9 @@ async function checkOrAvailability(value: string) {
     orConflict.value = null;
     return;
   }
-  const excludeType = modalMode.value === "edit" ? "transaction" : undefined;
-  const excludeId = modalMode.value === "edit" && editingTransaction.value ? editingTransaction.value.id : undefined;
+  const isEditOrView = modalMode.value === "edit" || modalMode.value === "view";
+  const excludeType = isEditOrView ? "transaction" : undefined;
+  const excludeId = isEditOrView && editingTransaction.value ? editingTransaction.value.id : undefined;
   const params = new URLSearchParams({ or_number: value });
   if (excludeType) params.set("exclude_type", excludeType);
   if (excludeId) params.set("exclude_id", String(excludeId));
