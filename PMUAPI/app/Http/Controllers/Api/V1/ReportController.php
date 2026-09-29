@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TransactionResource;
+use App\Models\FeeType;
 use App\Models\RevenueHistory;
 use App\Models\Transaction;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -66,13 +67,43 @@ class ReportController extends Controller
             ->whereDate('transaction_date', $date)
             ->get();
 
-        return $this->generateReportFromTemplate($transactions, 'daily', $date);
+        $allFeeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+
+        return $this->generateReportFromTemplate($transactions, 'daily', $date, $allFeeTypes);
+    }
+
+    public function monthlyXlsx()
+    {
+        $month = request('month', now()->format('Y-m'));
+
+        $transactions = Transaction::with(['items.feeType'])
+            ->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month])
+            ->orderBy('transaction_date')
+            ->get();
+
+        $allFeeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+
+        return $this->generateReportFromTemplate($transactions, 'monthly', $month, $allFeeTypes);
+    }
+
+    public function annualXlsx()
+    {
+        $year = request('year', now()->year);
+
+        $transactions = Transaction::with(['items.feeType'])
+            ->whereYear('transaction_date', $year)
+            ->orderBy('transaction_date')
+            ->get();
+
+        $allFeeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+
+        return $this->generateReportFromTemplate($transactions, 'yearly', (string) $year, $allFeeTypes);
     }
 
     /**
      * Generate report from PMU template
      */
-    private function generateReportFromTemplate($transactions, string $type, string $dateOrMonthOrYear)
+    private function generateReportFromTemplate($transactions, string $type, string $dateOrMonthOrYear, $allFeeTypes = null)
     {
         $templatePath = database_path('seeders/PMU REPORT TEMPLATE.xlsx');
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
@@ -90,15 +121,20 @@ class ReportController extends Controller
         $sheet->mergeCells('D11:M11');
         $sheet->getStyle('D11:M11')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        // Collect all unique fee types from transaction data
-        $feeTypes = $transactions
-            ->pluck('items')
-            ->flatten()
-            ->pluck('feeType')
-            ->filter()
-            ->unique('id')
-            ->sortBy('fee_name')
-            ->values();
+        // Use all fee types from database, not just from transactions
+        if ($allFeeTypes) {
+            $feeTypes = $allFeeTypes;
+        } else {
+            // Fallback: collect from transactions
+            $feeTypes = $transactions
+                ->pluck('items')
+                ->flatten()
+                ->pluck('feeType')
+                ->filter()
+                ->unique('id')
+                ->sortBy('fee_name')
+                ->values();
+        }
 
         // Build dynamic fee type column mapping (B onwards)
         $feeTypeColumns = [];
@@ -122,13 +158,31 @@ class ReportController extends Controller
         }
         $sheet->setCellValue($totalCol . '13', 'TOTAL');
 
+        // Apply header formatting: center, wrap text, bold
+        $headerRange = "A13:{$totalCol}13";
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => ['bold' => true],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+        ]);
+
+        // Set column widths for fee type columns
+        foreach ($feeTypeColumns as $feeName => $col) {
+            $sheet->getColumnDimension($col)->setWidth(14);
+        }
+        $sheet->getColumnDimension('A')->setWidth(12);
+        $sheet->getColumnDimension($totalCol)->setWidth(14);
+
         // Data starts at row 14
         $dataStartRow = 14;
         $row = $dataStartRow;
         $grandTotal = 0;
         $colTotals = array_fill_keys(array_keys($feeTypeColumns), 0);
 
-        // Find footer start row by searching for "Prepared by"
+        // Find footer start row BEFORE any row insertions
         $footerStartRow = null;
         $highestRow = $sheet->getHighestRow();
         for ($r = $dataStartRow; $r <= $highestRow; $r++) {
@@ -149,13 +203,17 @@ class ReportController extends Controller
         $totalRow = $dataStartRow + $dataCount;
         $footerRows = $highestRow - $footerStartRow + 1;
 
-        // Insert rows for data if needed (shift footer down)
+        // Insert rows at footer position to shift footer down
         if ($dataCount > 0) {
-            $sheet->insertNewRowBefore($totalRow + 1, $footerRows);
+            $sheet->insertNewRowBefore($footerStartRow, $dataCount);
+            $totalRow = $footerStartRow - 1; // total row is now right before footer
         }
 
         foreach ($transactions as $tx) {
             $sheet->setCellValue('A' . $row, $tx->transaction_date->toDateString());
+
+            $isCancelled = strtolower($tx->status) === 'cancelled';
+            $includeInTotals = !($type === 'daily' && $isCancelled);
 
             $rowTotal = 0;
             foreach ($feeTypeColumns as $feeName => $col) {
@@ -163,15 +221,21 @@ class ReportController extends Controller
                     ->where('feeType.fee_name', '=', $feeName)
                     ->sum('subtotal');
                 $sheet->setCellValue($col . $row, $subtotal ?: '');
-                $rowTotal += $subtotal;
-                $colTotals[$feeName] += $subtotal;
+
+                if ($includeInTotals) {
+                    $rowTotal += $subtotal;
+                    $colTotals[$feeName] += $subtotal;
+                }
             }
 
-            $sheet->setCellValue($totalCol . $row, $rowTotal ?: '');
-            $grandTotal += $rowTotal;
+            $sheet->setCellValue($totalCol . $row, $includeInTotals ? ($rowTotal ?: '') : '');
+
+            if ($includeInTotals) {
+                $grandTotal += $rowTotal;
+            }
 
             // Highlight cancelled rows
-            if (strtolower($tx->status) === 'cancelled') {
+            if ($isCancelled) {
                 $sheet->getStyle("A{$row}:{$totalCol}{$row}")->applyFromArray([
                     'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true],
                     'fill' => [
@@ -181,20 +245,26 @@ class ReportController extends Controller
                 ]);
             }
 
+            // Apply center alignment to data cells
+            $sheet->getStyle("A{$row}:{$totalCol}{$row}")->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+
             $row++;
         }
 
-        // Add TOTAL row (now at correct position after data)
+        // Add TOTAL row
         $sheet->setCellValue('A' . $totalRow, 'TOTAL');
         foreach ($feeTypeColumns as $feeName => $col) {
             $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?: '');
         }
         $sheet->setCellValue($totalCol . $totalRow, $grandTotal);
 
-        // Style total row
-        $sheet->getStyle("A{$totalRow}:{$totalCol}{$totalRow}")->getFont()->setBold(true);
-
-        // Footer is now at $totalRow + 1 (auto-shifted by insertNewRowBefore)
+        // Style total row: bold, centered
+        $sheet->getStyle("A{$totalRow}:{$totalCol}{$totalRow}")->applyFromArray([
+            'font' => ['bold' => true],
+            'alignment' => [
+                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
+            ],
+        ]);
 
         $writer = new Xlsx($spreadsheet);
         $tempPath = tempnam(sys_get_temp_dir(), "{$type}_report_") . '.xlsx';
