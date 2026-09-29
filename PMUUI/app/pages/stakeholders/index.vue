@@ -329,13 +329,13 @@ const columns: TableColumn<Stakeholder>[] = [
       return h("UBadge", { class: "capitalize", variant: "subtle", color: "primary" }, () => typeName);
     },
   },
-{
+  {
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => {
       const status = row.getValue("status");
       const color = status === "active" ? "success" : "error";
-      return h("UBadge", { class:"capitalize", variant: "subtle", color }, () => status);
+      return h("UBadge", { class: "capitalize", variant: "subtle", color }, () => status);
     },
   },
   {
@@ -414,8 +414,8 @@ const columns: TableColumn<Stakeholder>[] = [
           </UFormField>
 
           <UFormField label="Official Receipt" class="mb-3"
-            :error="errors.official_receipt || (orConflict.value ? `Already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}` : null)">
-            <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="number"
+            :error="errors.official_receipt || (orConflict ? `Already used by ${orConflict.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.name}` : null)">
+            <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="text"
               inputmode="numeric" :min="0"
               @input="form.official_receipt = (form.official_receipt ?? '').replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
               placeholder="7 digits" />
