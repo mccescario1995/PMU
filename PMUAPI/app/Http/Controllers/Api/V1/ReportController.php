@@ -78,7 +78,7 @@ class ReportController extends Controller
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Set report title in E11:N11 (merged)
+        // Set report title in D11:M11 (merged)
         $dateObj = \Carbon\Carbon::parse($dateOrMonthOrYear);
         $title = match ($type) {
             'daily' => "FOR THE DAY OF {$dateObj->format('F d, Y')}",
@@ -86,29 +86,44 @@ class ReportController extends Controller
             'yearly' => "REPORT FOR THE YEAR {$dateObj->format('Y')}",
             default => "REPORT",
         };
-        $sheet->setCellValue('E11', $title);
-        $sheet->mergeCells('E11:N11');
-        $sheet->getStyle('E11:N11')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
+        $sheet->setCellValue('D11', $title);
+        $sheet->mergeCells('D11:M11');
+        $sheet->getStyle('D11:M11')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        // Fee type column mapping (template columns B through N)
-        $feeTypeColumns = [
-            'USAGE' => 'B',
-            'FISH UNLOADING' => 'C',
-            'AUXILIARY INV.' => 'D',
-            'TRADING' => 'E',
-            'TERMINAL' => 'F',
-            'WHARFAGE' => 'G',
-            'QUARANTINE' => 'H',
-            'STORAGE' => 'I',
-            'PARKING' => 'J',
-            'RENTAL' => 'K',
-            'ACCREDITATION' => 'L',
-            'OTHERS' => 'M',
-            'ENTRANCE' => 'N',
-        ];
+        // Collect all unique fee types from transaction data
+        $feeTypes = $transactions
+            ->pluck('items')
+            ->flatten()
+            ->pluck('feeType')
+            ->filter()
+            ->unique('id')
+            ->sortBy('fee_name')
+            ->values();
 
-        // Data starts at row 15
-        $dataStartRow = 15;
+        // Build dynamic fee type column mapping (B onwards)
+        $feeTypeColumns = [];
+        $colIndex = 2; // B = 2
+        foreach ($feeTypes as $ft) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+            $feeTypeColumns[$ft->fee_name] = $colLetter;
+            $colIndex++;
+        }
+
+        // Total column is after the last fee type column
+        $totalCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+
+        // Set headers in row 13
+        $sheet->setCellValue('A13', 'DATE');
+        $colIdx = 2;
+        foreach ($feeTypes as $ft) {
+            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIdx);
+            $sheet->setCellValue($colLetter . '13', $ft->fee_name);
+            $colIdx++;
+        }
+        $sheet->setCellValue($totalCol . '13', 'TOTAL');
+
+        // Data starts at row 14
+        $dataStartRow = 14;
         $row = $dataStartRow;
         $grandTotal = 0;
         $colTotals = array_fill_keys(array_keys($feeTypeColumns), 0);
@@ -145,19 +160,19 @@ class ReportController extends Controller
             $rowTotal = 0;
             foreach ($feeTypeColumns as $feeName => $col) {
                 $subtotal = $tx->items
-                    ->where('feeType.fee_name', 'LIKE', "%{$feeName}%")
+                    ->where('feeType.fee_name', '=', $feeName)
                     ->sum('subtotal');
                 $sheet->setCellValue($col . $row, $subtotal ?: '');
                 $rowTotal += $subtotal;
                 $colTotals[$feeName] += $subtotal;
             }
 
-            $sheet->setCellValue('O' . $row, $rowTotal ?: '');
+            $sheet->setCellValue($totalCol . $row, $rowTotal ?: '');
             $grandTotal += $rowTotal;
 
             // Highlight cancelled rows
             if (strtolower($tx->status) === 'cancelled') {
-                $sheet->getStyle("A{$row}:O{$row}")->applyFromArray([
+                $sheet->getStyle("A{$row}:{$totalCol}{$row}")->applyFromArray([
                     'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true],
                     'fill' => [
                         'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -174,10 +189,10 @@ class ReportController extends Controller
         foreach ($feeTypeColumns as $feeName => $col) {
             $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?: '');
         }
-        $sheet->setCellValue('O' . $totalRow, $grandTotal);
+        $sheet->setCellValue($totalCol . $totalRow, $grandTotal);
 
         // Style total row
-        $sheet->getStyle("A{$totalRow}:O{$totalRow}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$totalRow}:{$totalCol}{$totalRow}")->getFont()->setBold(true);
 
         // Footer is now at $totalRow + 1 (auto-shifted by insertNewRowBefore)
 
