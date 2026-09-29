@@ -66,32 +66,81 @@ class ReportController extends Controller
             ->whereDate('transaction_date', $date)
             ->get();
 
-        $spreadsheet = new Spreadsheet;
+        $templatePath = database_path('seeders/PMU REPORT TEMPLATE.xlsx');
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setCellValue('A1', 'Daily Report - '.$date);
-        $sheet->mergeCells('A1:E1');
-        $sheet->setCellValue('A3', 'ID');
-        $sheet->setCellValue('B3', 'Stakeholder');
-        $sheet->setCellValue('C3', 'Fee Types');
-        $sheet->setCellValue('D3', 'Amount');
-        $sheet->setCellValue('E3', 'Status');
 
-        $row = 4;
+        // Update report title with selected date
+        $dateObj = \Carbon\Carbon::parse($date);
+        $sheet->setCellValue('A1', "FOR THE DAY OF {$dateObj->format('F d, Y')}");
+
+        // Fee type mapping from fee_type table to template columns
+        // Template columns: A=Date, B=USAGE, C=FISH UNLOADING, D=AUXILIARY, E=TRADING, F=TERMINAL, G=WHARFAGE, H=QUARANTINE, I=STORAGE, J=PARKING, K=RENTAL, L=ACCREDITATION, M=OTHERS, N=ENTRANCE, O=TOTAL
+        $feeTypeColumns = [
+            'USAGE' => 'B',
+            'FISH UNLOADING' => 'C',
+            'AUXILIARY INV.' => 'D',
+            'TRADING' => 'E',
+            'TERMINAL' => 'F',
+            'WHARFAGE' => 'G',
+            'QUARANTINE' => 'H',
+            'STORAGE' => 'I',
+            'PARKING' => 'J',
+            'RENTAL' => 'K',
+            'ACCREDITATION' => 'L',
+            'OTHERS' => 'M',
+            'ENTRANCE' => 'N',
+        ];
+
+        // Clear existing data rows (starting from row 6)
+        $sheet->removeRow(6, 100);
+
+        $row = 6;
+        $grandTotal = 0;
+
         foreach ($transactions as $tx) {
-            $feeTypes = $tx->items->map(fn ($i) => $i->feeType?->fee_name)->filter()->join(', ');
-            $sheet->setCellValue('A'.$row, $tx->id);
-            $sheet->setCellValue('B'.$row, $tx->stakeholder?->name ?? '-');
-            $sheet->setCellValue('C'.$row, $feeTypes ?: '-');
-            $sheet->setCellValue('D'.$row, $tx->total_amount);
-            $sheet->setCellValue('E'.$row, $tx->status);
+            $sheet->setCellValue('A' . $row, $tx->transaction_date->toDateString());
+
+            $rowTotal = 0;
+            foreach ($feeTypeColumns as $feeName => $col) {
+                $subtotal = $tx->items
+                    ->where('feeType.fee_name', 'LIKE', "%{$feeName}%")
+                    ->sum('subtotal');
+                $sheet->setCellValue($col . $row, $subtotal ?: '');
+                $rowTotal += $subtotal;
+            }
+
+            $sheet->setCellValue('O' . $row, $rowTotal ?: '');
+            $grandTotal += $rowTotal;
+
+            // Highlight cancelled rows
+            if (strtolower($tx->status) === 'cancelled') {
+                $sheet->getStyle("A{$row}:O{$row}")->applyFromArray([
+                    'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FF0000'],
+                    ],
+                ]);
+            }
+
             $row++;
         }
 
-        $sheet->setCellValue('A'.($row + 1), 'Total');
-        $sheet->setCellValue('D'.($row + 1), $transactions->sum('total_amount'));
+        // Add total row
+        $sheet->setCellValue('A' . $row, 'TOTAL');
+        foreach ($feeTypeColumns as $feeName => $col) {
+            $colTotal = $transactions->sum(function ($tx) use ($feeName) {
+                return $tx->items
+                    ->where('feeType.fee_name', 'LIKE', "%{$feeName}%")
+                    ->sum('subtotal');
+            });
+            $sheet->setCellValue($col . $row, $colTotal ?: '');
+        }
+        $sheet->setCellValue('O' . $row, $grandTotal);
 
         $writer = new Xlsx($spreadsheet);
-        $tempPath = tempnam(sys_get_temp_dir(), 'daily_report_').'.xlsx';
+        $tempPath = tempnam(sys_get_temp_dir(), 'daily_report_') . '.xlsx';
         $writer->save($tempPath);
 
         return response()->download($tempPath, "daily-report-{$date}.xlsx")->deleteFileAfterSend(true);
@@ -449,6 +498,18 @@ class ReportController extends Controller
             $sheet->setCellValue($c . $row, $tx->total_amount);
             $c++;
             $sheet->setCellValue($c . $row, $tx->remarks ?? '');
+
+            if (strtolower($tx->status) === 'cancelled') {
+                $lastCol = $c;
+                $sheet->getStyle("A{$row}:{$lastCol}{$row}")->applyFromArray([
+                    'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FF0000'],
+                    ],
+                ]);
+            }
+
             $row++;
         }
 
