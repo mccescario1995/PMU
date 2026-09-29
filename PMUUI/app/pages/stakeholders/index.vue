@@ -109,18 +109,19 @@ async function checkOrAvailability(value: string) {
 watch(
   () => form.official_receipt,
   (val) => {
-    if (!val) {
+    const value = val ?? "";
+    if (!value) {
       errors.official_receipt = null;
       orConflict.value = null;
       return;
     }
-    if (!/^\d{7}$/.test(val)) {
+    if (!/^\d{7}$/.test(value)) {
       errors.official_receipt = "Must be exactly 7 digits";
       orConflict.value = null;
     } else {
       errors.official_receipt = null;
       if (orCheckTimeout) clearTimeout(orCheckTimeout);
-      orCheckTimeout = setTimeout(() => checkOrAvailability(val), 300);
+      orCheckTimeout = setTimeout(() => checkOrAvailability(value), 300);
     }
   },
 );
@@ -416,7 +417,7 @@ const columns: TableColumn<Stakeholder>[] = [
             :error="errors.official_receipt || (orConflict.value ? `Already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}` : null)">
             <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="number"
               inputmode="numeric" :min="0"
-              @input="form.official_receipt = form.official_receipt.replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
+              @input="form.official_receipt = (form.official_receipt ?? '').replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
               placeholder="7 digits" />
           </UFormField>
 

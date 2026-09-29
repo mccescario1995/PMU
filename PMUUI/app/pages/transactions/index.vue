@@ -100,15 +100,16 @@ async function checkOrAvailability(value: string) {
 watch(
   () => form.or_number,
   (val) => {
-    if (!val) {
+    const value = val ?? "";
+    if (!value) {
       orConflict.value = null;
       return;
     }
-    if (!/^\d{7}$/.test(val)) {
+    if (!/^\d{7}$/.test(value)) {
       orConflict.value = null;
     } else {
       if (orCheckTimeout) clearTimeout(orCheckTimeout);
-      orCheckTimeout = setTimeout(() => checkOrAvailability(val), 300);
+      orCheckTimeout = setTimeout(() => checkOrAvailability(value), 300);
     }
   },
 );
