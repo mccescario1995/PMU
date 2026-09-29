@@ -13,8 +13,8 @@ class InventoryPlanningController extends Controller
     {
         $forecasts = RevenueForecastSamira::orderBy('forecast_date')->get();
 
-        $peakForecasts = $forecasts->filter(fn ($f) => $this->isPeakSeason($f->forecast_date));
-        $offPeakForecasts = $forecasts->filter(fn ($f) => $this->isOffPeakSeason($f->forecast_date));
+        $peakForecasts = $forecasts->filter(fn($f) => $this->isPeakSeason($f->forecast_date));
+        $offPeakForecasts = $forecasts->filter(fn($f) => $this->isOffPeakSeason($f->forecast_date));
 
         $items = InventoryItem::orderBy('item_name')->get();
 
@@ -22,7 +22,7 @@ class InventoryPlanningController extends Controller
             return [
                 'total_items' => $group->count(),
                 'total_quantity' => $group->sum('quantity'),
-                'low_stock_count' => $group->filter(fn ($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged')->count(),
+                'low_stock_count' => $group->filter(fn($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged')->count(),
             ];
         });
 
@@ -52,7 +52,7 @@ class InventoryPlanningController extends Controller
                 'total_items' => $items->count(),
                 'total_quantity' => (int) $inventoryValue,
                 'by_category_type' => $byCategoryType,
-                'low_stock_items' => $items->filter(fn ($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged')->count(),
+                'low_stock_items' => $items->filter(fn($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged')->count(),
             ],
             'recommended_stock' => $recommendedStock,
             'budget_guidance' => $this->generateBudgetGuidance($items, $forecasts),
@@ -64,7 +64,7 @@ class InventoryPlanningController extends Controller
         $items = InventoryItem::orderBy('category')->orderBy('item_name')->get();
         $forecasts = RevenueForecastSamira::orderBy('forecast_date')->get();
 
-        $lowStockItems = $items->filter(fn ($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged');
+        $lowStockItems = $items->filter(fn($item) => $item->quantity <= $item->minimum_stock || $item->status === 'damaged');
 
         $forecastByMonth = [];
         foreach ($forecasts as $f) {
@@ -103,8 +103,8 @@ class InventoryPlanningController extends Controller
     private function calculateRecommendedStock($items, $forecasts): array
     {
         $recommended = [];
-        $peakRevenue = $forecasts->filter(fn ($f) => $this->isPeakSeason($f->forecast_date))->sum('predicted_revenue');
-        $offPeakRevenue = $forecasts->filter(fn ($f) => $this->isOffPeakSeason($f->forecast_date))->sum('predicted_revenue');
+        $peakRevenue = $forecasts->filter(fn($f) => $this->isPeakSeason($f->forecast_date))->sum('predicted_revenue');
+        $offPeakRevenue = $forecasts->filter(fn($f) => $this->isOffPeakSeason($f->forecast_date))->sum('predicted_revenue');
         $totalRevenue = $peakRevenue + $offPeakRevenue;
 
         $seasonMultiplier = $totalRevenue > 0 ? ($peakRevenue / $totalRevenue) : 0.5;
@@ -138,8 +138,8 @@ class InventoryPlanningController extends Controller
 
     private function generateBudgetGuidance($items, $forecasts): array
     {
-        $peakRevenue = $forecasts->filter(fn ($f) => $this->isPeakSeason($f->forecast_date))->sum('predicted_revenue');
-        $offPeakRevenue = $forecasts->filter(fn ($f) => $this->isOffPeakSeason($f->forecast_date))->sum('predicted_revenue');
+        $peakRevenue = $forecasts->filter(fn($f) => $this->isPeakSeason($f->forecast_date))->sum('predicted_revenue');
+        $offPeakRevenue = $forecasts->filter(fn($f) => $this->isOffPeakSeason($f->forecast_date))->sum('predicted_revenue');
 
         $equipmentTotal = $items->where('category', 'Equipment')->sum('quantity');
         $materialsTotal = $items->where('category', 'Materials')->sum('quantity');
@@ -166,12 +166,25 @@ class InventoryPlanningController extends Controller
         ];
     }
 
-    public function updateMinimumStock(Request $request, InventoryItem $item)
+    public function updateMinimumStock(Request $request)
     {
+        // , InventoryItem $item
         $request->validate([
+            'id' => 'required|integer|min:0',
             'minimum_stock' => 'required|integer|min:0',
         ]);
 
+        // Search the table for the item by ID
+        $item = InventoryItem::find($request->id);
+
+        // Check if the item exists
+        if (!$item) {
+            return response()->json([
+                'message' => 'Item not found',
+            ], 404);
+        }
+
+        // Update and save if found
         $item->minimum_stock = $request->minimum_stock;
         $item->save();
 

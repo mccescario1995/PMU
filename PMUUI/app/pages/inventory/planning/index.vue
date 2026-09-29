@@ -54,13 +54,14 @@ async function openEdit(row: any) {
 }
 
 async function saveEdit() {
+  console.log("Row ID:", editingItem.value.id);
   if (!editingItem.value) return
   saving.value = true
   try {
-    await apiFetch(`/v1/inventory/planning/items/${editingItem.value.id}/minimum-stock`, {
+    await apiFetch(`/v1/inventory/planning/items/${editForm.id}/minimum-stock`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ minimum_stock: editForm.recommended_min }),
+      body: JSON.stringify({ id: editForm.id , minimum_stock: editForm.recommended_min }),
       parseJson: true,
     })
     toast.add({ title: 'Minimum stock updated', color: 'success' })
@@ -203,9 +204,7 @@ const columns: TableColumn<any>[] = [
         <h1 class="text-2xl font-bold">Inventory Planning</h1>
         <p class="text-slate-500">Inventory and resource planning based on current stock and revenue forecasts.</p>
       </div>
-      <!-- <UButton icon="i-lucide-refresh-cw" :loading="loading" @click="() => window.location.reload()">
-        Refresh
-      </UButton> -->
+    
     </div>
 
     <div v-if="loading" class="flex items-center justify-center py-20">
