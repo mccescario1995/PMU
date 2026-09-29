@@ -72,7 +72,7 @@ const isDecemberForecast = computed(() => {
   return nextMonth === 11
 })
 
-const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => filteredForecasts.value.length)
+const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => currentYearForecasts.value.length)
 
 const totalRevenue = computed(() =>
   currentYearForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
@@ -196,7 +196,7 @@ const UBadge = resolveComponent('UBadge')
       </UCard>
     </div>
 
-    <UTable :data="filteredForecasts" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
+    <UTable :data="currentYearForecasts" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
       <template #action-cell="{ row }">
         <UButton
           v-if="can('view forecasts')"
@@ -242,7 +242,7 @@ const UBadge = resolveComponent('UBadge')
         />
         <UButton size="sm" @click="handleGoToPage">Go</UButton>
       </div>
-      <UPagination :total="filteredForecasts.length" v-model:page="page" :items-per-page="pageSizeNumber" />
+      <UPagination :total="currentYearForecasts.length" v-model:page="page" :items-per-page="pageSizeNumber" />
     </div>
   </div>
 </template>
