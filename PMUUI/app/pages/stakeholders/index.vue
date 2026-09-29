@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from "~/composables/useApiFetch";
-import { onMounted, onUnmounted, ref, computed, watch, h, reactive } from "vue";
+import { onMounted, onUnmounted, ref, computed, watch, h, reactive, nextTick } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
@@ -66,6 +66,7 @@ const showModal = ref(false);
 const modalMode = ref<"create" | "edit" | "view">("create");
 const saving = ref(false);
 const editingStakeholder = ref<any>(null);
+const formErrors = ref<string[]>([]);
 
 const types = ref<any[]>([]);
 const typesLoaded = ref(false);
@@ -75,13 +76,6 @@ const form = reactive({
   official_receipt: "",
   stakeholder_type_id: null as number | null,
   status: "active",
-});
-
-const errors = reactive({
-  name: null as string | null,
-  official_receipt: null as string | null,
-  stakeholder_type_id: null as string | null,
-  status: null as string | null,
 });
 
 let orCheckTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -111,15 +105,12 @@ watch(
   (val) => {
     const value = val ?? "";
     if (!value) {
-      errors.official_receipt = null;
       orConflict.value = null;
       return;
     }
     if (!/^\d{7}$/.test(value)) {
-      errors.official_receipt = "Must be exactly 7 digits";
       orConflict.value = null;
     } else {
-      errors.official_receipt = null;
       if (orCheckTimeout) clearTimeout(orCheckTimeout);
       orCheckTimeout = setTimeout(() => checkOrAvailability(value), 300);
     }
@@ -127,37 +118,35 @@ watch(
 );
 
 function validateForm(): boolean {
+  formErrors.value = [];
   let isValid = true;
 
   if (!form.name.trim()) {
-    errors.name = "Name is required";
+    formErrors.value.push("Name is required");
     isValid = false;
-  } else {
-    errors.name = null;
   }
 
   if (!form.official_receipt.trim()) {
-    errors.official_receipt = "Official receipt is required";
+    formErrors.value.push("Official receipt is required");
     isValid = false;
   } else if (!/^\d{7}$/.test(form.official_receipt.trim())) {
-    errors.official_receipt = "Must be exactly 7 digits";
+    formErrors.value.push("Official receipt must be exactly 7 digits");
     isValid = false;
-  } else {
-    errors.official_receipt = null;
   }
 
   if (!form.stakeholder_type_id) {
-    errors.stakeholder_type_id = "Stakeholder type is required";
+    formErrors.value.push("Stakeholder type is required");
     isValid = false;
-  } else {
-    errors.stakeholder_type_id = null;
   }
 
   if (!form.status) {
-    errors.status = "Status is required";
+    formErrors.value.push("Status is required");
     isValid = false;
-  } else {
-    errors.status = null;
+  }
+
+  if (orConflict.value) {
+    formErrors.value.push(`Official receipt already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}`);
+    isValid = false;
   }
 
   return isValid;
@@ -169,16 +158,13 @@ const isFormValid = computed(() => {
   if (!form.stakeholder_type_id) return false;
   if (!form.status) return false;
   if (orConflict.value) return false;
+  if (formErrors.value.length > 0) return false;
   return true;
 });
 
 onUnmounted(() => {
   if (orCheckTimeout) clearTimeout(orCheckTimeout);
 });
-
-function clearError(field: keyof typeof errors) {
-  errors[field] = null;
-}
 
 async function loadTypes() {
   if (typesLoaded.value) return;
@@ -202,10 +188,7 @@ function openCreate() {
   form.official_receipt = "";
   form.stakeholder_type_id = null;
   form.status = "active";
-  errors.name = null;
-  errors.official_receipt = null;
-  errors.stakeholder_type_id = null;
-  errors.status = null;
+  formErrors.value = [];
   orConflict.value = null;
   showModal.value = true;
   loadTypes();
@@ -218,10 +201,7 @@ function openView(row: any) {
   form.official_receipt = row.official_receipt ?? "";
   form.stakeholder_type_id = row.stakeholder_type_id;
   form.status = row.status ?? "active";
-  errors.name = null;
-  errors.official_receipt = null;
-  errors.stakeholder_type_id = null;
-  errors.status = null;
+  formErrors.value = [];
   orConflict.value = null;
   showModal.value = true;
   loadTypes();
@@ -234,10 +214,7 @@ function openEdit(row: any) {
   form.official_receipt = row.official_receipt ?? "";
   form.stakeholder_type_id = row.stakeholder_type_id;
   form.status = row.status ?? "active";
-  errors.name = null;
-  errors.official_receipt = null;
-  errors.stakeholder_type_id = null;
-  errors.status = null;
+  formErrors.value = [];
   orConflict.value = null;
   showModal.value = true;
   loadTypes();
@@ -409,28 +386,33 @@ const columns: TableColumn<Stakeholder>[] = [
       </template>
       <template #body>
         <div class="space-y-4">
-          <UFormField label="Name" class="mb-3" :error="errors.name">
-            <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" @input="clearError('name')" />
+          <div v-if="formErrors.length > 0" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <ul class="list-disc list-inside text-red-700 text-sm space-y-1">
+              <li v-for="(error, i) in formErrors" :key="i">{{ error }}</li>
+            </ul>
+          </div>
+
+          <UFormField label="Name" class="mb-3">
+            <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" />
           </UFormField>
 
-          <UFormField label="Official Receipt" class="mb-3"
-            :error="errors.official_receipt || (orConflict ? `Already used by ${orConflict.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.name}` : null)">
+          <UFormField label="Official Receipt" class="mb-3">
             <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="text"
               inputmode="numeric" :min="0"
-              @input="form.official_receipt = (form.official_receipt ?? '').replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
+              @input="form.official_receipt = (form.official_receipt ?? '').replace(/\D/g, '').slice(0, 7)"
               placeholder="7 digits" />
           </UFormField>
 
-          <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id">
+          <UFormField label="Stakeholder Type" class="mb-3">
             <USelect v-model="form.stakeholder_type_id" :items="types" value-key="id" label-key="name" class="w-full"
-              :disabled="modalMode === 'view'" @change="clearError('stakeholder_type_id')" />
+              :disabled="modalMode === 'view'" />
           </UFormField>
 
-          <UFormField label="Status" class="mb-3" :error="errors.status">
+          <UFormField label="Status" class="mb-3">
             <USelect v-model="form.status" :items="[
               { label: 'Active', value: 'active' },
               { label: 'Inactive', value: 'inactive' },
-            ]" class="w-full" :disabled="modalMode === 'view'" @change="clearError('status')" />
+            ]" class="w-full" :disabled="modalMode === 'view'" />
           </UFormField>
         </div>
       </template>

@@ -52,6 +52,7 @@ const showModal = ref(false);
 const modalMode = ref<"create" | "edit" | "view">("create");
 const saving = ref(false);
 const editingTransaction = ref<any>(null);
+const formErrors = ref<string[]>([]);
 
 const stakeholders = ref<any[]>([]);
 const feeTypes = ref<any[]>([]);
@@ -187,6 +188,7 @@ async function openCreate() {
   form.transaction_date = new Date().toISOString().slice(0, 10);
   form.status = "completed";
   orConflict.value = null;
+  formErrors.value = [];
   showModal.value = true;
 }
 
@@ -204,6 +206,7 @@ async function openView(row: any) {
   form.transaction_date = (row.transaction_date ?? "").toString().slice(0, 10);
   form.status = row.status;
   orConflict.value = null;
+  formErrors.value = [];
   showModal.value = true;
 }
 
@@ -221,6 +224,7 @@ async function openEdit(row: any) {
   form.transaction_date = (row.transaction_date ?? "").toString().slice(0, 10);
   form.status = row.status;
   orConflict.value = null;
+  formErrors.value = [];
   showModal.value = true;
 }
 
@@ -285,39 +289,47 @@ function clearFilters() {
   resetPageAndRefresh();
 }
 
-function validateForm(): string | null {
+function validateForm(): boolean {
+  formErrors.value = [];
+  let isValid = true;
+
   if (!form.stakeholder_id) {
-    return "Stakeholder is required";
+    formErrors.value.push("Stakeholder is required");
+    isValid = false;
   }
   if (!form.or_number || !/^\d{7}$/.test(form.or_number)) {
-    return "OR Number must be exactly 7 digits";
+    formErrors.value.push("OR Number must be exactly 7 digits");
+    isValid = false;
   }
   if (!form.transaction_date) {
-    return "Transaction date is required";
+    formErrors.value.push("Transaction date is required");
+    isValid = false;
   }
   if (form.items.length === 0) {
-    return "At least one transaction item is required";
+    formErrors.value.push("At least one transaction item is required");
+    isValid = false;
   }
   for (const item of form.items) {
     if (!item.fee_type_id) {
-      return "All items must have a fee type selected";
+      formErrors.value.push("All items must have a fee type selected");
+      isValid = false;
+      break;
     }
     if (!item.quantity || item.quantity < 1) {
-      return "Quantity must be at least 1 for all items";
+      formErrors.value.push("Quantity must be at least 1 for all items");
+      isValid = false;
+      break;
     }
   }
   if (orConflict.value) {
-    return `OR Number already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}`;
+    formErrors.value.push(`OR Number already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}`);
+    isValid = false;
   }
-  return null;
+  return isValid;
 }
 
 async function save() {
-  const validationError = validateForm();
-  if (validationError) {
-    toast.add({ title: validationError, color: "error" });
-    return;
-  }
+  if (!validateForm()) return;
 
   saving.value = true;
   try {
@@ -541,15 +553,13 @@ onMounted(() => {
       </template>
       <template #body>
         <div class="space-y-4">
+          <div v-if="formErrors.length > 0" class="p-3 bg-red-50 border border-red-200 rounded-lg">
+            <ul class="list-disc list-inside text-red-700 text-sm space-y-1">
+              <li v-for="(error, i) in formErrors" :key="i">{{ error }}</li>
+            </ul>
+          </div>
+
           <UFormField label="Stakeholder" class="mb-3">
-            <!-- <USelectMenu
-                v-model="form.stakeholder_id"
-                :items="stakeholders.map((s) => ({ label: s.name, value: s.id }))"
-                placeholder="Select stakeholder"
-                :disabled="modalMode === 'view'"
-                :filterable="true"
-                @update:open="(isOpen: boolean) => isOpen && loadStakeholders()"
-              /> -->
             <USelectMenu v-model="form.stakeholder_id" value-key="value" class="w-full"
               :items="stakeholders.map((s) => ({ label: s.name, value: s.id }))" placeholder="Select stakeholder"
               :disabled="modalMode === 'view'" @update:open="(isOpen: boolean) => isOpen && loadStakeholders()">
@@ -564,52 +574,48 @@ onMounted(() => {
             </USelectMenu>
           </UFormField>
 
-          <UFormField label="OR Number" class="mb-3"
-            :error="orConflict ? `Already used by ${orConflict.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.name}` : null">
+          <UFormField label="OR Number" class="mb-3">
             <UInput v-model="form.or_number" placeholder="7 digits" type="text" inputmode="numeric" :min="0"
               :disabled="modalMode === 'view'" class="w-full"
               @input="form.or_number = form.or_number?.replace(/\D/g, '').slice(0, 7)" />
           </UFormField>
 
-          <UFormField label="OR Number" class="mb-3"
-            :error="orConflict ? `Already used by ${orConflict.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.name}` : null">
-
-            <UFormField label="Transaction Items" class="mb-4">
-              <div v-for="(item, index) in form.items" :key="index" class="flex gap-2 mb-2 items-end">
-                <USelect v-model="item.fee_type_id" :items="feeTypes.map((f) => ({ label: f.fee_name, value: f.id }))"
-                  placeholder="Fee Type" class="w-[30%]" :disabled="modalMode === 'view'"
-                  @update:open="(isOpen: boolean) => isOpen && loadFeeTypes()" />
-                <UInputNumber v-model="item.quantity" :min="1" placeholder="Qty" class="w-[20%]"
-                  :disabled="modalMode === 'view'" />
-                <UInputNumber v-model="item.unit_price" :step="0.01" :min="0" placeholder="Unit Price" class="w-[20%]"
-                  :disabled="true" readonly />
-                <span class="w-auto font-mono text-right text-primary">
-                  {{ formatCurrency(calculateSubtotal(item)) }}
-                </span>
-                <UButton v-if="modalMode !== 'view' && form.items.length > 1" size="xs" color="error" variant="outline"
-                  icon="i-lucide-trash-2" @click="removeItem(index)" />
-              </div>
-              <UButton v-if="modalMode !== 'view'" type="button" variant="outline" icon="i-lucide-plus" class="w-fit"
-                @click="addItem">
-                Add Item
-              </UButton>
-            </UFormField>
-
-            <UFormField label="Total Amount" class="mb-3">
-              <span class="text-2xl font-bold text-success">
-                {{ formatCurrency(calculateTotal()) }}
+          <UFormField label="Transaction Items" class="mb-4">
+            <div v-for="(item, index) in form.items" :key="index" class="flex gap-2 mb-2 items-end">
+              <USelect v-model="item.fee_type_id" :items="feeTypes.map((f) => ({ label: f.fee_name, value: f.id }))"
+                placeholder="Fee Type" class="w-[30%]" :disabled="modalMode === 'view'"
+                @update:open="(isOpen: boolean) => isOpen && loadFeeTypes()" />
+              <UInputNumber v-model="item.quantity" :min="1" placeholder="Qty" class="w-[20%]"
+                :disabled="modalMode === 'view'" />
+              <UInputNumber v-model="item.unit_price" :step="0.01" :min="0" placeholder="Unit Price" class="w-[20%]"
+                :disabled="true" readonly />
+              <span class="w-auto font-mono text-right text-primary">
+                {{ formatCurrency(calculateSubtotal(item)) }}
               </span>
+              <UButton v-if="modalMode !== 'view' && form.items.length > 1" size="xs" color="error" variant="outline"
+                icon="i-lucide-trash-2" @click="removeItem(index)" />
+            </div>
+            <UButton v-if="modalMode !== 'view'" type="button" variant="outline" icon="i-lucide-plus" class="w-fit"
+              @click="addItem">
+              Add Item
+            </UButton>
+          </UFormField>
+
+          <UFormField label="Total Amount" class="mb-3">
+            <span class="text-2xl font-bold text-success">
+              {{ formatCurrency(calculateTotal()) }}
+            </span>
+          </UFormField>
+
+          <div class="flex flex-row">
+            <UFormField label="Date" class="mb-3 me-3 w-full">
+              <UInput type="date" v-model="form.transaction_date" class="w-full" :disabled="modalMode === 'view'" />
             </UFormField>
 
-            <div class="flex flex-row">
-              <UFormField label="Date" class="mb-3 me-3 w-full">
-                <UInput type="date" v-model="form.transaction_date" class="w-full" :disabled="modalMode === 'view'" />
-              </UFormField>
-
-              <UFormField label="Status" class="mb-3 w-full">
-                <USelect v-model="form.status" :items="statusOptions" class="w-full" :disabled="modalMode === 'view'" />
-              </UFormField>
-            </div>
+            <UFormField label="Status" class="mb-3 w-full">
+              <USelect v-model="form.status" :items="statusOptions" class="w-full" :disabled="modalMode === 'view'" />
+            </UFormField>
+          </div>
         </div>
       </template>
       <template #footer>
