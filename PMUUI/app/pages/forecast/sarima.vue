@@ -77,6 +77,7 @@ const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPag
 const totalRevenue = computed(() =>
   currentYearForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
 )
+
 const periods = computed(() => currentYearForecasts.value.length)
 const latestModel = computed(() => currentYearForecasts.value[0]?.model_version ?? "-")
 

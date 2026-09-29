@@ -19,6 +19,8 @@ const stats = ref({
 
 const { daily: weatherDaily, loading: weatherLoading, error: weatherError } = useWeatherForecast();
 
+const forecastData = ref<any[]>([]);
+
 const nextMonthForecasts = computed(() => {
   const now = new Date()
   let nextMonth = now.getMonth() + 1

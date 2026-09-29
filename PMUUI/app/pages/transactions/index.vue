@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from "~/composables/useApiFetch";
-import { onMounted, ref, computed, watch, h } from "vue";
+import { onMounted, onUnmounted, ref, computed, watch, h } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
@@ -75,6 +75,47 @@ const form = reactive({
   status: "pending",
 });
 
+let orCheckTimeout: ReturnType<typeof setTimeout> | null = null;
+const orConflict = ref<{ type: string; id: number; name: string } | null>(null);
+
+async function checkOrAvailability(value: string) {
+  if (!value || value.length !== 7) {
+    orConflict.value = null;
+    return;
+  }
+  const excludeType = modalMode.value === "edit" ? "transaction" : undefined;
+  const excludeId = modalMode.value === "edit" && editingTransaction.value ? editingTransaction.value.id : undefined;
+  const params = new URLSearchParams({ or_number: value });
+  if (excludeType) params.set("exclude_type", excludeType);
+  if (excludeId) params.set("exclude_id", String(excludeId));
+  try {
+    const result = await apiFetch(`/v1/check-or-availability?${params.toString()}`, { parseJson: true });
+    orConflict.value = result.available ? null : result.conflict;
+  } catch {
+    orConflict.value = null;
+  }
+}
+
+watch(
+  () => form.or_number,
+  (val) => {
+    if (!val) {
+      orConflict.value = null;
+      return;
+    }
+    if (!/^\d{7}$/.test(val)) {
+      orConflict.value = null;
+    } else {
+      if (orCheckTimeout) clearTimeout(orCheckTimeout);
+      orCheckTimeout = setTimeout(() => checkOrAvailability(val), 300);
+    }
+  },
+);
+
+onUnmounted(() => {
+  if (orCheckTimeout) clearTimeout(orCheckTimeout);
+});
+
 const statusOptions: SelectItem[] = [
   { label: "Pending", value: "pending" },
   { label: "Completed", value: "completed" },
@@ -143,6 +184,7 @@ async function openCreate() {
   ];
   form.transaction_date = new Date().toISOString().slice(0, 10);
   form.status = "completed";
+  orConflict.value = null;
   showModal.value = true;
 }
 
@@ -159,6 +201,7 @@ async function openView(row: any) {
   }));
   form.transaction_date = (row.transaction_date ?? "").toString().slice(0, 10);
   form.status = row.status;
+  orConflict.value = null;
   showModal.value = true;
 }
 
@@ -175,6 +218,7 @@ async function openEdit(row: any) {
   }));
   form.transaction_date = (row.transaction_date ?? "").toString().slice(0, 10);
   form.status = row.status;
+  orConflict.value = null;
   showModal.value = true;
 }
 
@@ -243,6 +287,9 @@ function validateForm(): string | null {
   if (!form.stakeholder_id) {
     return "Stakeholder is required";
   }
+  if (!form.or_number || !/^\d{7}$/.test(form.or_number)) {
+    return "OR Number must be exactly 7 digits";
+  }
   if (!form.transaction_date) {
     return "Transaction date is required";
   }
@@ -256,6 +303,9 @@ function validateForm(): string | null {
     if (!item.quantity || item.quantity < 1) {
       return "Quantity must be at least 1 for all items";
     }
+  }
+  if (orConflict.value) {
+    return `OR Number already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}`;
   }
   return null;
 }
@@ -512,9 +562,10 @@ onMounted(() => {
             </USelectMenu>
           </UFormField>
 
-          <UFormField label="OR Number" class="mb-3 ">
-            <UInput v-model="form.or_number" placeholder="Enter OR Number" type="number" :min="0" :max="7"
-              :disabled="modalMode === 'view'" class="w-full"/>
+          <UFormField label="OR Number" class="mb-3" :error="orConflict.value ? `Already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}` : null" >
+            <UInput v-model="form.or_number" placeholder="7 digits" type="number" inputmode="numeric" :min="0"
+              :disabled="modalMode === 'view'" class="w-full"
+              @input="form.or_number = form.or_number?.replace(/\D/g, '').slice(0, 7)" />
           </UFormField>
 
           <UFormField label="Transaction Items" class="mb-4">

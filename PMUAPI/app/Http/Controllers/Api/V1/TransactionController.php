@@ -43,7 +43,7 @@ class TransactionController extends Controller
         $data = $request->validate([
             'stakeholder_id' => 'nullable|exists:stakeholders,id',
             'transaction_date' => 'required|date',
-            'or_number' => 'nullable|string|max:50',
+            'or_number' => 'required|string|size:7|regex:/^\d{7}$/|unique:transactions,or_number',
             'status' => 'nullable|in:pending,completed,cancelled',
             'remarks' => 'nullable|string',
             'items' => 'nullable|array',
@@ -132,7 +132,7 @@ class TransactionController extends Controller
         $data = $request->validate([
             'stakeholder_id' => 'nullable|exists:stakeholders,id',
             'transaction_date' => 'sometimes|required|date',
-            'or_number' => 'nullable|string|max:50',
+            'or_number' => 'sometimes|required|string|size:7|regex:/^\d{7}$/|unique:transactions,or_number,'.$transaction->id,
             'status' => 'nullable|in:pending,completed,cancelled',
             'remarks' => 'nullable|string',
             'items' => 'nullable|array',

@@ -67,6 +67,8 @@ Route::prefix('v1')->group(function () {
         Route::get('dropdowns/fee-types', [DropdownController::class, 'feeTypes']);
         Route::get('dropdowns/roles', [DropdownController::class, 'roles']);
 
+        Route::get('check-or-availability', [StakeholderController::class, 'checkOrAvailability']);
+
         /*
         |--------------------------------------------------------------------------
         | Roles

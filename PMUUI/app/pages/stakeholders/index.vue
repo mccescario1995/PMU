@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from "~/composables/useApiFetch";
-import { onMounted, ref, computed, watch, h, reactive } from "vue";
+import { onMounted, onUnmounted, ref, computed, watch, h, reactive } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
@@ -86,6 +86,46 @@ const errors = reactive({
   status: null as string | null,
 });
 
+let orCheckTimeout: ReturnType<typeof setTimeout> | null = null;
+const orConflict = ref<{ type: string; id: number; name: string } | null>(null);
+
+async function checkOrAvailability(value: string) {
+  if (!value || value.length !== 7) {
+    orConflict.value = null;
+    return;
+  }
+  const excludeType = modalMode.value === "edit" ? "stakeholder" : undefined;
+  const excludeId = modalMode.value === "edit" && editingStakeholder.value ? editingStakeholder.value.id : undefined;
+  const params = new URLSearchParams({ or_number: value });
+  if (excludeType) params.set("exclude_type", excludeType);
+  if (excludeId) params.set("exclude_id", String(excludeId));
+  try {
+    const result = await apiFetch(`/v1/check-or-availability?${params.toString()}`, { parseJson: true });
+    orConflict.value = result.available ? null : result.conflict;
+  } catch {
+    orConflict.value = null;
+  }
+}
+
+watch(
+  () => form.official_receipt,
+  (val) => {
+    if (!val) {
+      errors.official_receipt = null;
+      orConflict.value = null;
+      return;
+    }
+    if (!/^\d{7}$/.test(val)) {
+      errors.official_receipt = "Must be exactly 7 digits";
+      orConflict.value = null;
+    } else {
+      errors.official_receipt = null;
+      if (orCheckTimeout) clearTimeout(orCheckTimeout);
+      orCheckTimeout = setTimeout(() => checkOrAvailability(val), 300);
+    }
+  },
+);
+
 function validateForm(): boolean {
   let isValid = true;
 
@@ -100,7 +140,7 @@ function validateForm(): boolean {
     errors.official_receipt = "Official receipt is required";
     isValid = false;
   } else if (!/^\d{7}$/.test(form.official_receipt.trim())) {
-    errors.official_receipt = "Official receipt must be exactly 7 digits";
+    errors.official_receipt = "Must be exactly 7 digits";
     isValid = false;
   } else {
     errors.official_receipt = null;
@@ -128,7 +168,12 @@ const isFormValid = computed(() => {
   if (!form.official_receipt.trim() || !/^\d{7}$/.test(form.official_receipt.trim())) return false;
   if (!form.stakeholder_type_id) return false;
   if (!form.status) return false;
+  if (orConflict.value) return false;
   return true;
+});
+
+onUnmounted(() => {
+  if (orCheckTimeout) clearTimeout(orCheckTimeout);
 });
 
 function clearError(field: keyof typeof errors) {
@@ -161,6 +206,7 @@ function openCreate() {
   errors.official_receipt = null;
   errors.stakeholder_type_id = null;
   errors.status = null;
+  orConflict.value = null;
   showModal.value = true;
   loadTypes();
 }
@@ -176,6 +222,7 @@ function openView(row: any) {
   errors.official_receipt = null;
   errors.stakeholder_type_id = null;
   errors.status = null;
+  orConflict.value = null;
   showModal.value = true;
   loadTypes();
 }
@@ -191,6 +238,7 @@ function openEdit(row: any) {
   errors.official_receipt = null;
   errors.stakeholder_type_id = null;
   errors.status = null;
+  orConflict.value = null;
   showModal.value = true;
   loadTypes();
 }
@@ -415,18 +463,17 @@ const columns: TableColumn<Stakeholder>[] = [
               <UInput v-model="form.name" :disabled="modalMode === 'view'" class="w-full" @input="clearError('name')" />
             </UFormField>
 
-            <UFormField label="Official Receipt" class="mb-3" :error="errors.official_receipt" >
+<UFormField label="Official Receipt" class="mb-3" :error="errors.official_receipt || (orConflict.value ? `Already used by ${orConflict.value.type === 'stakeholder' ? 'Stakeholder' : 'Transaction'}: ${orConflict.value.name}` : null)" >
               <UInput
                 v-model="form.official_receipt"
                 :disabled="modalMode === 'view'"
                 class="w-full"
                 type="number"
                 inputmode="numeric"
-                :min="0" :max="7"
+                :min="0"
                 @input="form.official_receipt = form.official_receipt.replace(/\D/g, '').slice(0, 7); clearError('official_receipt')"
-                placeholder="7 digits only"
+                placeholder="7 digits"
               />
-              <template #description>Exactly 7 digits</template>
             </UFormField>
 
             <UFormField label="Stakeholder Type" class="mb-3" :error="errors.stakeholder_type_id" >

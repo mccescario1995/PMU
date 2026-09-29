@@ -81,4 +81,52 @@ class StakeholderController extends Controller
 
         return response()->noContent();
     }
+
+    public function checkOrAvailability(Request $request)
+    {
+        $orNumber = $request->query('or_number');
+        $excludeType = $request->query('exclude_type');
+        $excludeId = $request->query('exclude_id');
+
+        if (!$orNumber) {
+            return response()->json(['available' => true]);
+        }
+
+        $stakeholderQuery = Stakeholder::where('official_receipt', $orNumber);
+        $transactionQuery = \App\Models\Transaction::where('or_number', $orNumber);
+
+        if ($excludeType === 'stakeholder' && $excludeId) {
+            $stakeholderQuery->where('id', '!=', $excludeId);
+        }
+        if ($excludeType === 'transaction' && $excludeId) {
+            $transactionQuery->where('id', '!=', $excludeId);
+        }
+
+        $stakeholder = $stakeholderQuery->first();
+        $transaction = $transactionQuery->first();
+
+        if ($stakeholder) {
+            return response()->json([
+                'available' => false,
+                'conflict' => [
+                    'type' => 'stakeholder',
+                    'id' => $stakeholder->id,
+                    'name' => $stakeholder->name,
+                ],
+            ]);
+        }
+
+        if ($transaction) {
+            return response()->json([
+                'available' => false,
+                'conflict' => [
+                    'type' => 'transaction',
+                    'id' => $transaction->id,
+                    'name' => $transaction->stakeholder?->name ?? 'Transaction #' . $transaction->id,
+                ],
+            ]);
+        }
+
+        return response()->json(['available' => true]);
+    }
 }

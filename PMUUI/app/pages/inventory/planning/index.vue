@@ -111,7 +111,7 @@ const columns: TableColumn<any>[] = [
   },
   // { accessorKey: 'minimum_stock', header: 'Min Stock', cell: ({ row }) => row.getValue('minimum_stock') ?? 0 },
   // { accessorKey: 'reorder_quantity', header: 'Reorder Qty', cell: ({ row }) => row.getValue('reorder_quantity') ?? 0 },
-  { accessorKey: 'average_daily_usage', header: 'Avg Daily Usage', cell: ({ row }) => row.getValue('average_daily_usage') ?? 0 },
+  // { accessorKey: 'average_daily_usage', header: 'Avg Daily Usage', cell: ({ row }) => row.g1etValue('average_daily_usage') ?? 0 },
   // { accessorKey: 'estimated_monthly_usage', header: 'Est. Monthly Usage' },
   { accessorKey: 'recommended_min', header: 'Recommended Min' },
   // { accessorKey: 'reorder_point', header: 'Reorder Point' },
