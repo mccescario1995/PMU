@@ -108,9 +108,36 @@ class ReportController extends Controller
         ];
 
         // Data starts at row 15
-        $row = 15;
+        $dataStartRow = 15;
+        $row = $dataStartRow;
         $grandTotal = 0;
         $colTotals = array_fill_keys(array_keys($feeTypeColumns), 0);
+
+        // Find footer start row by searching for "Prepared by"
+        $footerStartRow = null;
+        $highestRow = $sheet->getHighestRow();
+        for ($r = $dataStartRow; $r <= $highestRow; $r++) {
+            $cellValue = $sheet->getCell('A' . $r)->getValue();
+            if (is_string($cellValue) && stripos($cellValue, 'Prepared by') !== false) {
+                $footerStartRow = $r;
+                break;
+            }
+        }
+
+        // If footer not found, default to row 49
+        if ($footerStartRow === null) {
+            $footerStartRow = 49;
+        }
+
+        // Calculate how many data rows we need
+        $dataCount = $transactions->count();
+        $totalRow = $dataStartRow + $dataCount;
+        $footerRows = $highestRow - $footerStartRow + 1;
+
+        // Insert rows for data if needed (shift footer down)
+        if ($dataCount > 0) {
+            $sheet->insertNewRowBefore($totalRow + 1, $footerRows);
+        }
 
         foreach ($transactions as $tx) {
             $sheet->setCellValue('A' . $row, $tx->transaction_date->toDateString());
@@ -142,15 +169,17 @@ class ReportController extends Controller
             $row++;
         }
 
-        // Add TOTAL row
-        $sheet->setCellValue('A' . $row, 'TOTAL');
+        // Add TOTAL row (now at correct position after data)
+        $sheet->setCellValue('A' . $totalRow, 'TOTAL');
         foreach ($feeTypeColumns as $feeName => $col) {
-            $sheet->setCellValue($col . $row, $colTotals[$feeName] ?: '');
+            $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?: '');
         }
-        $sheet->setCellValue('O' . $row, $grandTotal);
+        $sheet->setCellValue('O' . $totalRow, $grandTotal);
 
         // Style total row
-        $sheet->getStyle("A{$row}:O{$row}")->getFont()->setBold(true);
+        $sheet->getStyle("A{$totalRow}:O{$totalRow}")->getFont()->setBold(true);
+
+        // Footer is now at $totalRow + 1 (auto-shifted by insertNewRowBefore)
 
         $writer = new Xlsx($spreadsheet);
         $tempPath = tempnam(sys_get_temp_dir(), "{$type}_report_") . '.xlsx';
