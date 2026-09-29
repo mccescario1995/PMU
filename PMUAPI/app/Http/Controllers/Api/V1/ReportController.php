@@ -66,16 +66,31 @@ class ReportController extends Controller
             ->whereDate('transaction_date', $date)
             ->get();
 
+        return $this->generateReportFromTemplate($transactions, 'daily', $date);
+    }
+
+    /**
+     * Generate report from PMU template
+     */
+    private function generateReportFromTemplate($transactions, string $type, string $dateOrMonthOrYear)
+    {
         $templatePath = database_path('seeders/PMU REPORT TEMPLATE.xlsx');
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Update report title with selected date
-        $dateObj = \Carbon\Carbon::parse($date);
-        $sheet->setCellValue('A1', "FOR THE DAY OF {$dateObj->format('F d, Y')}");
+        // Set report title in E11:N11 (merged)
+        $dateObj = \Carbon\Carbon::parse($dateOrMonthOrYear);
+        $title = match ($type) {
+            'daily' => "FOR THE DAY OF {$dateObj->format('F d, Y')}",
+            'monthly' => "FOR THE MONTH OF {$dateObj->format('F Y')}",
+            'yearly' => "REPORT FOR THE YEAR {$dateObj->format('Y')}",
+            default => "REPORT",
+        };
+        $sheet->setCellValue('E11', $title);
+        $sheet->mergeCells('E11:N11');
+        $sheet->getStyle('E11:N11')->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
 
-        // Fee type mapping from fee_type table to template columns
-        // Template columns: A=Date, B=USAGE, C=FISH UNLOADING, D=AUXILIARY, E=TRADING, F=TERMINAL, G=WHARFAGE, H=QUARANTINE, I=STORAGE, J=PARKING, K=RENTAL, L=ACCREDITATION, M=OTHERS, N=ENTRANCE, O=TOTAL
+        // Fee type column mapping (template columns B through N)
         $feeTypeColumns = [
             'USAGE' => 'B',
             'FISH UNLOADING' => 'C',
@@ -92,11 +107,10 @@ class ReportController extends Controller
             'ENTRANCE' => 'N',
         ];
 
-        // Clear existing data rows (starting from row 6)
-        $sheet->removeRow(6, 100);
-
-        $row = 6;
+        // Data starts at row 15
+        $row = 15;
         $grandTotal = 0;
+        $colTotals = array_fill_keys(array_keys($feeTypeColumns), 0);
 
         foreach ($transactions as $tx) {
             $sheet->setCellValue('A' . $row, $tx->transaction_date->toDateString());
@@ -108,6 +122,7 @@ class ReportController extends Controller
                     ->sum('subtotal');
                 $sheet->setCellValue($col . $row, $subtotal ?: '');
                 $rowTotal += $subtotal;
+                $colTotals[$feeName] += $subtotal;
             }
 
             $sheet->setCellValue('O' . $row, $rowTotal ?: '');
@@ -127,23 +142,21 @@ class ReportController extends Controller
             $row++;
         }
 
-        // Add total row
+        // Add TOTAL row
         $sheet->setCellValue('A' . $row, 'TOTAL');
         foreach ($feeTypeColumns as $feeName => $col) {
-            $colTotal = $transactions->sum(function ($tx) use ($feeName) {
-                return $tx->items
-                    ->where('feeType.fee_name', 'LIKE', "%{$feeName}%")
-                    ->sum('subtotal');
-            });
-            $sheet->setCellValue($col . $row, $colTotal ?: '');
+            $sheet->setCellValue($col . $row, $colTotals[$feeName] ?: '');
         }
         $sheet->setCellValue('O' . $row, $grandTotal);
 
+        // Style total row
+        $sheet->getStyle("A{$row}:O{$row}")->getFont()->setBold(true);
+
         $writer = new Xlsx($spreadsheet);
-        $tempPath = tempnam(sys_get_temp_dir(), 'daily_report_') . '.xlsx';
+        $tempPath = tempnam(sys_get_temp_dir(), "{$type}_report_") . '.xlsx';
         $writer->save($tempPath);
 
-        return response()->download($tempPath, "daily-report-{$date}.xlsx")->deleteFileAfterSend(true);
+        return response()->download($tempPath, "{$type}-report-{$dateOrMonthOrYear}.xlsx")->deleteFileAfterSend(true);
     }
 
     public function dailyPdf()
@@ -221,36 +234,12 @@ class ReportController extends Controller
     {
         $year = request('year', now()->year);
 
-        $rows = RevenueHistory::whereYear('revenue_date', $year)->get(['revenue_date', 'total_revenue', 'transaction_count']);
+        $transactions = Transaction::with(['items.feeType'])
+            ->whereYear('transaction_date', $year)
+            ->orderBy('transaction_date')
+            ->get();
 
-        $totalRevenue = (float) $rows->sum('total_revenue');
-        $totalTransactions = (int) $rows->sum('transaction_count');
-
-        $spreadsheet = new Spreadsheet;
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setCellValue('A1', 'Yearly Report - '.$year);
-        $sheet->mergeCells('A1:C1');
-        $sheet->setCellValue('A3', 'Date');
-        $sheet->setCellValue('B3', 'Revenue');
-        $sheet->setCellValue('C3', 'Transactions');
-
-        $row = 4;
-        foreach ($rows as $r) {
-            $sheet->setCellValue('A'.$row, $r->revenue_date);
-            $sheet->setCellValue('B'.$row, $r->total_revenue);
-            $sheet->setCellValue('C'.$row, $r->transaction_count);
-            $row++;
-        }
-
-        $sheet->setCellValue('A'.($row + 1), 'Total Revenue');
-        $sheet->setCellValue('B'.($row + 1), $totalRevenue);
-        $sheet->setCellValue('C'.($row + 1), $totalTransactions);
-
-        $writer = new Xlsx($spreadsheet);
-        $tempPath = tempnam(sys_get_temp_dir(), 'yearly_report_').'.xlsx';
-        $writer->save($tempPath);
-
-        return response()->download($tempPath, "yearly-report-{$year}.xlsx")->deleteFileAfterSend(true);
+        return $this->generateReportFromTemplate($transactions, 'yearly', (string) $year);
     }
 
     public function annualPdf()
@@ -297,37 +286,12 @@ class ReportController extends Controller
     {
         $month = request('month', now()->format('Y-m'));
 
-        $rows = RevenueHistory::whereRaw("DATE_FORMAT(revenue_date, '%Y-%m') = ?", [$month])
-            ->get(['revenue_date', 'total_revenue', 'transaction_count']);
+        $transactions = Transaction::with(['items.feeType'])
+            ->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month])
+            ->orderBy('transaction_date')
+            ->get();
 
-        $totalRevenue = (float) $rows->sum('total_revenue');
-        $totalTransactions = (int) $rows->sum('transaction_count');
-
-        $spreadsheet = new Spreadsheet;
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setCellValue('A1', 'Monthly Report - '.$month);
-        $sheet->mergeCells('A1:C1');
-        $sheet->setCellValue('A3', 'Date');
-        $sheet->setCellValue('B3', 'Revenue');
-        $sheet->setCellValue('C3', 'Transactions');
-
-        $row = 4;
-        foreach ($rows as $r) {
-            $sheet->setCellValue('A'.$row, $r->revenue_date);
-            $sheet->setCellValue('B'.$row, $r->total_revenue);
-            $sheet->setCellValue('C'.$row, $r->transaction_count);
-            $row++;
-        }
-
-        $sheet->setCellValue('A'.($row + 1), 'Total Revenue');
-        $sheet->setCellValue('B'.($row + 1), $totalRevenue);
-        $sheet->setCellValue('C'.($row + 1), $totalTransactions);
-
-        $writer = new Xlsx($spreadsheet);
-        $tempPath = tempnam(sys_get_temp_dir(), 'monthly_report_').'.xlsx';
-        $writer->save($tempPath);
-
-        return response()->download($tempPath, "monthly-report-{$month}.xlsx")->deleteFileAfterSend(true);
+        return $this->generateReportFromTemplate($transactions, 'monthly', $month);
     }
 
     public function monthlyExcel()

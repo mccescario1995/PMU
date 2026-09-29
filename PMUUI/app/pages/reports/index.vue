@@ -29,7 +29,7 @@ async function exportMonthly() {
   isLoading.value = true;
   try {
     const month = selectedMonth.value; // format: YYYY-MM
-    const endpoint = `/v1/reports/transaction/xlsx?type=monthly&month=${month}`;
+    const endpoint = `/v1/reports/monthly/xlsx?month=${month}`;
     await downloadReport(endpoint, "monthly", month);
   } catch (error: any) {
     console.error("Export failed:", error);
@@ -43,7 +43,7 @@ async function exportYearly() {
   isLoading.value = true;
   try {
     const year = selectedYear.value;
-    const endpoint = `/v1/reports/transaction/xlsx?type=yearly&year=${year}`;
+    const endpoint = `/v1/reports/annual/xlsx?year=${year}`;
     await downloadReport(endpoint, "yearly", String(year));
   } catch (error: any) {
     console.error("Export failed:", error);
