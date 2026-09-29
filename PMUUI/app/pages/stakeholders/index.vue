@@ -337,7 +337,6 @@ const columns: TableColumn<Stakeholder>[] = [
       return h("UBadge", { class:"capitalize", variant: "subtle", color }, () => status);
     },
   },
-  },
   {
     accessorKey: "action",
     header: "Action",
