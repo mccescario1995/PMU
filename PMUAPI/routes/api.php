@@ -123,6 +123,7 @@ Route::prefix('v1')->group(function () {
         Route::get('fee-types/{fee_type}', [FeeTypeController::class, 'show'])->middleware('can:view fee types');
         Route::put('fee-types/{fee_type}', [FeeTypeController::class, 'update'])->middleware('can:edit fee types');
         Route::delete('fee-types/{fee_type}', [FeeTypeController::class, 'destroy'])->middleware('can:delete fee types');
+        Route::get('fee-types/{fee_type}/can-delete', [FeeTypeController::class, 'canDelete'])->middleware('can:delete fee types');
 
         Route::get('settings', [SettingsController::class, 'index'])->middleware('can:view settings');
         Route::post('settings', [SettingsController::class, 'store'])->middleware('can:create settings');

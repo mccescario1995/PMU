@@ -73,4 +73,14 @@ class FeeTypeController extends Controller
 
         return response()->noContent();
     }
+
+    public function canDelete(FeeType $feeType)
+    {
+        $hasTransactions = $feeType->transactionItems()->exists();
+
+        return response()->json([
+            'can_delete' => !$hasTransactions,
+            'message' => $hasTransactions ? 'Fee type has associated transactions and cannot be deleted.' : 'Fee type can be deleted.',
+        ]);
+    }
 }

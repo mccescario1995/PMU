@@ -111,7 +111,27 @@ async function save() {
 }
 
 async function remove(row: any) {
+  try {
+    const check = await apiFetch(`/v1/fee-types/${row.id}/can-delete`, { parseJson: true });
+    if (!check.can_delete) {
+      toast.add({
+        title: "Cannot delete fee type",
+        description: check.message ?? "Fee type has associated transactions.",
+        color: "error",
+      });
+      return;
+    }
+  } catch (e: any) {
+    toast.add({
+      title: "Failed to check fee type",
+      description: e.message ?? "Please try again.",
+      color: "error",
+    });
+    return;
+  }
+
   if (!confirm("Delete this fee type?")) return;
+
   try {
     await apiFetch(`/v1/fee-types/${row.id}`, { method: "DELETE" });
     data.value = data.value.filter((f: any) => f.id !== row.id);
@@ -120,7 +140,7 @@ async function remove(row: any) {
   } catch (e: any) {
     toast.add({
       title: "Failed to delete fee type",
-      description: e.message ?? "Fee type has associated transactions.",
+      description: e.message ?? "Please try again.",
       color: "error",
     });
   }
