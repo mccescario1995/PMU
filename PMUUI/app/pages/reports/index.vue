@@ -15,7 +15,7 @@ async function exportDaily() {
   isLoading.value = true;
   try {
     const date = selectedDate.value;
-    const endpoint = `/v1/reports/transaction/xlsx?type=daily&date=${date}`;
+    const endpoint = `/v1/reports/daily/xlsx?date=${date}`;
     await downloadReport(endpoint, "daily", date);
   } catch (error: any) {
     console.error("Export failed:", error);
