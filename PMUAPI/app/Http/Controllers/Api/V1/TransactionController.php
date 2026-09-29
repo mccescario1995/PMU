@@ -304,11 +304,11 @@ class TransactionController extends Controller
             ->get(['report_date']);
 
         $revenues = $dates->mapWithKeys(fn ($d) => [
-            $d->report_date => \App\Models\TransactionRevenue::where('report_date', $d->report_date)->value('revenue_target') ?? 0,
+            $d->report_date->toDateString() => \App\Models\TransactionRevenue::where('report_date', $d->report_date)->value('revenue_target') ?? 0,
         ]);
 
         $dates->each(function ($d) use ($revenues) {
-            $date = $d->report_date;
+            $date = $d->report_date->toDateString();
             $lag1 = $revenues[$date] ?? null;
             $lag7 = $revenues[\Carbon\Carbon::parse($date)->subDays(7)->toDateString()] ?? null;
             $lag365 = $revenues[\Carbon\Carbon::parse($date)->subDays(365)->toDateString()] ?? null;
