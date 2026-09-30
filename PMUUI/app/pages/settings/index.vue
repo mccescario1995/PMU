@@ -42,7 +42,7 @@ function save() {
         </UFormField>
       </UCard>
 
-      <UCard>
+      <!-- <UCard>
         <template #header> Fee Configuration </template>
         <UFormField label="Fish Unloading Fee (PHP/kg)">
           <UInput type="number" v-model="form.unloadingFee" />
@@ -53,7 +53,7 @@ function save() {
         <UFormField label="Low Stock Threshold">
           <UInput type="number" v-model="form.lowStockThreshold" />
         </UFormField>
-      </UCard>
+      </UCard> -->
 
       <UButton type="submit"> Save Changes </UButton>
     </UForm>

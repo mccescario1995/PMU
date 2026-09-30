@@ -11,9 +11,9 @@ const modules = [
   // { title: "Reports", description: "Daily, monthly and yearly summaries.", icon: "i-lucide-file-bar-chart", to: "/cms/reports", color: "text-indigo-500" },
   { title: "Fee Types", description: "Configure port fee rates and units.", icon: "i-lucide-tag", to: "/cms/fee-types", color: "text-yellow-600" },
   { title: "Stakeholder Types", description: "Manage stakeholder classifications.", icon: "i-lucide-users-2", to: "/cms/stakeholder-types", color: "text-teal-500" },
-  { title: "Weather Data", description: "Environmental condition logs.", icon: "i-lucide-cloud", to: "/cms/weather", color: "text-cyan-500" },
+  // { title: "Weather Data", description: "Environmental condition logs.", icon: "i-lucide-cloud", to: "/cms/weather", color: "text-cyan-500" },
   // { title: "Import Logs", description: "Review import history and errors.", icon: "i-lucide-upload", to: "/cms/imports", color: "text-lime-500" },
-  { title: "Settings", description: "App-wide configuration values.", icon: "i-lucide-settings-2", to: "/cms/settings", color: "text-gray-500" },
+  // { title: "Settings", description: "App-wide configuration values.", icon: "i-lucide-settings-2", to: "/cms/settings", color: "text-gray-500" },
   // { title: "Statuses", description: "Manage inventory, transaction and stakeholder statuses.", icon: "i-lucide-circle-dot", to: "/cms/statuses", color: "text-pink-500" },
 ]
 </script>
