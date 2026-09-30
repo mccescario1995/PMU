@@ -73,7 +73,7 @@ const typesLoaded = ref(false);
 
 const form = reactive({
   name: "",
-  official_receipt: "",
+  official_receipt: null as string | null,
   stakeholder_type_id: null as number | null,
   status: "active",
 });
@@ -134,10 +134,11 @@ function validateForm(): boolean {
     isValid = false;
   }
 
-  if (!form.official_receipt.trim()) {
+  const orValue = form.official_receipt ?? "";
+  if (!orValue.trim()) {
     formErrors.value.push("Official receipt is required");
     isValid = false;
-  } else if (!/^\d{7}$/.test(form.official_receipt.trim())) {
+  } else if (!/^\d{7}$/.test(orValue.trim())) {
     formErrors.value.push("Official receipt must be exactly 7 digits");
     isValid = false;
   }
@@ -157,7 +158,8 @@ function validateForm(): boolean {
 
 const isFormValid = computed(() => {
   if (!form.name.trim()) return false;
-  if (!form.official_receipt.trim() || !/^\d{7}$/.test(form.official_receipt.trim())) return false;
+  const orValue = form.official_receipt ?? "";
+  if (!orValue.trim() || !/^\d{7}$/.test(orValue.trim())) return false;
   if (!form.stakeholder_type_id) return false;
   if (!form.status) return false;
   if (orConflict.value) return false;
@@ -204,7 +206,7 @@ function openCreate() {
   modalMode.value = "create";
   editingStakeholder.value = null;
   form.name = "";
-  form.official_receipt = "";
+  form.official_receipt = null;
   form.stakeholder_type_id = null;
   form.status = "active";
   formErrors.value = [];
@@ -217,7 +219,7 @@ function openView(row: any) {
   modalMode.value = "view";
   editingStakeholder.value = row;
   form.name = row.name;
-  form.official_receipt = row.official_receipt ?? "";
+  form.official_receipt = row.official_receipt ?? null;
   form.stakeholder_type_id = row.stakeholder_type_id;
   form.status = row.status ?? "active";
   formErrors.value = [];
@@ -230,7 +232,7 @@ function openEdit(row: any) {
   modalMode.value = "edit";
   editingStakeholder.value = row;
   form.name = row.name;
-  form.official_receipt = row.official_receipt ?? "";
+  form.official_receipt = row.official_receipt ?? null;
   form.stakeholder_type_id = row.stakeholder_type_id;
   form.status = row.status ?? "active";
   formErrors.value = [];
@@ -418,7 +420,7 @@ const columns: TableColumn<Stakeholder>[] = [
           <UFormField label="Official Receipt" class="mb-3" required>
             <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="number"
               inputmode="numeric" :min="0"
-              @input="form.official_receipt = (form.official_receipt ?? '').replace(/\D/g, '').slice(0, 7)"
+              @input="form.official_receipt = form.official_receipt?.replace(/\D/g, '').slice(0, 7)"
               placeholder="Enter Official Receipt" />
           </UFormField>
 
