@@ -242,9 +242,11 @@ class ReportController extends Controller
                     $isPending = $status === 'pending';
                     // Monthly/yearly: INCLUDE pending in computation, exclude cancelled only
                     if (!$isCancelled) {
-                        $subtotal += $tx->items
-                            ->where('feeType.fee_name', '=', $feeName)
-                            ->sum('subtotal');
+                        foreach ($tx->items as $item) {
+                            if ($item->feeType && $item->feeType->fee_name === $feeName) {
+                                $subtotal += (float) $item->subtotal;
+                            }
+                        }
                     }
                 }
                 $sheet->setCellValue($col . $row, $subtotal ?: '');
