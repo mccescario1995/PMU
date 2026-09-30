@@ -133,11 +133,12 @@ async function saveRole() {
       });
     }
     openRoleModal.value = false;
+    await load();
     toast.add({
       title: editingRole.value ? "Role updated" : "Role created",
       color: "success",
     });
-    await load();
+    
   } catch (e: any) {
     toast.add({
       title: "Failed to save role",
