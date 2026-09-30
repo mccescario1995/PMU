@@ -181,7 +181,7 @@ class ReportController extends Controller
         $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $totalRow, $grandTotal);
 
         // Style TOTAL row like header
-        $this->applyTotalStyle($sheet, $totalRow, $feeTypes);
+        $this->applyTotalStyle($sheet, $totalRow, count($feeTypes));
 
         $writer = new Xlsx($spreadsheet);
         $tempPath = tempnam(sys_get_temp_dir(), 'daily_report_') . '.xlsx';
@@ -281,7 +281,7 @@ class ReportController extends Controller
         $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $totalRow, $grandTotal);
 
         // Style TOTAL row like header
-        $this->applyTotalStyle($sheet, $totalRow, $feeTypes);
+        $this->applyTotalStyle($sheet, $totalRow, count($feeTypes));
 
         $writer = new Xlsx($spreadsheet);
         $tempPath = tempnam(sys_get_temp_dir(), strtolower(str_replace(' ', '_', $templatePrefix)) . '_report_') . '.xlsx';
