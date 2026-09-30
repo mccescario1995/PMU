@@ -105,7 +105,7 @@ class ReportController extends Controller
         $dataStartRow = 14;
         $row = $dataStartRow;
         $grandTotal = 0;
-        $colTotals = array_fill_keys(array_keys($feeTypes->pluck('fee_name')->toArray()), 0);
+        $colTotals = [];
 
         // Find footer (Prepared by) - should be around row 18 in template
         $footerStartRow = $this->findFooterRow($sheet, $dataStartRow);
@@ -138,7 +138,7 @@ class ReportController extends Controller
 
                 if ($includeInTotals) {
                     $rowTotal += $subtotal;
-                    $colTotals[$feeName] += $subtotal;
+                    $colTotals[$feeName] = ($colTotals[$feeName] ?? 0) + $subtotal;
                 }
             }
 
@@ -176,7 +176,7 @@ class ReportController extends Controller
         foreach ($feeTypes as $fee) {
             $feeName = $fee->fee_name;
             $col = $this->getColumnLetterForFee($feeName, $feeTypes);
-            $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?: '');
+            $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?? 0);
         }
         $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $totalRow, $grandTotal);
 
@@ -215,7 +215,7 @@ class ReportController extends Controller
         $dataStartRow = 14;
         $row = $dataStartRow;
         $grandTotal = 0;
-        $colTotals = array_fill_keys(array_keys($feeTypes->pluck('fee_name')->toArray()), 0);
+        $colTotals = [];
 
         // Find footer (Prepared by)
         $footerStartRow = $this->findFooterRow($sheet, $dataStartRow);
@@ -250,7 +250,7 @@ class ReportController extends Controller
                 $sheet->setCellValue($col . $row, $subtotal ?: '');
 
                 $rowTotal += $subtotal;
-                $colTotals[$feeName] += $subtotal;
+                $colTotals[$feeName] = ($colTotals[$feeName] ?? 0) + $subtotal;
             }
 
             $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $row, $rowTotal ?: '');
@@ -274,7 +274,7 @@ class ReportController extends Controller
         foreach ($feeTypes as $fee) {
             $feeName = $fee->fee_name;
             $col = $this->getColumnLetterForFee($feeName, $feeTypes);
-            $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?: '');
+            $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?? 0);
         }
         $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $totalRow, $grandTotal);
 
