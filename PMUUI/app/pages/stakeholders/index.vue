@@ -247,11 +247,17 @@ async function save() {
   if (!validateForm()) return;
   saving.value = true;
   try {
+    // Create payload with official_receipt as string for API
+    const payload = {
+      ...form,
+      official_receipt: String(form.official_receipt ?? '')
+    };
+    
     if (modalMode.value === "edit" && editingStakeholder.value) {
       await apiFetch(`/v1/stakeholders/${editingStakeholder.value.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
         parseJson: true,
       });
       toast.add({ title: "Stakeholder updated", color: "success" });
@@ -259,7 +265,7 @@ async function save() {
       await apiFetch("/v1/stakeholders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
         parseJson: true,
       });
       toast.add({ title: "Stakeholder created", color: "success" });
