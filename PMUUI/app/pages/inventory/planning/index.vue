@@ -154,47 +154,54 @@ const recommendedStockArray = computed(() => {
   return Object.values(stock)
 })
 
-const columns: TableColumn<any>[] = [
-  { accessorKey: 'item_name', header: 'Item Name' },
-  {
-    accessorKey: 'category_type', header: 'Category', cell: ({ row }) => {
-      const type = row.getValue('category_type')
-      return h('UBadge', { variant: 'subtle', color: getCategoryColor(type) }, () => type)
-    }
-  },
-  {
-    accessorKey: 'current_quantity', header: 'Current Qty', cell: ({ row }) => {
-      const qty = row.getValue('current_quantity')
-      return h('span', { class: qty <= 5 ? 'text-warning font-semibold' : '' }, () => qty)
-    }
-  },
-  // { accessorKey: 'minimum_stock', header: 'Min Stock', cell: ({ row }) => row.getValue('minimum_stock') ?? 0 },
-  // { accessorKey: 'reorder_quantity', header: 'Reorder Qty', cell: ({ row }) => row.getValue('reorder_quantity') ?? 0 },
-  // { accessorKey: 'average_daily_usage', header: 'Avg Daily Usage', cell: ({ row }) => row.g1etValue('average_daily_usage') ?? 0 },
-  // { accessorKey: 'estimated_monthly_usage', header: 'Est. Monthly Usage' },
-  { accessorKey: 'recommended_min', header: 'Recommended Min' },
-  // { accessorKey: 'reorder_point', header: 'Reorder Point' },
-  {
-    accessorKey: 'stock_status', header: 'Stock Status', cell: ({ row }) => {
-      const item = row.original
-      const s = computeStockStatus(item)
-      return h('UBadge', { variant: 'subtle', color: statusColor[s] || 'neutral' }, () => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
-    }
-  },
-  // {
-  //   accessorKey: 'days_remaining', header: 'Days Remaining', cell: ({ row }) => {
-  //     const item = row.original
-  //     const days = computeDaysRemaining(item)
-  //     return days !== null ? days.toFixed(1) : 'N/A'
-  //   }
-  // },
-  {
-    accessorKey: 'needs_reorder', header: 'Reorder?', cell: ({ row }) => {
-      return row.getValue('needs_reorder') ? 'Yes' : 'No'
-    }
-  },
-  { accessorKey: 'action', header: 'Action' },
-]
+const columns = computed(() => {
+  const cols: TableColumn<any>[] = [
+    { accessorKey: 'item_name', header: 'Item Name' },
+    {
+      accessorKey: 'category_type', header: 'Category', cell: ({ row }) => {
+        const type = row.getValue('category_type')
+        return h('UBadge', { variant: 'subtle', color: getCategoryColor(type) }, () => type)
+      }
+    },
+    {
+      accessorKey: 'current_quantity', header: 'Current Qty', cell: ({ row }) => {
+        const qty = row.getValue('current_quantity')
+        return h('span', { class: qty <= 5 ? 'text-warning font-semibold' : '' }, () => qty)
+      }
+    },
+    // { accessorKey: 'minimum_stock', header: 'Min Stock', cell: ({ row }) => row.getValue('minimum_stock') ?? 0 },
+    // { accessorKey: 'reorder_quantity', header: 'Reorder Qty', cell: ({ row }) => row.getValue('reorder_quantity') ?? 0 },
+    // { accessorKey: 'average_daily_usage', header: 'Avg Daily Usage', cell: ({ row }) => row.g1etValue('average_daily_usage') ?? 0 },
+    // { accessorKey: 'estimated_monthly_usage', header: 'Est. Monthly Usage' },
+    { accessorKey: 'recommended_min', header: 'Recommended Min' },
+    // { accessorKey: 'reorder_point', header: 'Reorder Point' },
+    {
+      accessorKey: 'stock_status', header: 'Stock Status', cell: ({ row }) => {
+        const item = row.original
+        const s = computeStockStatus(item)
+        return h('UBadge', { variant: 'subtle', color: statusColor[s] || 'neutral' }, () => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()))
+      }
+    },
+    // {
+    //   accessorKey: 'days_remaining', header: 'Days Remaining', cell: ({ row }) => {
+    //     const item = row.original
+    //     const days = computeDaysRemaining(item)
+    //     return days !== null ? days.toFixed(1) : 'N/A'
+    //   }
+    // },
+    {
+      accessorKey: 'needs_reorder', header: 'Reorder?', cell: ({ row }) => {
+        return row.getValue('needs_reorder') ? 'Yes' : 'No'
+      }
+    },
+  ]
+
+  if (can('edit inventory')) {
+    cols.push({ accessorKey: 'action', header: 'Action' })
+  }
+
+  return cols
+})
 </script>
 
 <template>
