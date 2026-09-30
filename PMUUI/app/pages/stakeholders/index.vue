@@ -129,12 +129,13 @@ function validateForm(): boolean {
   formErrors.value = [];
   let isValid = true;
 
-  if (!form.name.trim()) {
+  const nameValue = String(form.name ?? "");
+  if (!nameValue.trim()) {
     formErrors.value.push("Name is required");
     isValid = false;
   }
 
-  const orValue = form.official_receipt ?? "";
+  const orValue = String(form.official_receipt ?? "");
   if (!orValue.trim()) {
     formErrors.value.push("Official receipt is required");
     isValid = false;
@@ -157,8 +158,9 @@ function validateForm(): boolean {
 }
 
 const isFormValid = computed(() => {
-  if (!form.name.trim()) return false;
-  const orValue = form.official_receipt ?? "";
+  const nameValue = String(form.name ?? "");
+  if (!nameValue.trim()) return false;
+  const orValue = String(form.official_receipt ?? "");
   if (!orValue.trim() || !/^\d{7}$/.test(orValue.trim())) return false;
   if (!form.stakeholder_type_id) return false;
   if (!form.status) return false;
@@ -218,8 +220,8 @@ function openCreate() {
 function openView(row: any) {
   modalMode.value = "view";
   editingStakeholder.value = row;
-  form.name = row.name;
-  form.official_receipt = row.official_receipt ?? null;
+  form.name = row.name != null ? String(row.name) : "";
+  form.official_receipt = row.official_receipt != null ? String(row.official_receipt) : null;
   form.stakeholder_type_id = row.stakeholder_type_id;
   form.status = row.status ?? "active";
   formErrors.value = [];
@@ -231,8 +233,8 @@ function openView(row: any) {
 function openEdit(row: any) {
   modalMode.value = "edit";
   editingStakeholder.value = row;
-  form.name = row.name;
-  form.official_receipt = row.official_receipt ?? null;
+  form.name = row.name != null ? String(row.name) : "";
+  form.official_receipt = row.official_receipt != null ? String(row.official_receipt) : null;
   form.stakeholder_type_id = row.stakeholder_type_id;
   form.status = row.status ?? "active";
   formErrors.value = [];
