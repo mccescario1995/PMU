@@ -366,21 +366,27 @@ const userStatus = ref<SelectItem[]>([
                 :disabled="viewingRole" />
             </UFormField>
 
-            <UFormField label="Permissions">
-              <div class="space-y-3">
-                <div v-for="group in permissionGroups" :key="group.resource" class="rounded-lg border p-3">
-                  <p class="mb-2 text-sm font-semibold capitalize">
-                    {{ group.resource }}
-                  </p>
-                  <div class="flex flex-wrap gap-3">
-<UCheckbox v-for="perm in group.permissions" :key="perm.name"
-  :model-value="roleForm.permissions.includes(perm.name)"
-  @update:model-value="(val: boolean) => togglePerm(perm.name, val)"
-  :label="perm.action" :ui="{ label: 'capitalize' }" :disabled="viewingRole" />
+<UFormField label="Permissions">
+                <div class="space-y-3">
+                  <div v-for="group in permissionGroups" :key="group.resource" class="rounded-lg border p-3">
+                    <p class="mb-2 text-sm font-semibold capitalize">
+                      {{ group.resource }}
+                    </p>
+                    <div class="flex flex-wrap gap-3">
+                      <label v-for="perm in group.permissions" :key="perm.name" class="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          :checked="roleForm.permissions.includes(perm.name)"
+                          @change="togglePerm(perm.name, $event.target.checked)"
+                          :disabled="viewingRole"
+                          class="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                        <span class="text-sm capitalize">{{ perm.action }}</span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </UFormField>
+              </UFormField>
           </div>
         </template>
 
