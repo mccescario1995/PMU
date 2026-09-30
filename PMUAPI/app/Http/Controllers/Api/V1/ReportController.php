@@ -3,62 +3,22 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\TransactionResource;
 use App\Models\FeeType;
-use App\Models\RevenueHistory;
 use App\Models\Transaction;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class ReportController extends Controller
 {
-    public function daily()
-    {
-        $date = request('date', today()->toDateString());
-
-        $transactions = Transaction::with(['stakeholder', 'items.feeType'])
-            ->whereDate('transaction_date', $date)
-            ->get();
-
-        return response()->json([
-            'date' => $date,
-            'transactions' => TransactionResource::collection($transactions),
-            'total' => (float) $transactions->sum('total_amount'),
-            'count' => $transactions->count(),
-        ]);
-    }
-
-    public function dailyExcel()
-    {
-        $date = request('date', today()->toDateString());
-
-        $transactions = Transaction::with(['stakeholder', 'items.feeType'])
-            ->whereDate('transaction_date', $date)
-            ->get();
-
-        $callback = function () use ($transactions, $date) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Daily Report - '.$date]);
-            fputcsv($handle, ['ID', 'Stakeholder', 'Fee Types', 'Amount', 'Status']);
-            foreach ($transactions as $tx) {
-                $feeTypes = $tx->items->map(fn ($i) => $i->feeType?->fee_name)->filter()->join(', ');
-                fputcsv($handle, [
-                    $tx->id,
-                    $tx->stakeholder?->name ?? '-',
-                    $feeTypes ?: '-',
-                    $tx->total_amount,
-                    $tx->status,
-                ]);
-            }
-            fputcsv($handle, []);
-            fputcsv($handle, ['Total', '', '', $transactions->sum('total_amount')]);
-            fclose($handle);
-        };
-
-        return response()->streamDownload($callback, "daily-report-{$date}.csv");
-    }
-
+    /**
+     * Daily report with per-transaction rows
+     */
     public function dailyXlsx()
     {
         $date = request('date', today()->toDateString());
@@ -67,176 +27,110 @@ class ReportController extends Controller
             ->whereDate('transaction_date', $date)
             ->get();
 
-        $allFeeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+        $feeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
 
-        return $this->generateReportFromTemplate($transactions, 'daily', $date, $allFeeTypes);
+        return $this->generateDailyReport($transactions, $date, $feeTypes);
     }
 
+    /**
+     * Monthly report - one row per day
+     */
     public function monthlyXlsx()
     {
         $month = request('month', now()->format('Y-m'));
 
-        $transactions = Transaction::with(['items.feeType'])
+        // Get all transactions in the month, group by day
+        $dailyData = Transaction::with(['items.feeType'])
             ->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month])
-            ->orderBy('transaction_date')
-            ->get();
+            ->get()
+            ->groupBy(function ($tx) {
+                return Carbon::parse($tx->transaction_date)->format('Y-m-d');
+            });
 
-        $allFeeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+        $feeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+        $periodLabel = Carbon::parse($month . '-01')->format('F Y'); // e.g. "November 2026"
 
-        return $this->generateReportFromTemplate($transactions, 'monthly', $month, $allFeeTypes);
+        return $this->generatePeriodReport(
+            $dailyData,
+            $feeTypes,
+            $periodLabel,
+            'MONTHLY REPORT FOR ', // template prefix
+            31 // fixed days
+        );
     }
 
+    /**
+     * Yearly report - one row per month
+     */
     public function annualXlsx()
     {
         $year = request('year', now()->year);
 
-        $transactions = Transaction::with(['items.feeType'])
+        // Get all transactions in the year, group by month
+        $monthlyData = Transaction::with(['items.feeType'])
             ->whereYear('transaction_date', $year)
-            ->orderBy('transaction_date')
-            ->get();
+            ->get()
+            ->groupBy(function ($tx) {
+                return Carbon::parse($tx->transaction_date)->format('Y-m');
+            });
 
-        $allFeeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+        $feeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+        $periodLabel = $year; // just the year
 
-        return $this->generateReportFromTemplate($transactions, 'yearly', (string) $year, $allFeeTypes);
+        return $this->generatePeriodReport(
+            $monthlyData,
+            $feeTypes,
+            $periodLabel,
+            'ANNUAL REPORT FOR THE YEAR ', // template prefix
+            12 // fixed months
+        );
     }
 
     /**
-     * Generate report from PMU template
+     * Generate daily report (per-transaction rows with highlighting)
      */
-    private function generateReportFromTemplate($transactions, string $type, string $dateOrMonthOrYear, $allFeeTypes = null)
+    private function generateDailyReport($transactions, $date, $feeTypes)
     {
-        $templatePath = database_path('seeders/PMU REPORT TEMPLATE.xlsx');
-        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($templatePath);
+        $templatePath = database_path('seeders/PMU REPORT TEMPLATE DAILY.xlsx');
+        $spreadsheet = IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Set report title in D11:M11 (merged)
-        $dateObj = \Carbon\Carbon::parse($dateOrMonthOrYear);
-        $title = match ($type) {
-            'daily' => "FOR THE DAY OF {$dateObj->format('F d, Y')}",
-            'monthly' => "FOR THE MONTH OF {$dateObj->format('F Y')}",
-            'yearly' => "REPORT FOR THE YEAR {$dateObj->format('Y')}",
-            default => "REPORT",
-        };
-        $sheet->setCellValue('D11', $title);
+        // Update title - replace date in "DAILY REPORT FOR  JANUARY 31, 2026"
+        $dateObj = Carbon::parse($date);
+        $newTitle = 'DAILY REPORT FOR  ' . $dateObj->format('F d, Y');
+        $sheet->setCellValue('D11', $newTitle);
         $sheet->mergeCells('D11:M11');
-        $sheet->getStyle('D11:M11')->applyFromArray([
-            'font' => [
-                'name' => 'Calibri',
-                'size' => 14,
-                'bold' => true,
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
+        $this->applyHeaderStyle($sheet, count($feeTypes));
 
-        // Use all fee types from database, not just from transactions
-        if ($allFeeTypes) {
-            $feeTypes = $allFeeTypes;
-        } else {
-            // Fallback: collect from transactions
-            $feeTypes = $transactions
-                ->pluck('items')
-                ->flatten()
-                ->pluck('feeType')
-                ->filter()
-                ->unique('id')
-                ->sortBy('fee_name')
-                ->values();
-        }
-
-        // Build dynamic fee type column mapping (B onwards)
-        $feeTypeColumns = [];
-        $colIndex = 2; // B = 2
-        foreach ($feeTypes as $ft) {
-            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
-            $feeTypeColumns[$ft->fee_name] = $colLetter;
-            $colIndex++;
-        }
-
-        // Total column is after the last fee type column
-        $totalCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
-
-        // Set headers in row 13
-        $sheet->setCellValue('A13', 'DATE');
-        $colIdx = 2;
-        foreach ($feeTypes as $ft) {
-            $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIdx);
-            $sheet->setCellValue($colLetter . '13', $ft->fee_name);
-            $colIdx++;
-        }
-        $sheet->setCellValue($totalCol . '13', 'TOTAL');
-
-        // Apply header formatting: yellow background, red text, center, wrap text
-        $headerRange = "A13:{$totalCol}13";
-        $sheet->getStyle($headerRange)->applyFromArray([
-            'font' => [
-                'name' => 'Calibri',
-                'size' => 11,
-                'bold' => true,
-                'color' => ['rgb' => 'FF0000'],
-            ],
-            'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => 'FFFF00'],
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-                'wrapText' => true,
-            ],
-        ]);
-        $sheet->getRowDimension(13)->setRowHeight(45);
-
-        // Set column widths for fee type columns
-        foreach ($feeTypeColumns as $feeName => $col) {
-            $sheet->getColumnDimension($col)->setWidth(14);
-        }
-        $sheet->getColumnDimension('A')->setWidth(12);
-        $sheet->getColumnDimension($totalCol)->setWidth(14);
-
-        // Data starts at row 14
         $dataStartRow = 14;
         $row = $dataStartRow;
         $grandTotal = 0;
-        $colTotals = array_fill_keys(array_keys($feeTypeColumns), 0);
+        $colTotals = array_fill_keys(array_keys($feeTypes->pluck('fee_name')->toArray()), 0);
 
-        // Find footer start row BEFORE any row insertions
-        $footerStartRow = null;
-        $highestRow = $sheet->getHighestRow();
-        for ($r = $dataStartRow; $r <= $highestRow; $r++) {
-            $cellValue = $sheet->getCell('A' . $r)->getValue();
-            if (is_string($cellValue) && stripos($cellValue, 'Prepared by') !== false) {
-                $footerStartRow = $r;
-                break;
-            }
-        }
-
-        // If footer not found, default to row 49
+        // Find footer (Prepared by) - should be around row 18 in template
+        $footerStartRow = $this->findFooterRow($sheet, $dataStartRow);
         if ($footerStartRow === null) {
-            $footerStartRow = 49;
+            $footerStartRow = 18; // fallback from inspection
         }
 
-        // Calculate how many data rows we need
+        // Insert rows for data, shifting footer down
         $dataCount = $transactions->count();
-        $totalRow = $dataStartRow + $dataCount;
-        $footerRows = $highestRow - $footerStartRow + 1;
-
-        // Insert rows at footer position to shift footer down
         if ($dataCount > 0) {
             $sheet->insertNewRowBefore($footerStartRow, $dataCount);
-            $totalRow = $footerStartRow - 1; // total row is now right before footer
         }
 
         foreach ($transactions as $tx) {
             $sheet->setCellValue('A' . $row, $tx->transaction_date->toDateString());
 
-            $isCancelled = strtolower($tx->status) === 'cancelled';
-            $includeInTotals = !($type === 'daily' && $isCancelled);
+            $status = strtolower((string) $tx->status);
+            $isCancelled = $status === 'cancelled';
+            $isPending = $status === 'pending';
+            $includeInTotals = !($isCancelled || $isPending); // daily excludes both
 
             $rowTotal = 0;
-            foreach ($feeTypeColumns as $feeName => $col) {
+            foreach ($feeTypes as $fee) {
+                $feeName = $fee->fee_name;
+                $col = $this->getColumnLetterForFee($feeName, $feeTypes);
                 $subtotal = $tx->items
                     ->where('feeType.fee_name', '=', $feeName)
                     ->sum('subtotal');
@@ -248,389 +142,233 @@ class ReportController extends Controller
                 }
             }
 
-            $sheet->setCellValue($totalCol . $row, $includeInTotals ? ($rowTotal ?: '') : '');
+            $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $row, $includeInTotals ? ($rowTotal ?: '') : '');
 
             if ($includeInTotals) {
                 $grandTotal += $rowTotal;
             }
 
-            // Highlight cancelled rows
+            // Base formatting
+            $sheet->getStyle("A{$row}:{$this->getTotalColumnLetter($feeTypes)}{$row}")->applyFromArray([
+                'font' => ['name' => 'Calibri', 'size' => 11],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
+
+            // Status highlighting (applied last)
             if ($isCancelled) {
-                $sheet->getStyle("A{$row}:{$totalCol}{$row}")->applyFromArray([
-                    'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true],
-                    'fill' => [
-                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'FF0000'],
-                    ],
+                $sheet->getStyle("A{$row}:{$this->getTotalColumnLetter($feeTypes)}{$row}")->applyFromArray([
+                    'font' => ['name' => 'Calibri', 'size' => 11, 'bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => [Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FF0000']],
+                ]);
+            } elseif ($isPending) {
+                $sheet->getStyle("A{$row}:{$this->getTotalColumnLetter($feeTypes)}{$row}")->applyFromArray([
+                    'font' => ['name' => 'Calibri', 'size' => 11, 'bold' => true, 'color' => ['rgb' => '000000']],
+                    'fill' => [Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFFF99']],
                 ]);
             }
-
-            // Apply center alignment and uniform font to data cells
-            $sheet->getStyle("A{$row}:{$totalCol}{$row}")->applyFromArray([
-                'font' => [
-                    'name' => 'Calibri',
-                    'size' => 11,
-                ],
-                'alignment' => [
-                    'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                ],
-            ]);
 
             $row++;
         }
 
         // Add TOTAL row
+        $totalRow = $dataStartRow + $dataCount;
         $sheet->setCellValue('A' . $totalRow, 'TOTAL');
-        foreach ($feeTypeColumns as $feeName => $col) {
+        foreach ($feeTypes as $fee) {
+            $feeName = $fee->fee_name;
+            $col = $this->getColumnLetterForFee($feeName, $feeTypes);
             $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?: '');
         }
-        $sheet->setCellValue($totalCol . $totalRow, $grandTotal);
+        $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $totalRow, $grandTotal);
 
-        // Style total row: bold, centered, uniform font
-        $sheet->getStyle("A{$totalRow}:{$totalCol}{$totalRow}")->applyFromArray([
-            'font' => [
-                'name' => 'Calibri',
-                'size' => 11,
-                'bold' => true,
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-            ],
-        ]);
+        // Style TOTAL row like header
+        $this->applyTotalStyle($sheet, $totalRow, $feeTypes);
 
         $writer = new Xlsx($spreadsheet);
-        $tempPath = tempnam(sys_get_temp_dir(), "{$type}_report_") . '.xlsx';
+        $tempPath = tempnam(sys_get_temp_dir(), 'daily_report_') . '.xlsx';
         $writer->save($tempPath);
 
-        return response()->download($tempPath, "{$type}-report-{$dateOrMonthOrYear}.xlsx")->deleteFileAfterSend(true);
-    }
-
-    public function dailyPdf()
-    {
-        $date = request('date', today()->toDateString());
-
-        $transactions = Transaction::with(['stakeholder', 'items.feeType'])
-            ->whereDate('transaction_date', $date)
-            ->get();
-
-        $pdf = Pdf::loadView('reports.daily', [
-            'date' => $date,
-            'transactions' => $transactions,
-            'total' => (float) $transactions->sum('total_amount'),
-            'count' => $transactions->count(),
-        ]);
-
-        return $pdf->download("daily-report-{$date}.pdf");
-    }
-
-    public function monthly()
-    {
-        $month = request('month', now()->format('Y-m'));
-
-        $rows = RevenueHistory::whereRaw("DATE_FORMAT(revenue_date, '%Y-%m') = ?", [$month])->get();
-
-        return response()->json([
-            'month' => $month,
-            'revenue_histories' => $rows,
-            'total_revenue' => (float) $rows->sum('total_revenue'),
-            'total_transactions' => (int) $rows->sum('transaction_count'),
-        ]);
-    }
-
-    public function annual()
-    {
-        $year = request('year', now()->year);
-
-        $rows = RevenueHistory::whereYear('revenue_date', $year)->get();
-
-        return response()->json([
-            'year' => (int) $year,
-            'rows' => $rows,
-            'total_revenue' => (float) $rows->sum('total_revenue'),
-            'total_transactions' => (int) $rows->sum('transaction_count'),
-        ]);
-    }
-
-    public function annualExcel()
-    {
-        $year = request('year', now()->year);
-
-        $rows = RevenueHistory::whereYear('revenue_date', $year)->get(['revenue_date', 'total_revenue', 'transaction_count']);
-
-        $totalRevenue = (float) $rows->sum('total_revenue');
-        $totalTransactions = (int) $rows->sum('transaction_count');
-
-        $callback = function () use ($rows, $year, $totalRevenue, $totalTransactions) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Yearly Report - '.$year]);
-            fputcsv($handle, ['Date', 'Revenue', 'Transactions']);
-            foreach ($rows as $row) {
-                fputcsv($handle, [$row->revenue_date, $row->total_revenue, $row->transaction_count]);
-            }
-            fputcsv($handle, []);
-            fputcsv($handle, ['Total Revenue', $totalRevenue]);
-            fputcsv($handle, ['Total Transactions', $totalTransactions]);
-            fclose($handle);
-        };
-
-        return response()->streamDownload($callback, "yearly-report-{$year}.csv");
-    }
-
-    // public function annualXlsx()
-    // {
-    //     $year = request('year', now()->year);
-
-    //     $transactions = Transaction::with(['items.feeType'])
-    //         ->whereYear('transaction_date', $year)
-    //         ->orderBy('transaction_date')
-    //         ->get();
-
-    //     return $this->generateReportFromTemplate($transactions, 'yearly', (string) $year);
-    // }
-
-    public function annualPdf()
-    {
-        $year = request('year', now()->year);
-
-        $rows = RevenueHistory::whereYear('revenue_date', $year)
-            ->get(['revenue_date', 'total_revenue', 'transaction_count']);
-
-        $totalRevenue = (float) $rows->sum('total_revenue');
-        $totalTransactions = (int) $rows->sum('transaction_count');
-
-        $pdf = Pdf::loadView('reports.annual', [
-            'year' => $year,
-            'rows' => $rows,
-            'totalRevenue' => $totalRevenue,
-            'totalTransactions' => $totalTransactions,
-        ]);
-
-        return $pdf->download("annual-report-{$year}.pdf");
-    }
-
-    public function monthlyPdf()
-    {
-        $month = request('month', now()->format('Y-m'));
-
-        $rows = RevenueHistory::whereRaw("DATE_FORMAT(revenue_date, '%Y-%m') = ?", [$month])
-            ->get(['revenue_date', 'total_revenue', 'transaction_count']);
-
-        $totalRevenue = (float) $rows->sum('total_revenue');
-        $totalTransactions = (int) $rows->sum('transaction_count');
-
-        $pdf = Pdf::loadView('reports.monthly', [
-            'month' => $month,
-            'rows' => $rows,
-            'totalRevenue' => $totalRevenue,
-            'totalTransactions' => $totalTransactions,
-        ]);
-
-        return $pdf->download("monthly-report-{$month}.pdf");
-    }
-
-    // public function monthlyXlsx()
-    // {
-    //     $month = request('month', now()->format('Y-m'));
-
-    //     $transactions = Transaction::with(['items.feeType'])
-    //         ->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month])
-    //         ->orderBy('transaction_date')
-    //         ->get();
-
-    //     return $this->generateReportFromTemplate($transactions, 'monthly', $month);
-    // }
-
-    public function monthlyExcel()
-    {
-        $month = request('month', now()->format('Y-m'));
-
-        $rows = RevenueHistory::whereRaw("DATE_FORMAT(revenue_date, '%Y-%m') = ?", [$month])
-            ->get(['revenue_date', 'total_revenue', 'transaction_count']);
-
-        $totalRevenue = (float) $rows->sum('total_revenue');
-        $totalTransactions = (int) $rows->sum('transaction_count');
-
-        $callback = function () use ($rows, $month, $totalRevenue, $totalTransactions) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Monthly Report - '.$month]);
-            fputcsv($handle, ['Date', 'Revenue', 'Transactions']);
-            foreach ($rows as $row) {
-                fputcsv($handle, [$row->revenue_date, $row->total_revenue, $row->transaction_count]);
-            }
-            fputcsv($handle, []);
-            fputcsv($handle, ['Total Revenue', $totalRevenue]);
-            fputcsv($handle, ['Total Transactions', $totalTransactions]);
-            fclose($handle);
-        };
-
-        return response()->streamDownload($callback, "monthly-report-{$month}.csv");
+        return response()->download($tempPath, "daily-report-{$date}.xlsx")->deleteFileAfterSend(true);
     }
 
     /**
-     * Fetch transactions with per-fee-type breakdown for a date range.
-     *
-     * @param  string  $type  daily|monthly|yearly
+     * Generate period report (monthly/yearly - one row per period)
      */
-    public function transactionReport()
+    private function generatePeriodReport($periodData, $feeTypes, $periodLabel, $templatePrefix, $periodCount)
     {
-        $type = request('type', 'daily');
-        $query = Transaction::with(['stakeholder', 'items.feeType']);
+        // Find correct template based on prefix
+        $templateMap = [
+            'MONTHLY REPORT FOR ' => 'PMU REPORT TEMPLATE MONTHLY.xlsx',
+            'ANNUAL REPORT FOR THE YEAR ' => 'PMU REPORT TEMPLATE YEARLY.xlsx',
+        ];
+        $templateFile = $templateMap[$templatePrefix] ?? 'PMU REPORT TEMPLATE MONTHLY.xlsx';
+        $templatePath = database_path('seeders/' . $templateFile);
 
-        switch ($type) {
-            case 'monthly':
-                $month = request('month', now()->format('Y-m'));
-                $query->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month]);
-                break;
-            case 'yearly':
-                $year = request('year', now()->year);
-                $query->whereYear('transaction_date', $year);
-                break;
-            case 'daily':
-            default:
-                $date = request('date', today()->toDateString());
-                $query->whereDate('transaction_date', $date);
-                $type = 'daily';
-                break;
-        }
-
-        $transactions = $query->orderBy('transaction_date')->get();
-
-        // Collect all fee types that appear in this range
-        $feeTypes = $transactions
-            ->pluck('items')
-            ->flatten()
-            ->pluck('feeType')
-            ->filter()
-            ->unique('id')
-            ->values();
-
-        $rows = $transactions->map(function ($tx) use ($feeTypes) {
-            $feeMap = [];
-            foreach ($feeTypes as $ft) {
-                $feeMap[$ft->id] = $tx->items
-                    ->where('fee_type_id', $ft->id)
-                    ->sum('subtotal');
-            }
-            return [
-                'id' => str_pad((string) $tx->id, 3, '0', STR_PAD_LEFT),
-                'date' => $tx->transaction_date->toDateString(),
-                'payor' => $tx->stakeholder?->name ?? '-',
-                'fees' => collect($feeTypes)->mapWithKeys(fn ($ft) => [$ft->fee_name => $feeMap[$ft->id] ?? 0])->all(),
-                'total' => (float) $tx->total_amount,
-                'remarks' => $tx->remarks ?? '',
-            ];
-        });
-
-        return response()->json([
-            'type' => $type,
-            'fee_types' => $feeTypes->map(fn ($f) => ['id' => $f->id, 'fee_name' => $f->fee_name]),
-            'transactions' => $rows,
-            'grand_total' => (float) $transactions->sum('total_amount'),
-            'count' => $transactions->count(),
-        ]);
-    }
-
-    /**
-     * Export the per-fee-type transaction report as XLSX.
-     *
-     * @param  string  $type  daily|monthly|yearly
-     */
-    public function transactionReportXlsx()
-    {
-        $type = request('type', 'daily');
-        $query = Transaction::with(['stakeholder', 'items.feeType']);
-
-        switch ($type) {
-            case 'monthly':
-                $month = request('month', now()->format('Y-m'));
-                $query->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month]);
-                $label = "monthly-report-{$month}";
-                break;
-            case 'yearly':
-                $year = request('year', now()->year);
-                $query->whereYear('transaction_date', $year);
-                $label = "yearly-report-{$year}";
-                break;
-            case 'daily':
-            default:
-                $date = request('date', today()->toDateString());
-                $query->whereDate('transaction_date', $date);
-                $type = 'daily';
-                $label = "daily-report-{$date}";
-                break;
-        }
-
-        $transactions = $query->orderBy('transaction_date')->get();
-
-        $feeTypes = $transactions
-            ->pluck('items')
-            ->flatten()
-            ->pluck('feeType')
-            ->filter()
-            ->unique('id')
-            ->values();
-
-        $spreadsheet = new Spreadsheet;
+        $spreadsheet = IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Report details
-        $sheet->setCellValue('A1', 'PORT MANAGEMENT UNIT - PASACAO, CAMARINES SUR');
-        $sheet->setCellValue('A2', 'Transaction Report');
-        $sheet->setCellValue('A3', 'Report Period: ' . strtoupper($type));
-        $sheet->setCellValue('A4', 'Generated: ' . now()->format('F j, Y g:i A') . ' by: ' . auth()->user()?->name ?? 'System');
-        $sheet->setCellValue('A6', 'Date');
-        $sheet->setCellValue('B6', 'Transaction #');
-        $sheet->setCellValue('C6', 'Payor/Stakeholder');
+        // Update title
+        $newTitle = $templatePrefix . $periodLabel;
+        $sheet->setCellValue('D11', $newTitle);
+        $sheet->mergeCells('D11:M11');
+        $this->applyHeaderStyle($sheet, count($feeTypes));
 
-        $col = 'D';
-        foreach ($feeTypes as $ft) {
-            $sheet->setCellValue($col . '6', $ft->fee_name);
-            $col++;
+        $dataStartRow = 14;
+        $row = $dataStartRow;
+        $grandTotal = 0;
+        $colTotals = array_fill_keys(array_keys($feeTypes->pluck('fee_name')->toArray()), 0);
+
+        // Find footer (Prepared by)
+        $footerStartRow = $this->findFooterRow($sheet, $dataStartRow);
+        if ($footerStartRow === null) {
+            // fallback from inspection
+            $footerStartRow = $templatePrefix === 'MONTHLY REPORT FOR ' ? 48 : 29;
         }
 
-        $sheet->setCellValue($col . '6', 'Total');
-        $col++;
-        $sheet->setCellValue($col . '6', 'Remarks');
+        // No row insertion needed - templates already have blank rows for all periods
+        // Monthly: rows 14-44 (31 rows), Yearly: rows 14-25 (12 rows)
+        // Footer stays put, we just fill in the data rows
 
-        $row = 7;
-        foreach ($transactions as $tx) {
-            $sheet->setCellValue('A' . $row, $tx->transaction_date->toDateString());
-            $sheet->setCellValue('B' . $row, str_pad((string) $tx->id, 3, '0', STR_PAD_LEFT));
-            $sheet->setCellValue('C' . $row, $tx->stakeholder?->name ?? '-');
+        foreach ($periodData as $periodLabel => $transactions) {
+            $sheet->setCellValue('A' . $row, $periodLabel);
 
-            $c = 'D';
-            foreach ($feeTypes as $ft) {
-                $subtotal = $tx->items->where('fee_type_id', $ft->id)->sum('subtotal');
-                $sheet->setCellValue($c . $row, $subtotal);
-                $c++;
+            $rowTotal = 0;
+            foreach ($feeTypes as $fee) {
+                $feeName = $fee->fee_name;
+                $col = $this->getColumnLetterForFee($feeName, $feeTypes);
+                $subtotal = 0;
+                foreach ($transactions as $tx) {
+                    $status = strtolower((string) $tx->status);
+                    $isCancelled = $status === 'cancelled';
+                    $isPending = $status === 'pending';
+                    // Monthly/yearly: INCLUDE pending in computation, exclude cancelled only
+                    if (!$isCancelled) {
+                        $subtotal += $tx->items
+                            ->where('feeType.fee_name', '=', $feeName)
+                            ->sum('subtotal');
+                    }
+                }
+                $sheet->setCellValue($col . $row, $subtotal ?: '');
+
+                $rowTotal += $subtotal;
+                $colTotals[$feeName] += $subtotal;
             }
 
-            $sheet->setCellValue($c . $row, $tx->total_amount);
-            $c++;
-            $sheet->setCellValue($c . $row, $tx->remarks ?? '');
+            $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $row, $rowTotal ?: '');
 
-            if (strtolower($tx->status) === 'cancelled') {
-                $lastCol = $c;
-                $sheet->getStyle("A{$row}:{$lastCol}{$row}")->applyFromArray([
-                    'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true],
-                    'fill' => [
-                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                        'startColor' => ['rgb' => 'FF0000'],
-                    ],
-                ]);
+            if ($rowTotal > 0) {
+                $grandTotal += $rowTotal;
             }
+
+            // Base formatting
+            $sheet->getStyle("A{$row}:{$this->getTotalColumnLetter($feeTypes)}{$row}")->applyFromArray([
+                'font' => ['name' => 'Calibri', 'size' => 11],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            ]);
 
             $row++;
         }
 
-        // Total row
-        $sheet->setCellValue('A' . $row, 'TOTAL');
-        $sheet->setCellValue($col . $row, $transactions->sum('total_amount'));
+        // Add TOTAL row (after last data row)
+        $totalRow = $dataStartRow + $periodCount;
+        $sheet->setCellValue('A' . $totalRow, 'TOTAL');
+        foreach ($feeTypes as $fee) {
+            $feeName = $fee->fee_name;
+            $col = $this->getColumnLetterForFee($feeName, $feeTypes);
+            $sheet->setCellValue($col . $totalRow, $colTotals[$feeName] ?: '');
+        }
+        $sheet->setCellValue($this->getTotalColumnLetter($feeTypes) . $totalRow, $grandTotal);
+
+        // Style TOTAL row like header
+        $this->applyTotalStyle($sheet, $totalRow, $feeTypes);
 
         $writer = new Xlsx($spreadsheet);
-        $tempPath = tempnam(sys_get_temp_dir(), 'transaction_report_') . '.xlsx';
+        $tempPath = tempnam(sys_get_temp_dir(), strtolower(str_replace(' ', '_', $templatePrefix)) . '_report_') . '.xlsx';
         $writer->save($tempPath);
 
-        return response()->download($tempPath, $label . '.xlsx')->deleteFileAfterSend(true);
+        return response()->download($tempPath, strtolower(str_replace(' ', '-', $templatePrefix)) . "-report-{$periodLabel}.xlsx")->deleteFileAfterSend(true);
+    }
+
+    private function findFooterRow($sheet, $startRow)
+    {
+        $highestRow = $sheet->getHighestRow();
+        for ($r = $startRow; $r <= min($highestRow, $startRow + 50); $r++) {
+            $cellValue = $sheet->getCell('A' . $r)->getValue();
+            if (is_string($cellValue) && stripos($cellValue, 'Prepared by') !== false) {
+                return $r;
+            }
+        }
+        return null;
+    }
+
+    private function getColumnLetterForFee($feeName, $feeTypes)
+    {
+        static $cache = [];
+        if (!isset($cache[$feeName])) {
+            $index = 2; // B = 2
+            foreach ($feeTypes as $fee) {
+                if ($fee->fee_name === $feeName) {
+                    break;
+                }
+                $index++;
+            }
+            $cache[$feeName] = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index);
+        }
+        return $cache[$feeName];
+    }
+
+    private function getTotalColumnLetter($feeTypes)
+    {
+        $colIndex = 2 + $feeTypes->count(); // B + number of fee types
+        return \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+    }
+
+    private function applyHeaderStyle($sheet, $feeCount)
+    {
+        $totalCol = $this->getTotalColumnLetterFromCount($feeCount);
+        $headerRange = "A13:{$totalCol}13";
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => [
+                'name' => 'Calibri',
+                'size' => 11,
+                'bold' => true,
+                'color' => ['rgb' => 'FF0000'],
+            ],
+            'fill' => [
+                Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'FFFF00'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+        ]);
+        $sheet->getRowDimension(13)->setRowHeight(45);
+    }
+
+    private function applyTotalStyle($sheet, $row, $feeCount)
+    {
+        $totalCol = $this->getTotalColumnLetterFromCount($feeCount);
+        $sheet->getStyle("A{$row}:{$totalCol}{$row}")->applyFromArray([
+            'font' => [
+                'name' => 'Calibri',
+                'size' => 11,
+                'bold' => true,
+                'color' => ['rgb' => 'FF0000'],
+            ],
+            'fill' => [
+                Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'FFFF00'],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
+    }
+
+    private function getTotalColumnLetterFromCount($feeCount)
+    {
+        return \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(2 + $feeCount);
     }
 }
