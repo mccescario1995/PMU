@@ -103,7 +103,7 @@ async function checkOrAvailability(value: string) {
 watch(
   () => form.official_receipt,
   (val) => {
-    const value = val ?? "";
+    const value = val == null ? "" : String(val);
     // Clear OR conflict if empty or not 7 digits
     if (!value || value.length !== 7) {
       orConflict.value = null;
@@ -420,7 +420,7 @@ const columns: TableColumn<Stakeholder>[] = [
           <UFormField label="Official Receipt" class="mb-3" required>
             <UInput v-model="form.official_receipt" :disabled="modalMode === 'view'" class="w-full" type="number"
               inputmode="numeric" :min="0"
-              @input="form.official_receipt = form.official_receipt?.replace(/\D/g, '').slice(0, 7)"
+              @input="form.official_receipt = String(form.official_receipt ?? '').replace(/\D/g, '').slice(0, 7)"
               placeholder="Enter Official Receipt" />
           </UFormField>
 
