@@ -4,24 +4,24 @@
     <meta charset="utf-8">
     <title>Monthly Report - {{ $month }}</title>
     <style>
-        @page { margin: 20mm 15mm; size: A4 landscape; }
-        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9px; color: #333; line-height: 1.2; }
-        .header { text-align: center; margin-bottom: 10px; }
-        .header h1 { color: #17395C; font-size: 16px; font-weight: bold; margin: 0 0 4px 0; }
-        .header .subtitle { color: #666; font-size: 10px; margin: 0; }
-        table { width: 100%; border-collapse: collapse; font-size: 8px; }
-        th, td { border: 1px solid #999; padding: 3px 4px; vertical-align: middle; }
-        th { background: #FFFF00; color: #FF0000; font-weight: bold; font-size: 8px; text-align: center; }
-        .date-col { width: 70px; text-align: center; }
-        .fee-col { width: 55px; text-align: right; padding-right: 4px; }
-        .total-col { width: 60px; text-align: right; padding-right: 4px; font-weight: bold; }
+        @page { margin: 15mm; size: A4 portrait; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 8px; color: #333; line-height: 1.15; }
+        .header { text-align: center; margin-bottom: 8px; }
+        .header h1 { color: #17395C; font-size: 14px; font-weight: bold; margin: 0 0 2px 0; }
+        .header .subtitle { color: #666; font-size: 9px; margin: 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 7.5px; table-layout: fixed; }
+        th, td { border: 1px solid #999; padding: 2px 3px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        th { background: #FFFF00; color: #FF0000; font-weight: bold; font-size: 7px; text-align: center; }
+        .date-col { width: 65px; text-align: center; }
+        .fee-col { width: 48px; text-align: right; padding-right: 3px; }
+        .total-col { width: 55px; text-align: right; padding-right: 3px; font-weight: bold; }
         .center { text-align: center; }
         .total-row { background: #FFFF00; color: #FF0000; font-weight: bold; }
-        .footer { margin-top: 15px; font-size: 8px; color: #666; }
-        .footer-row { display: flex; justify-content: space-between; margin-top: 20px; }
+        .footer { margin-top: 12px; font-size: 7.5px; color: #666; }
+        .footer-row { display: flex; justify-content: space-between; margin-top: 18px; }
         .footer-col { width: 30%; text-align: center; }
-        .footer-col .label { font-weight: bold; margin-bottom: 20px; display: block; }
-        .footer-col .line { border-bottom: 1px solid #333; height: 40px; }
+        .footer-col .label { font-weight: bold; margin-bottom: 18px; display: block; }
+        .footer-col .line { border-bottom: 1px solid #333; height: 36px; }
     </style>
 </head>
 <body>
