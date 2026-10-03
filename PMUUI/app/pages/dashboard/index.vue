@@ -37,14 +37,14 @@ const nextMonthForecasts = computed(() => {
     const forecastDate = new Date(f.forecast_date)
     return forecastDate >= periodStart && forecastDate <= periodEnd
   })
-  console.log('nextMonthForecasts:', filtered.length, filtered.slice(0,3))
+
   return filtered
 })
 
 const maxForecast = computed(() => {
   const vals = nextMonthForecasts.value.map((f) => Number(f.predicted_revenue) || 0)
   const max = Math.max(...vals, 1)
-  console.log('maxForecast:', max, 'values:', vals.slice(0,5))
+
   return max
 })
 
@@ -137,7 +137,7 @@ const formatForecastDate = (dateStr) => {
               <div class="bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
                 :title="`${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
-              <span class="text-xs text-gray-500 mt-1 whitespace-nowrap" :class="{ 'mt-6': i % 2 === 1 }">
+               <span class="text-xs text-gray-500 whitespace-nowrap mt-1" :class="{ 'mt-8': i % 2 === 1 }" :style="{ transform: i % 2 === 1 ? 'rotate(-45deg)' : 'none', transformOrigin: 'bottom left', marginLeft: i % 2 === 1 ? '-8px' : '0', marginRight: i % 2 === 1 ? '8px' : '0' }">
                 {{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) }}
               </span>
             </div>
