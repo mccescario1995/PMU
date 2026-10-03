@@ -142,20 +142,35 @@ class ReportController extends Controller
     {
         $year = request('year', now()->year);
 
-        $rows = RevenueHistory::whereYear('revenue_date', $year)
-            ->get(['revenue_date', 'total_revenue', 'transaction_count']);
+        $transactions = Transaction::with(['items.feeType'])
+            ->whereYear('transaction_date', $year)
+            ->get();
 
-        $totalRevenue = (float) $rows->sum('total_revenue');
-        $totalTransactions = (int) $rows->sum('transaction_count');
+        $monthlyData = $transactions->groupBy(
+            fn ($tx) => Carbon::parse($tx->transaction_date)->format('Y-m')
+        );
+
+        $periodLabels = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $date = Carbon::create($year, $m, 1);
+            $periodLabels[$date->format('Y-m')] = $date->format('F Y');
+        }
 
         $feeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
 
+        $grandTotal = 0.0;
+        $colTotals = [];
+        foreach ($feeTypes as $fee) {
+            $colTotals[$fee->fee_name] = 0.0;
+        }
+
         $pdf = Pdf::loadView('reports.annual', [
             'year' => $year,
-            'rows' => $rows,
-            'totalRevenue' => $totalRevenue,
-            'totalTransactions' => $totalTransactions,
+            'periodLabels' => $periodLabels,
+            'monthlyData' => $monthlyData,
             'feeTypes' => $feeTypes,
+            'grandTotal' => $grandTotal,
+            'colTotals' => $colTotals,
         ]);
 
         return $pdf->download("annual-report-{$year}.pdf");
@@ -164,21 +179,36 @@ class ReportController extends Controller
     public function monthlyPdf()
     {
         $month = request('month', now()->format('Y-m'));
+        $start = Carbon::createFromFormat('Y-m-d', $month.'-01')->startOfDay();
 
-        $rows = RevenueHistory::whereRaw("DATE_FORMAT(revenue_date, '%Y-%m') = ?", [$month])
-            ->get(['revenue_date', 'total_revenue', 'transaction_count']);
+        $transactions = Transaction::with(['items.feeType'])
+            ->whereRaw("DATE_FORMAT(transaction_date, '%Y-%m') = ?", [$month])
+            ->get();
 
-        $totalRevenue = (float) $rows->sum('total_revenue');
-        $totalTransactions = (int) $rows->sum('transaction_count');
+        $dailyData = $transactions->groupBy(
+            fn ($tx) => Carbon::parse($tx->transaction_date)->format('Y-m-d')
+        );
+
+        $periodLabels = [];
+        for ($d = $start->copy(); $d->month === $start->month; $d->addDay()) {
+            $periodLabels[$d->format('Y-m-d')] = $d->format('m/d/Y');
+        }
 
         $feeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
 
+        $grandTotal = 0.0;
+        $colTotals = [];
+        foreach ($feeTypes as $fee) {
+            $colTotals[$fee->fee_name] = 0.0;
+        }
+
         $pdf = Pdf::loadView('reports.monthly', [
             'month' => $month,
-            'rows' => $rows,
-            'totalRevenue' => $totalRevenue,
-            'totalTransactions' => $totalTransactions,
+            'periodLabels' => $periodLabels,
+            'dailyData' => $dailyData,
             'feeTypes' => $feeTypes,
+            'grandTotal' => $grandTotal,
+            'colTotals' => $colTotals,
         ]);
 
         return $pdf->download("monthly-report-{$month}.pdf");

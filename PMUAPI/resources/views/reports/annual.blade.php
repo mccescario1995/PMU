@@ -43,24 +43,18 @@
         </thead>
         <tbody>
             @php
-                $feeTypesList = $feeTypes ?? \App\Models\FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
                 $grandTotal = 0;
                 $colTotals = [];
-                foreach ($feeTypesList as $fee) {
-                    $colTotals[$fee->fee_name] = 0;
-                }
+                foreach ($feeTypes as $fee) { $colTotals[$fee->fee_name] = 0; }
             @endphp
-            @for ($m = 1; $m <= 12; $m++)
+            @foreach ($periodLabels as $periodKey => $displayLabel)
                 @php
-                    $date = \Carbon\Carbon::create($year, $m, 1);
-                    $periodKey = $date->format('Y-m');
-                    $displayLabel = $date->format('F Y');
-                    $transactions = $rows->where('revenue_date', 'like', $periodKey.'%') ?? collect();
+                    $transactions = $monthlyData[$periodKey] ?? collect();
                     $rowTotal = 0;
                 @endphp
                 <tr>
                     <td class="date-col center">{{ $displayLabel }}</td>
-                    @foreach ($feeTypesList as $fee)
+                    @foreach ($feeTypes as $fee)
                         @php
                             $feeName = $fee->fee_name;
                             $subtotal = 0;
@@ -77,15 +71,13 @@
                         @endphp
                         <td class="fee-col">{{ $subtotal > 0 ? number_format($subtotal, 2) : '' }}</td>
                     @endforeach
-                    @php
-                        if ($rowTotal > 0) { $grandTotal += $rowTotal; }
-                    @endphp
+                    @php $grandTotal += $rowTotal; @endphp
                     <td class="total-col">{{ $rowTotal > 0 ? number_format($rowTotal, 2) : '' }}</td>
                 </tr>
-            @endfor
+            @endforeach
             <tr class="total-row">
                 <td class="date-col center">TOTAL</td>
-                @foreach ($feeTypesList as $fee)
+                @foreach ($feeTypes as $fee)
                     <td class="fee-col">{{ ($colTotals[$fee->fee_name] ?? 0) > 0 ? number_format($colTotals[$fee->fee_name], 2) : '' }}</td>
                 @endforeach
                 <td class="total-col">{{ $grandTotal > 0 ? number_format($grandTotal, 2) : '' }}</td>
