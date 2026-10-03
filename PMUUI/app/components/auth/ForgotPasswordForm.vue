@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useToast } from "#imports";
-import { apiFetch } from "~/utils/api";
+import { apiFetch } from "~/composables/useApiFetch";
 
 const router = useRouter();
 const toast = useToast();
