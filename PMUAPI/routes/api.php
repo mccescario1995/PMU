@@ -181,6 +181,9 @@ Route::prefix('v1')->group(function () {
             Route::put('items/{item}', [InventoryItemController::class, 'update'])->middleware('can:edit inventory');
             Route::delete('items/{item}', [InventoryItemController::class, 'destroy'])->middleware('can:delete inventory');
 
+            Route::get('items/{item}/price', [InventoryItemController::class, 'getPrice'])->middleware('can:view inventory');
+            Route::put('items/{item}/price', [InventoryItemController::class, 'updatePrice'])->middleware('can:edit inventory');
+
             Route::get('items/{item}/logs', [InventoryItemController::class, 'logs'])->middleware('can:view inventory');
             Route::post('items/{item}/add-stock', [InventoryItemController::class, 'addStock'])->middleware('can:edit inventory');
             Route::post('items/{item}/deduct-stock', [InventoryItemController::class, 'deductStock'])->middleware('can:edit inventory');

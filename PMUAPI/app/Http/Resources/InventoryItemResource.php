@@ -18,6 +18,7 @@ class InventoryItemResource extends JsonResource
             'minimum_stock' => $this->minimum_stock,
             'reorder_quantity' => $this->reorder_quantity,
             'average_daily_usage' => (float) $this->average_daily_usage,
+            'price' => (float) $this->price,
             'status' => $this->status,
             'stock_status' => $this->status === 'damaged'
                 ? 'damaged'

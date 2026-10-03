@@ -149,4 +149,28 @@ class InventoryItemController extends Controller
 
         return new InventoryItemResource($item);
     }
+
+    public function getPrice(InventoryItem $item)
+    {
+        return response()->json([
+            'id' => $item->id,
+            'item_name' => $item->item_name,
+            'price' => (float) $item->price,
+        ]);
+    }
+
+    public function updatePrice(Request $request, InventoryItem $item)
+    {
+        $data = $request->validate([
+            'price' => 'required|numeric|min:0',
+        ]);
+
+        $oldPrice = $item->price;
+
+        $item->update(['price' => $data['price']]);
+
+        $this->logAudit('update', 'inventory_items', $item->id, ['price' => $oldPrice], ['price' => $item->price]);
+
+        return new InventoryItemResource($item);
+    }
 }

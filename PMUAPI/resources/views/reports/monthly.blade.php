@@ -3,25 +3,20 @@
 <head>
     <meta charset="utf-8">
     <title>Monthly Report - {{ $month }}</title>
-    <style>
+<style>
         @page { margin: 15mm; size: A4 portrait; }
         body { font-family: 'DejaVu Sans', sans-serif; font-size: 8px; color: #333; line-height: 1.15; }
         .header { text-align: center; margin-bottom: 8px; }
-        .header h1 { color: #17395C; font-size: 14px; font-weight: bold; margin: 0 0 2px 0; }
-        .header .subtitle { color: #666; font-size: 9px; margin: 0; }
+        .header h1 { color: #17395C; font-size: 12px; font-weight: bold; margin: 0 0 2px 0; word-wrap: break-word; overflow-wrap: break-word; }
+        .header .subtitle { color: #666; font-size: 9px; margin: 0; word-wrap: break-word; overflow-wrap: break-word; }
         table { width: 100%; border-collapse: collapse; font-size: 7.5px; table-layout: fixed; }
         th, td { border: 1px solid #999; padding: 2px 3px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        th { background: #FFFF00; color: #FF0000; font-weight: bold; font-size: 7px; text-align: center; }
+        th { background: #FFFF00; color: #FF0000; font-weight: bold; font-size: 7px; text-align: center; word-wrap: break-word; overflow-wrap: break-word; white-space: normal; }
         .date-col { width: 65px; text-align: center; }
         .fee-col { width: 48px; text-align: right; padding-right: 3px; }
         .total-col { width: 55px; text-align: right; padding-right: 3px; font-weight: bold; }
         .center { text-align: center; }
         .total-row { background: #FFFF00; color: #FF0000; font-weight: bold; }
-        .footer { margin-top: 12px; font-size: 7.5px; color: #666; }
-        .footer-row { display: flex; justify-content: space-between; margin-top: 18px; }
-        .footer-col { width: 30%; text-align: center; }
-        .footer-col .label { font-weight: bold; margin-bottom: 18px; display: block; }
-        .footer-col .line { border-bottom: 1px solid #333; height: 36px; }
     </style>
 </head>
 <body>

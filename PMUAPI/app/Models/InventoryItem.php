@@ -20,6 +20,7 @@ class InventoryItem extends Model
         'minimum_stock',
         'reorder_quantity',
         'average_daily_usage',
+        'price',
     ];
 
     protected $casts = [
@@ -27,6 +28,7 @@ class InventoryItem extends Model
         'minimum_stock' => 'integer',
         'reorder_quantity' => 'integer',
         'average_daily_usage' => 'float',
+        'price' => 'decimal:2',
     ];
 
     public function logs(): HasMany

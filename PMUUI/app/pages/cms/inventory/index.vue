@@ -22,6 +22,8 @@ const statusColor = {
 };
 
 const items = ref<any[]>([]);
+const priceModal = ref(false);
+const priceForm = ref({ id: 0, item_name: '', price: 0 });
 const {
   page,
   pageSize,
@@ -49,6 +51,7 @@ type Inventory = {
   minimum_stock: number;
   reorder_quantity: number;
   average_daily_usage: number;
+  price: number;
   status: string;
   stock_status: string;
   days_remaining: number | null;
@@ -103,6 +106,14 @@ const columns: TableColumn<Inventory>[] = [
     header: "Avg Daily Usage",
   },
   {
+    accessorKey: "price",
+    header: "Price",
+    cell: ({ row }) => {
+      const value = row.getValue("price") as number;
+      return value !== null && value !== undefined ? `₱${value.toFixed(2)}` : "₱0.00";
+    },
+  },
+  {
     accessorKey: "stock_status",
     header: "Stock Status",
     cell: ({ row }) => {
@@ -130,6 +141,29 @@ async function remove(row: any) {
     method: "DELETE",
   });
   data.value = data.value.filter((i: any) => i.id !== row.original.id);
+}
+
+function openPriceModal(row: any) {
+  priceForm.value = {
+    id: row.original.id,
+    item_name: row.original.item_name,
+    price: row.original.price ?? 0,
+  };
+  priceModal.value = true;
+}
+
+async function savePrice() {
+  await apiFetch(`/v1/inventory/items/${priceForm.value.id}/price`, {
+    method: "PUT",
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ price: priceForm.value.price }),
+    parseJson: true,
+    throwOnError: true,
+  });
+  priceModal.value = false;
+  // Refresh the table data
+  const result = await apiFetch(`/v1/inventory/items?page=${page.value}&per_page=${pageSizeNumber.value}`, { parseJson: true });
+  data.value = result.data;
 }
 </script>
 
@@ -162,6 +196,12 @@ async function remove(row: any) {
           size="xs"
           :to="`/inventory/inventory-list/edit/${row.original.id}`"
           icon="i-lucide-edit"
+        ></UButton>
+        <UButton
+          v-if="can('edit inventory')"
+          size="xs"
+          @click="openPriceModal(row)"
+          icon="i-lucide-dollar-sign"
         ></UButton>
         <UButton
           v-if="can('delete inventory')"
@@ -202,4 +242,25 @@ async function remove(row: any) {
       />
     </div>
   </div>
+
+  <UModal v-model="priceModal" title="Update Price">
+    <template #default>
+      <div class="space-y-4">
+        <p class="text-sm text-slate-500">Item: <strong>{{ priceForm.item_name }}</strong></p>
+        <UFormField label="Price">
+          <UInput
+            type="number"
+            step="0.01"
+            min="0"
+            v-model="priceForm.price"
+            placeholder="Enter price"
+          />
+        </UFormField>
+      </div>
+    </template>
+    <template #footer>
+      <UButton variant="ghost" @click="priceModal = false">Cancel</UButton>
+      <UButton @click="savePrice">Save Price</UButton>
+    </template>
+  </UModal>
 </template>
