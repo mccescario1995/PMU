@@ -72,11 +72,14 @@ class ReportController extends Controller
             ->whereDate('transaction_date', $date)
             ->get();
 
+        $feeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+
         $pdf = Pdf::loadView('reports.daily', [
             'date' => $date,
             'transactions' => $transactions,
             'total' => (float) $transactions->sum('total_amount'),
             'count' => $transactions->count(),
+            'feeTypes' => $feeTypes,
         ]);
 
         return $pdf->download("daily-report-{$date}.pdf");
@@ -145,11 +148,14 @@ class ReportController extends Controller
         $totalRevenue = (float) $rows->sum('total_revenue');
         $totalTransactions = (int) $rows->sum('transaction_count');
 
+        $feeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+
         $pdf = Pdf::loadView('reports.annual', [
             'year' => $year,
             'rows' => $rows,
             'totalRevenue' => $totalRevenue,
             'totalTransactions' => $totalTransactions,
+            'feeTypes' => $feeTypes,
         ]);
 
         return $pdf->download("annual-report-{$year}.pdf");
@@ -165,11 +171,14 @@ class ReportController extends Controller
         $totalRevenue = (float) $rows->sum('total_revenue');
         $totalTransactions = (int) $rows->sum('transaction_count');
 
+        $feeTypes = FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+
         $pdf = Pdf::loadView('reports.monthly', [
             'month' => $month,
             'rows' => $rows,
             'totalRevenue' => $totalRevenue,
             'totalTransactions' => $totalTransactions,
+            'feeTypes' => $feeTypes,
         ]);
 
         return $pdf->download("monthly-report-{$month}.pdf");

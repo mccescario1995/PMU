@@ -4,46 +4,118 @@
     <meta charset="utf-8">
     <title>Daily Report - {{ $date }}</title>
     <style>
-        body { font-family: DejaVu Sans, sans-serif; margin: 30px; color: #333; }
-        h1 { color: #17395C; font-size: 20px; margin-bottom: 4px; }
-        .subtitle { color: #666; font-size: 12px; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background: #17395C; color: white; font-weight: bold; }
-        .amount { text-align: right; }
-        .total { margin-top: 16px; padding: 10px; background: #f5f5f5; font-weight: bold; font-size: 13px; }
-        .footer { margin-top: 20px; font-size: 10px; color: #999; text-align: center; }
+        @page { margin: 20mm 15mm; size: A4 landscape; }
+        body { font-family: 'DejaVu Sans', sans-serif; font-size: 9px; color: #333; line-height: 1.2; }
+        .header { text-align: center; margin-bottom: 10px; }
+        .header h1 { color: #17395C; font-size: 16px; font-weight: bold; margin: 0 0 4px 0; }
+        .header .subtitle { color: #666; font-size: 10px; margin: 0; }
+        table { width: 100%; border-collapse: collapse; font-size: 8px; }
+        th, td { border: 1px solid #999; padding: 3px 4px; vertical-align: middle; }
+        th { background: #FFFF00; color: #FF0000; font-weight: bold; font-size: 8px; text-align: center; }
+        .date-col { width: 60px; text-align: center; }
+        .fee-col { width: 55px; text-align: right; padding-right: 4px; }
+        .total-col { width: 60px; text-align: right; padding-right: 4px; font-weight: bold; }
+        .center { text-align: center; }
+        .cancelled { background: #FF0000 !important; color: #FFFFFF !important; font-weight: bold; }
+        .pending { background: #FFFF99 !important; color: #000000 !important; font-weight: bold; }
+        .total-row { background: #FFFF00; color: #FF0000; font-weight: bold; }
+        .footer { margin-top: 15px; font-size: 8px; color: #666; }
+        .footer-row { display: flex; justify-content: space-between; margin-top: 20px; }
+        .footer-col { width: 30%; text-align: center; }
+        .footer-col .label { font-weight: bold; margin-bottom: 20px; display: block; }
+        .footer-col .line { border-bottom: 1px solid #333; height: 40px; }
     </style>
 </head>
 <body>
-    <h1>Daily Report</h1>
-    <p class="subtitle">{{ \Carbon\Carbon::parse($date)->format('l, F d, Y') }}</p>
+    <div class="header">
+        <h1>PORT MANAGEMENT UNIT - PASACAO, CAMARINES SUR</h1>
+        <h1>Daily Report</h1>
+        <p class="subtitle">DAILY REPORT FOR {{ \Carbon\Carbon::parse($date)->format('F d, Y') }}</p>
+    </div>
+
     <table>
         <thead>
             <tr>
-                <th style="width: 8%;">ID</th>
-                <th style="width: 25%;">Stakeholder</th>
-                <th style="width: 35%;">Fee Types</th>
-                <th style="width: 17%;" class="amount">Amount</th>
-                <th style="width: 15%;">Status</th>
+                <th class="date-col" rowspan="2">DATE</th>
+                @foreach ($feeTypes as $fee)
+                    <th class="fee-col" rowspan="2">{{ $fee->fee_name }}</th>
+                @endforeach
+                <th class="total-col" rowspan="2">TOTAL</th>
             </tr>
         </thead>
         <tbody>
+            @php
+                $feeTypesList = $feeTypes ?? \App\Models\FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
+                $grandTotal = 0;
+                $colTotals = [];
+                foreach ($feeTypesList as $fee) {
+                    $colTotals[$fee->fee_name] = 0;
+                }
+            @endphp
             @foreach ($transactions as $tx)
-                <tr>
-                    <td>#{{ $tx->id }}</td>
-                    <td>{{ $tx->stakeholder?->name ?? '-' }}</td>
-                    <td>{{ $tx->items->map(fn($i) => $i->feeType?->fee_name)->filter()->join(', ') ?: '-' }}</td>
-                    <td class="amount">₱ {{ number_format($tx->total_amount, 2) }}</td>
-                    <td>{{ ucfirst($tx->status) }}</td>
+                @php
+                    $status = strtolower((string) $tx->status);
+                    $isCancelled = $status === 'cancelled';
+                    $isPending = $status === 'pending';
+                    $includeInTotals = !($isCancelled || $isPending);
+                    $rowTotal = 0;
+                    $rowHasValue = false;
+                    $rowClass = '';
+                    if ($isCancelled) { $rowClass = 'cancelled'; }
+                    elseif ($isPending) { $rowClass = 'pending'; }
+                @endphp
+                <tr class="{{ $rowClass }}">
+                    <td class="date-col center">{{ \Carbon\Carbon::parse($tx->transaction_date)->format('m/d/Y') }}</td>
+                    @foreach ($feeTypesList as $fee)
+                        @php
+                            $feeName = $fee->fee_name;
+                            $subtotal = 0;
+                            foreach ($tx->items as $item) {
+                                if ($item->feeType && $item->feeType->fee_name === $feeName) {
+                                    $subtotal += (float) $item->subtotal;
+                                }
+                            }
+                            $colTotals[$feeName] = ($colTotals[$feeName] ?? 0) + ($includeInTotals ? $subtotal : 0);
+                            if ($subtotal > 0) { $rowHasValue = true; }
+                            $rowTotal += $includeInTotals ? $subtotal : 0;
+                        @endphp
+                        <td class="fee-col">{{ $subtotal > 0 ? number_format($subtotal, 2) : '' }}</td>
+                    @endforeach
+                    @php
+                        if ($includeInTotals && $rowTotal > 0) { $grandTotal += $rowTotal; }
+                    @endphp
+                    <td class="total-col">{{ ($includeInTotals && $rowTotal > 0) ? number_format($rowTotal, 2) : '' }}</td>
                 </tr>
             @endforeach
+            <tr class="total-row">
+                <td class="date-col center">TOTAL</td>
+                @foreach ($feeTypesList as $fee)
+                    <td class="fee-col">{{ ($colTotals[$fee->fee_name] ?? 0) > 0 ? number_format($colTotals[$fee->fee_name], 2) : '' }}</td>
+                @endforeach
+                <td class="total-col">{{ $grandTotal > 0 ? number_format($grandTotal, 2) : '' }}</td>
+            </tr>
         </tbody>
     </table>
-    <div class="total">
-        <p>Total Transactions: {{ $count }}</p>
-        <p>Total Collection: ₱ {{ number_format($total, 2) }}</p>
+
+    <div class="footer">
+        <div class="footer-row">
+            <div class="footer-col">
+                <span class="label">Prepared by:</span>
+                <div class="line"></div>
+                <span>{{ auth()->user()?->name ?? 'System' }}</span>
+            </div>
+            <div class="footer-col">
+                <span class="label">Checked by:</span>
+                <div class="line"></div>
+                <span></span>
+            </div>
+            <div class="footer-col">
+                <span class="label">Noted by:</span>
+                <div class="line"></div>
+                <span></span>
+            </div>
+        </div>
+        <p style="text-align: center; margin-top: 10px;">Generated on {{ now()->format('Y-m-d H:i') }}</p>
     </div>
-    <div class="footer">Generated on {{ now()->format('Y-m-d H:i') }}</div>
 </body>
 </html>
