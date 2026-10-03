@@ -137,7 +137,9 @@ const formatForecastDate = (dateStr) => {
               <div class="bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
                 :title="`${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
-              <span class="text-xs text-gray-500 mt-1 whitespace-nowrap">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) }}</span>
+              <span class="text-xs text-gray-500 mt-1 whitespace-nowrap" :class="{ 'mt-6': i % 2 === 1 }">
+                {{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) }}
+              </span>
             </div>
           </div>
         </div>
