@@ -3,7 +3,7 @@ export default defineNuxtRouteMiddleware((to) => {
     return;
   }
 
-  const publicPages = ["/", "/login"];
+  const publicPages = ["/", "/forgot-password", "/reset-password"];
 
   if (publicPages.includes(to.path)) {
     return;
@@ -12,6 +12,6 @@ export default defineNuxtRouteMiddleware((to) => {
   const { accessToken } = useAuth();
 
   if (!accessToken.value) {
-    return navigateTo("/login");
+    return navigateTo("/");
   }
 });

@@ -1,5 +1,9 @@
 // composables/useApiFetch.ts
+import { ref } from "vue";
 import { accessToken } from "./useAuth";
+
+export const loading = ref(false);
+let requestCount = 0;
 
 type ApiFetchOptions = RequestInit & {
   parseJson?: boolean;
@@ -56,6 +60,9 @@ export async function apiFetch<T = any>(
 
   let response: Response;
 
+  requestCount++;
+  loading.value = true;
+
   try {
     response = await execute(accessToken.value);
   } catch (err: any) {
@@ -66,6 +73,8 @@ export async function apiFetch<T = any>(
     throw err;
   } finally {
     clearTimeout(timeoutId);
+    requestCount--;
+    loading.value = requestCount > 0;
   }
 
   if (response.status === 401) {

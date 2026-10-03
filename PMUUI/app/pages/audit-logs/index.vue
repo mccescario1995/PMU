@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from "~/composables/useApiFetch";
-import { ref, computed, watch, h } from "vue";
+import { h } from "vue";
 import { useTablePagination } from "~/composables/useTablePagination";
-import { UPopover } from "#components";
+import { UPopover, UTooltip } from "#components";
 
 definePageMeta({
   layout: "dashboard",
@@ -37,26 +37,80 @@ const {
   },
 });
 
+function formatChanges(value: any): string {
+  if (!value) return "No changes recorded";
+  try {
+    const obj = typeof value === "string" ? JSON.parse(value) : value;
+    return Object.entries(obj)
+      .map(([field, newValue]) => `${formatFieldName(field)}: ${newValue}`)
+      .join("; ");
+  } catch {
+    return String(value);
+  }
+}
+
+function formatFieldName(field: string): string {
+  return field
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function getActionLabel(action: string): string {
+  const actions: Record<string, string> = {
+    created: "Created",
+    updated: "Updated",
+    deleted: "Deleted",
+    restored: "Restored",
+  };
+  return actions[action] ?? action;
+}
+
 const columns: TableColumn<any>[] = [
   {
     accessorKey: "id",
-    header: "#",
+    header: "Log #",
     cell: ({ row }) => `#${row.getValue("id")}`,
   },
   {
     accessorKey: "user",
-    header: "User",
-    cell: ({ row }) => row.original.user?.name ?? "-",
+    header: "Performed By",
+    cell: ({ row }) => {
+      const user = row.original.user;
+      if (!user) return "System";
+      return `${user.name} (${user.email})`;
+    },
   },
-  { accessorKey: "action", header: "Action" },
-  { accessorKey: "table_name", header: "Table" },
-  { accessorKey: "record_id", header: "Record ID" },
+  {
+    accessorKey: "action",
+    header: "Action Taken",
+    cell: ({ row }) => getActionLabel(row.getValue("action")),
+  },
+  {
+    accessorKey: "table_name",
+    header: "Affected Area",
+    cell: ({ row }) => formatFieldName(row.getValue("table_name")),
+  },
+  {
+    accessorKey: "record_id",
+    header: "Record #",
+    cell: ({ row }) => row.getValue("record_id") ?? "N/A",
+  },
   {
     accessorKey: "old_values",
-    header: "Old Values",
+    header: "Previous Values",
     cell: ({ row }) => {
-      const val = formatJson(row.original.old_values);
-      if (val === "-" || val.length <= 40) return val;
+      const val = formatChanges(row.original.old_values);
+      if (val === "No changes recorded" || val.length <= 50) return val;
 
       return h(
         UPopover,
@@ -69,13 +123,13 @@ const columns: TableColumn<any>[] = [
                 class:
                   "text-primary underline cursor-pointer hover:text-primary-600",
               },
-              val.slice(0, 40) + "...",
+              val.slice(0, 50) + "...",
             ),
           content: () =>
             h(
               "div",
               {
-                class: "whitespace-pre-wrap max-w-md p-3",
+                class: "whitespace-pre-wrap max-w-md p-3 text-sm",
               },
               val,
             ),
@@ -87,8 +141,8 @@ const columns: TableColumn<any>[] = [
     accessorKey: "new_values",
     header: "New Values",
     cell: ({ row }) => {
-      const val = formatJson(row.original.new_values);
-      if (val === "-" || val.length <= 40) return val;
+      const val = formatChanges(row.original.new_values);
+      if (val === "No changes recorded" || val.length <= 50) return val;
 
       return h(
         UPopover,
@@ -101,13 +155,13 @@ const columns: TableColumn<any>[] = [
                 class:
                   "text-primary underline cursor-pointer hover:text-primary-600",
               },
-              val.slice(0, 40) + "...",
+              val.slice(0, 50) + "...",
             ),
           content: () =>
             h(
               "div",
               {
-                class: "whitespace-pre-wrap max-w-md p-3",
+                class: "whitespace-pre-wrap max-w-md p-3 text-sm",
               },
               val,
             ),
@@ -117,35 +171,19 @@ const columns: TableColumn<any>[] = [
   },
   {
     accessorKey: "created_at",
-    header: "Date",
-    cell: ({ row }) =>
-      new Date(row.original.created_at).toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+    header: "Date & Time",
+    cell: ({ row }) => formatDate(row.original.created_at),
   },
 ];
-
-function formatJson(value: any): string {
-  if (!value) return "-";
-  try {
-    const obj = typeof value === "string" ? JSON.parse(value) : value;
-    return Object.entries(obj)
-      .map(([k, v]) => `${k}: ${v}`)
-      .join(", ");
-  } catch {
-    return String(value);
-  }
-}
 </script>
 
 <template>
   <div class="p-6 space-y-5">
     <div>
       <h1 class="text-2xl font-bold">Audit Logs</h1>
-      <p class="text-slate-500">System change tracking and history.</p>
+      <p class="text-slate-500 mt-1">
+        View a history of all changes made in the system. Each entry shows who made a change, what was changed, and when it happened.
+      </p>
     </div>
 
     <UTable :data="data" :columns="columns" :loading="loading" />
@@ -172,6 +210,11 @@ function formatJson(value: any): string {
         v-model:page="page"
         :items-per-page="pageSizeNumber"
       />
+    </div>
+
+    <div class="pt-4 border-t border-slate-200 text-sm text-slate-500 space-y-1">
+      <p><strong>Tip:</strong> Click on "Previous Values" or "New Values" to see full details when truncated.</p>
+      <p><strong>Actions:</strong> Created = New record added | Updated = Existing record modified | Deleted = Record removed</p>
     </div>
   </div>
 </template>

@@ -97,6 +97,11 @@ const handleSubmit = async () => {
       <div class="my-3">
         <UCheckbox label="Remember me" />
       </div>
+      <div class="my-3 text-right">
+        <UButton variant="link" color="primary" size="sm" to="/forgot-password">
+          Forgot password?
+        </UButton>
+      </div>
       <UButton type="submit" block size="xl" variant="outline" color="neutral"
         class="h-16 rounded-xl text-xl font-semibold mt-5" :loading="loading">
         Sign In

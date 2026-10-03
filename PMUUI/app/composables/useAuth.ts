@@ -48,7 +48,7 @@ export function useAuth() {
 
     if (hadToken) {
       try {
-        router.push("/login");
+        router.push("/");
       } catch {
         // ignore navigation errors
       }

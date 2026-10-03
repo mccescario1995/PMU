@@ -117,12 +117,23 @@ const formatForecastDate = (dateStr) => {
     <div class="grid gap-6 xl:grid-cols-3">
       <UCard class="xl:col-span-2">
         <template #header>Revenue Forecast</template>
-        <div class="flex items-end gap-1 h-40 border-b border-gray-300 pb-1">
-          <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-1 bg-success/70 hover:bg-success rounded-t"
-            :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
-            :title="`${formatForecastDate(item.forecast_date)}: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
+        <div class="flex gap-2">
+          <!-- Y-axis labels -->
+          <div class="flex flex-col justify-between h-40 w-20 pr-2 border-r border-gray-300">
+            <span v-for="i in 5" :key="i" class="text-xs text-gray-500 text-right select-none">
+              {{ currency(Math.round(maxForecast * (5 - i) / 4)) }}
+            </span>
+          </div>
+          <!-- Chart bars -->
+          <div class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative">
+            <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-1 flex flex-col items-center">
+              <div class="flex-1 bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
+                :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
+                :title="`Date: ${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
+              <span class="text-xs text-gray-500 mt-1 whitespace-nowrap">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) }}</span>
+            </div>
+          </div>
         </div>
-        <p class="text-xs text-gray-400 mt-1">{{ nextMonthForecasts.length }} forecast periods</p>
       </UCard>
 
       <UCard>
