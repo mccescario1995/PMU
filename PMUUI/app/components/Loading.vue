@@ -1,15 +1,40 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
-  size?: number;
-  color?: string;
-  thickness?: number;
+  size?: number
+  color?: string
+  thickness?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   size: 24,
-  color: "currentColor",
+  color: 'currentColor',
   thickness: 3,
-});
+})
+
+const wrapperStyle = computed(() => ({
+  width: `${props.size}px`,
+  height: `${props.size}px`,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}))
+
+const spinnerStyle = computed(() => ({
+  animation: 'loading-rotate 1.4s linear infinite',
+  width: '100%',
+  height: '100%',
+}))
+
+const pathStyle = computed(() => ({
+  stroke: props.color,
+  strokeWidth: `${props.thickness}px`,
+  strokeDasharray: '90, 150',
+  strokeDashoffset: '0',
+  animation: 'loading-dash 1.4s ease-in-out infinite',
+  strokeLinecap: 'round',
+}))
 </script>
 
 <template>
@@ -28,31 +53,6 @@ const props = withDefaults(defineProps<Props>(), {
     </svg>
   </div>
 </template>
-
-<script setup lang="ts">
-const wrapperStyle = computed(() => ({
-  width: `${props.size}px`,
-  height: `${props.size}px`,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-}));
-
-const spinnerStyle = computed(() => ({
-  animation: "loading-rotate 1.4s linear infinite",
-  width: "100%",
-  height: "100%",
-}));
-
-const pathStyle = computed(() => ({
-  stroke: props.color,
-  strokeWidth: `${props.thickness}px`,
-  strokeDasharray: "90, 150",
-  strokeDashoffset: "0",
-  animation: "loading-dash 1.4s ease-in-out infinite",
-  strokeLinecap: "round",
-}));
-</script>
 
 <style scoped>
 @keyframes loading-rotate {
