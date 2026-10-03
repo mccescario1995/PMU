@@ -15,7 +15,7 @@ async function exportDaily() {
   isLoading.value = true;
   try {
     const date = selectedDate.value;
-    const endpoint = `/v1/reports/daily/xlsx?date=${date}`;
+    const endpoint = `/v1/reports/daily/pdf?date=${date}`;
     await downloadReport(endpoint, "daily", date);
   } catch (error: any) {
     console.error("Export failed:", error);
@@ -29,7 +29,7 @@ async function exportMonthly() {
   isLoading.value = true;
   try {
     const month = selectedMonth.value; // format: YYYY-MM
-    const endpoint = `/v1/reports/monthly/xlsx?month=${month}`;
+    const endpoint = `/v1/reports/monthly/pdf?month=${month}`;
     await downloadReport(endpoint, "monthly", month);
   } catch (error: any) {
     console.error("Export failed:", error);
@@ -43,7 +43,7 @@ async function exportYearly() {
   isLoading.value = true;
   try {
     const year = selectedYear.value;
-    const endpoint = `/v1/reports/annual/xlsx?year=${year}`;
+    const endpoint = `/v1/reports/annual/pdf?year=${year}`;
     await downloadReport(endpoint, "yearly", String(year));
   } catch (error: any) {
     console.error("Export failed:", error);
@@ -60,7 +60,7 @@ async function downloadReport(endpoint: string, type: string, dateMonthYear: str
 
   const token = useAuth().accessToken.value;
   const headers: HeadersInit = {
-    Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    Accept: "application/pdf",
   };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -80,7 +80,7 @@ async function downloadReport(endpoint: string, type: string, dateMonthYear: str
   const downloadUrl = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = downloadUrl;
-  a.download = `${type}-report-${dateMonthYear}.xlsx`;
+  a.download = `${type}-report-${dateMonthYear}.pdf`;
   document.body.appendChild(a);
   a.click();
   window.URL.revokeObjectURL(downloadUrl);
@@ -107,8 +107,8 @@ async function downloadReport(endpoint: string, type: string, dateMonthYear: str
         
         <div class="space-y-3">
           <UInput v-model="selectedDate" type="date" class="w-full" />
-          <UButton class="w-full" icon="i-lucide-file-columns" @click="exportDaily" :loading="isLoading" :disabled="isLoading">
-            Export Excel (Detail)
+          <UButton class="w-full" icon="i-lucide-file-text" @click="exportDaily" :loading="isLoading" :disabled="isLoading">
+            Export PDF (Detail)
           </UButton>
         </div>
       </UCard>
@@ -124,8 +124,8 @@ async function downloadReport(endpoint: string, type: string, dateMonthYear: str
         
         <div class="space-y-3">
           <UInput v-model="selectedMonth" type="month" class="w-full" />
-          <UButton class="w-full" icon="i-lucide-file-columns" @click="exportMonthly" :loading="isLoading" :disabled="isLoading">
-            Export Excel (Detail)
+          <UButton class="w-full" icon="i-lucide-file-text" @click="exportMonthly" :loading="isLoading" :disabled="isLoading">
+            Export PDF (Detail)
           </UButton>
         </div>
       </UCard>
@@ -140,8 +140,8 @@ async function downloadReport(endpoint: string, type: string, dateMonthYear: str
         </template>
         <div class="space-y-3">
           <UInput v-model="selectedYear" type="number" placeholder="YYYY" class="w-full" />
-          <UButton class="w-full" icon="i-lucide-file-columns" @click="exportYearly" :loading="isLoading" :disabled="isLoading">
-            Export Excel (Detail)
+          <UButton class="w-full" icon="i-lucide-file-text" @click="exportYearly" :loading="isLoading" :disabled="isLoading">
+            Export PDF (Detail)
           </UButton>
         </div>
       </UCard>
