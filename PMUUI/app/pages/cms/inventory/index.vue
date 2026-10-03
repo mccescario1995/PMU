@@ -198,7 +198,6 @@ async function savePrice() {
           icon="i-lucide-edit"
         ></UButton>
         <UButton
-          v-if="can('edit inventory')"
           size="xs"
           @click="openPriceModal(row)"
           icon="i-lucide-dollar-sign"
