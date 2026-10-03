@@ -7,7 +7,7 @@ const modules = [
   { title: "Access Control", description: "Manage roles, permissions and user access.", icon: "i-lucide-user-cog", to: "/cms/accounts", color: "text-blue-500" },
   // { title: "Stakeholders", description: "Buyers, brokers and renters.", icon: "i-lucide-users", to: "/cms/stakeholders", color: "text-green-500" },
   // { title: "Transactions", description: "Fee collection and payment records.", icon: "i-lucide-receipt", to: "/cms/transactions", color: "text-orange-500" },
-  // { title: "Inventory", description: "Items, stock levels and adjustments.", icon: "i-lucide-package", to: "/cms/inventory", color: "text-purple-500" },
+  { title: "Inventory", description: "Items, stock levels and adjustments.", icon: "i-lucide-package", to: "/cms/inventory", color: "text-purple-500" },
   // { title: "Reports", description: "Daily, monthly and yearly summaries.", icon: "i-lucide-file-bar-chart", to: "/cms/reports", color: "text-indigo-500" },
   { title: "Fee Types", description: "Configure port fee rates and units.", icon: "i-lucide-tag", to: "/cms/fee-types", color: "text-yellow-600" },
   { title: "Stakeholder Types", description: "Manage stakeholder classifications.", icon: "i-lucide-users-2", to: "/cms/stakeholder-types", color: "text-teal-500" },
