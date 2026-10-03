@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
-import { apiFetch } from '~/composables/useApiFetch'
+import { apiFetch, loading } from '~/composables/useApiFetch'
 import { onMounted, ref, computed, h, reactive } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
 import { useToast } from '#imports'
 import { usePermissions } from '~/composables/usePermissions'
+import Loading from '~/components/Loading.vue'
 
 definePageMeta({
   layout: 'dashboard',
@@ -15,8 +16,6 @@ const { can } = usePermissions()
 const toast = useToast()
 
 const planning = ref<any>(null)
-const { page: overviewPage, pageSize: overviewPageSize, goToPageInput: overviewGoToPageInput, tablePagination: overviewTablePagination, totalPages: overviewTotalPages, handleGoToPage: overviewHandleGoToPage } = useTablePagination(() => Array.isArray(planning.value?.recommended_stock) ? planning.value.recommended_stock.length : 0)
-const loading = ref(true)
 
 const currency = (v: number) =>
   new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(v)
@@ -215,7 +214,7 @@ const columns = computed(() => {
     </div>
 
     <div v-if="loading" class="flex items-center justify-center py-20">
-      <span class="text-slate-400">Loading planning data...</span>
+      <Loading size="48" color="#3b82f6" />
     </div>
 
     <template v-else-if="planning">
