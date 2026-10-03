@@ -110,13 +110,13 @@ const formatForecastDate = (dateStr) => {
       <DashboardStatCard icon="i-lucide-philippine-peso" label="Today's Revenue" :value="currency(stats.today_revenue)"
         color="text-success" />
       <!-- Monthly Revenue (last month) -->
-      <DashboardStatCard icon="i-lucide-philippine-peso" label="Monthly Revenue" :value="currency(stats.monthly_revenue)"
-        color="text-success" />
+      <DashboardStatCard icon="i-lucide-philippine-peso" label="Monthly Revenue"
+        :value="currency(stats.monthly_revenue)" color="text-success" />
       <!-- Yearly Revenue (last year) -->
       <DashboardStatCard icon="i-lucide-philippine-peso" label="Yearly Revenue" :value="currency(stats.yearly_revenue)"
         color="text-info" />
       <!-- Transactions Today -->
-      <DashboardStatCard icon="i-lucide-receipt" label="Transactions Today" :value="String(stats.transactions_today)" 
+      <DashboardStatCard icon="i-lucide-receipt" label="Transactions Today" :value="String(stats.transactions_today)"
         color="text-primary" />
     </div>
 
@@ -132,14 +132,18 @@ const formatForecastDate = (dateStr) => {
             </span>
           </div>
           <!-- Chart bars -->
-          <div class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative overflow-x-auto min-w-[600px]">
-            <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-shrink-0 flex flex-col items-center w-8">
+          <div
+            class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative overflow-x-auto min-w-[600px]">
+            <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-shrink-0 flex flex-col items-center w-12">
               <div class="bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
                 :title="`${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
-               <span class="text-xs text-gray-500 whitespace-nowrap" :style="{ transform: 'rotate(-40deg)', transformOrigin: 'bottom left'}">
-                {{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) }}
-              </span>
+               <div class="flex-col items-center text-center space-y-1 mt-1">
+                 <span class="text-xs text-gray-500">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short' }) }}</span>
+                 <span class="text-xs text-gray-500">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { day: 'numeric' }) }}</span>
+                 <span class="text-xs text-gray-500">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { year: '2-digit' }) }}</span>
+               </div>
+              
             </div>
           </div>
         </div>
