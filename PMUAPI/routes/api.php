@@ -58,6 +58,9 @@ Route::prefix('v1')->group(function () {
     Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 
+    // Public forecast model training (no auth required)
+    Route::post('/forecasts/run-model', [ForecastController::class, 'runModel']);
+
     Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -242,7 +245,6 @@ Route::prefix('v1')->group(function () {
             Route::delete('/{forecast}', [ForecastController::class, 'destroy'])->where('forecast', '[0-9]+');
 
             Route::post('/generate', [ForecastController::class, 'generate']);
-            Route::post('/run-model', [ForecastController::class, 'runModel']);
 
             // Per-model endpoints for comparison
             Route::get('/model/arima', [ForecastController::class, 'byModel'])->defaults('model', 'arima');

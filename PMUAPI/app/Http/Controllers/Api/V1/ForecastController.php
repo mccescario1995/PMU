@@ -241,14 +241,15 @@ class ForecastController extends Controller
 
         $data = $request->validate([
             'model' => 'nullable|string|in:linear_regression,arima,sarima',
-            'days' => 'nullable|integer|min:1|max:366',
+            // 'days' => 'nullable|integer|min:1|max:1000',
         ]);
 
         if (! $model) {
             return response()->json(['error' => 'Model is required'], 400);
         }
 
-        $days = $data['days'] ?? 30;
+        // $days = $data['days'] ?? 30;
+        $days = 730;
 
         $pmumlUrl = rtrim(env('PMUML_URL', ''), '/');
         if (empty($pmumlUrl)) {
@@ -258,7 +259,6 @@ class ForecastController extends Controller
 
         // Map frontend model names to PMUML model names
         $pmuModel = match ($model) {
-            'arima' => 'amira',
             'sarima' => 'samira',
             default => $model,
         };
@@ -333,7 +333,7 @@ class ForecastController extends Controller
                 'forecast_date' => $forecastDate,
                 'predicted_revenue' => $predicted,
                 'season' => $season,
-                'model_version' => $model.'-v1',
+                'model_version' => $model.'-v1.0', // You can adjust this versioning as needed
             ]);
 
             $saved[] = [

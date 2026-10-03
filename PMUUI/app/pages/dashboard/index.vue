@@ -33,13 +33,20 @@ const nextMonthForecasts = computed(() => {
   const periodEnd = new Date(nextYear, nextMonth + 1, 0)
   periodEnd.setHours(23, 59, 59, 999)
 
-  return forecastData.value.filter((f: any) => {
+  const filtered = forecastData.value.filter((f: any) => {
     const forecastDate = new Date(f.forecast_date)
     return forecastDate >= periodStart && forecastDate <= periodEnd
   })
+  console.log('nextMonthForecasts:', filtered.length, filtered.slice(0,3))
+  return filtered
 })
 
-const maxForecast = computed(() => Math.max(...nextMonthForecasts.value.map((f) => Number(f.predicted_revenue) || 0), 1));
+const maxForecast = computed(() => {
+  const vals = nextMonthForecasts.value.map((f) => Number(f.predicted_revenue) || 0)
+  const max = Math.max(...vals, 1)
+  console.log('maxForecast:', max, 'values:', vals.slice(0,5))
+  return max
+})
 
 const generating = ref(false);
 const generateError = ref("");
@@ -125,9 +132,9 @@ const formatForecastDate = (dateStr) => {
             </span>
           </div>
           <!-- Chart bars -->
-          <div class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative overflow-x-auto">
-            <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-1 flex flex-col items-center">
-              <div class="flex-1 bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
+          <div class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative overflow-x-auto min-w-[600px]">
+            <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-shrink-0 flex flex-col items-center w-8">
+              <div class="bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
                 :title="`${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
               <span class="text-xs text-gray-500 mt-1 whitespace-nowrap">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) }}</span>
