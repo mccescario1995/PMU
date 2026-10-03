@@ -36,37 +36,34 @@
     <table>
         <thead>
             <tr>
-                <th class="date-col" rowspan="2">DATE</th>
+                <th class="date-col">DATE</th>
                 @foreach ($feeTypes as $fee)
-                    <th class="fee-col" rowspan="2">{{ $fee->fee_name }}</th>
+                    <th class="fee-col">{{ $fee->fee_name }}</th>
                 @endforeach
-                <th class="total-col" rowspan="2">TOTAL</th>
+                <th class="total-col">TOTAL</th>
             </tr>
         </thead>
         <tbody>
             @php
-                $feeTypesList = $feeTypes ?? \App\Models\FeeType::orderBy('fee_name')->get(['id', 'fee_name']);
                 $grandTotal = 0;
                 $colTotals = [];
-                foreach ($feeTypesList as $fee) {
-                    $colTotals[$fee->fee_name] = 0;
-                }
+                foreach ($feeTypes as $fee) { $colTotals[$fee->fee_name] = 0; }
             @endphp
-            @foreach ($transactions as $tx)
+            
+            @forelse ($transactions as $tx)
                 @php
                     $status = strtolower((string) $tx->status);
                     $isCancelled = $status === 'cancelled';
                     $isPending = $status === 'pending';
                     $includeInTotals = !($isCancelled || $isPending);
                     $rowTotal = 0;
-                    $rowHasValue = false;
                     $rowClass = '';
                     if ($isCancelled) { $rowClass = 'cancelled'; }
                     elseif ($isPending) { $rowClass = 'pending'; }
                 @endphp
                 <tr class="{{ $rowClass }}">
                     <td class="date-col center">{{ \Carbon\Carbon::parse($tx->transaction_date)->format('m/d/Y') }}</td>
-                    @foreach ($feeTypesList as $fee)
+                    @foreach ($feeTypes as $fee)
                         @php
                             $feeName = $fee->fee_name;
                             $subtotal = 0;
@@ -76,7 +73,6 @@
                                 }
                             }
                             $colTotals[$feeName] = ($colTotals[$feeName] ?? 0) + ($includeInTotals ? $subtotal : 0);
-                            if ($subtotal > 0) { $rowHasValue = true; }
                             $rowTotal += $includeInTotals ? $subtotal : 0;
                         @endphp
                         <td class="fee-col">{{ $subtotal > 0 ? number_format($subtotal, 2) : '' }}</td>
@@ -86,10 +82,15 @@
                     @endphp
                     <td class="total-col">{{ ($includeInTotals && $rowTotal > 0) ? number_format($rowTotal, 2) : '' }}</td>
                 </tr>
-            @endforeach
+            @empty
+                <tr>
+                    <td class="date-col center" colspan="{{ 2 + $feeTypes->count() }}">No transactions found for this date.</td>
+                </tr>
+            @endforelse
+            
             <tr class="total-row">
                 <td class="date-col center">TOTAL</td>
-                @foreach ($feeTypesList as $fee)
+                @foreach ($feeTypes as $fee)
                     <td class="fee-col">{{ ($colTotals[$fee->fee_name] ?? 0) > 0 ? number_format($colTotals[$fee->fee_name], 2) : '' }}</td>
                 @endforeach
                 <td class="total-col">{{ $grandTotal > 0 ? number_format($grandTotal, 2) : '' }}</td>
