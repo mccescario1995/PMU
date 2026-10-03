@@ -125,7 +125,7 @@ const formatForecastDate = (dateStr) => {
             </span>
           </div>
           <!-- Chart bars -->
-          <div class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative">
+          <div class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative overflow-x-auto">
             <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-1 flex flex-col items-center">
               <div class="flex-1 bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"

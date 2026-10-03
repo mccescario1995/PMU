@@ -78,7 +78,7 @@ function save() {
         <UInput type="number" v-model="form.minimum_stock" />
       </UFormField>
 
-      <UFormField label="Reorder Quantity">
+      <UFormField label="Restock Quantity">
         <UInput type="number" v-model="form.reorder_quantity" />
       </UFormField>
 

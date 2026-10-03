@@ -99,7 +99,7 @@ const columns: TableColumn<Inventory>[] = [
   },
   {
     accessorKey: "reorder_quantity",
-    header: "Reorder Qty",
+    header: "Restock Qty",
   },
   {
     accessorKey: "average_daily_usage",

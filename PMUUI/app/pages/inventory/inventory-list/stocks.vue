@@ -60,7 +60,7 @@ const columns: TableColumn<Stock>[] = [
   },
   { accessorKey: 'unit', header: 'Unit' },
   { accessorKey: 'minimum_stock', header: 'Min Stock', meta: { class: { th: "text-right", td: "text-right font-mono" } } },
-  { accessorKey: 'reorder_quantity', header: 'Reorder Qty', meta: { class: { th: "text-right", td: "text-right font-mono" } } },
+  { accessorKey: 'reorder_quantity', header: 'Restock Qty', meta: { class: { th: "text-right", td: "text-right font-mono" } } },
   { accessorKey: 'average_daily_usage', header: 'Avg Daily Usage', meta: { class: { th: "text-right", td: "text-right font-mono" } } },
   {
     accessorKey: 'stock_status',

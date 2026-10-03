@@ -110,7 +110,7 @@ async function submitDeductStock() {
           <p class="text-xl font-semibold">{{ item.minimum_stock }}</p>
         </UCard>
         <UCard>
-          <template #header> Reorder Quantity </template>
+          <template #header> Restock Quantity </template>
           <p class="text-xl font-semibold">{{ item.reorder_quantity }}</p>
         </UCard>
         <UCard>

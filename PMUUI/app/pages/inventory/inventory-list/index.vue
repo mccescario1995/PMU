@@ -104,7 +104,7 @@ const columns: TableColumn<Inventory>[] = [
   },
   {
     accessorKey: "reorder_quantity",
-    header: "Reorder Qty",
+    header: "Restock Qty",
   },
   // {
   //   accessorKey: "average_daily_usage",
@@ -413,7 +413,7 @@ async function remove(row: any) {
                 <UInput type="number" v-model="form.minimum_stock" :disabled="modalMode === 'view'" class="w-full" />
               </UFormField>
 
-              <UFormField label="Reorder Quantity" class="mb-3 w-full mr-3">
+              <UFormField label="Restock Quantity" class="mb-3 w-full mr-3">
                 <UInput type="number" v-model="form.reorder_quantity" :disabled="modalMode === 'view'" class="w-full" />
               </UFormField>
 
