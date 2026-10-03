@@ -129,7 +129,7 @@ const formatForecastDate = (dateStr) => {
             <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-1 flex flex-col items-center">
               <div class="flex-1 bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
-                :title="`Date: ${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
+                :title="`${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
               <span class="text-xs text-gray-500 mt-1 whitespace-nowrap">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) }}</span>
             </div>
           </div>
