@@ -99,23 +99,21 @@
     </table>
 
     <div class="footer">
-        <div class="footer-row">
-            <div class="footer-col">
-                <span class="label">Prepared by:</span>
-                <div class="line"></div>
-                <span>{{ auth()->user()?->name ?? 'System' }}</span>
-            </div>
-            <div class="footer-col">
-                <span class="label">Checked by:</span>
-                <div class="line"></div>
-                <span></span>
-            </div>
-            <div class="footer-col">
-                <span class="label">Noted by:</span>
-                <div class="line"></div>
-                <span></span>
-            </div>
-        </div>
+        <table style="width: 100%; border: none; margin-top: 20px; font-size: 7.5px;">
+            <tr style="border: none;">
+                <td style="width: 45%; border: none; text-align: left; vertical-align: top;">
+                    <strong>Prepared by:</strong><br>
+                    <span style="font-weight: bold;">{{ auth()->user()?->name ?? 'MARTE C. DAQUIZ' }}</span><br>
+                    <span>Port Statistician</span>
+                </td>
+                <td style="width: 10%; border: none;"></td>
+                <td style="width: 45%; border: none; text-align: left; vertical-align: top;">
+                    <strong>Noted by:</strong><br>
+                    <span style="font-weight: bold;">WILSON B. RABAJE</span><br>
+                    <span>OIC-Port Manager</span>
+                </td>
+            </tr>
+        </table>
         <p style="text-align: center; margin-top: 10px;">Generated on {{ now()->format('Y-m-d H:i') }}</p>
     </div>
 </body>
