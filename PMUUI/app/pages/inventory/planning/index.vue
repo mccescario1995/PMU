@@ -136,6 +136,56 @@ const remainingBudget = computed(() => {
   return Number(projectedRevenue.value) - Number(neededBudget.value)
 })
 
+const canAffordItem = (item: any): boolean => {
+  const neededQty = Math.max(0, Number(item.minimum_stock ?? item.recommended_min ?? 0) - Number(item.current_quantity ?? item.quantity ?? 0))
+  const price = Number(item.price ?? item.unit_price ?? 0)
+  const itemCost = neededQty * price
+  return itemCost <= Number(remainingBudget.value)
+}
+
+const inventoryRecommendation = computed(() => {
+  const budget = Number(remainingBudget.value)
+  const lowStockItems = lowStockItemsArray.value
+
+  if (budget < 0) {
+    return {
+      type: 'overstocked' as const,
+      title: 'Budget Exceeded',
+      message: 'The planned inventory purchases exceed the available budget. Consider reducing the quantity of selected items to avoid overspending and overstocking.',
+      items: [] as Array<{ name: string; canAfford: boolean }>,
+      borderClass: 'border-l-4 border-red-500 bg-red-50 text-red-800',
+      icon: 'i-lucide-alert-triangle',
+      iconClass: 'text-red-500'
+    }
+  }
+
+  if (lowStockItems.length > 0) {
+    const items = lowStockItems.map((item: any) => ({
+      name: item.item_name,
+      canAfford: canAffordItem(item)
+    }))
+    return {
+      type: 'understocked' as const,
+      title: 'Understocked Items',
+      message: `You still have an available budget of ${currency(budget)}. Consider adding more units of the following items to maintain sufficient inventory.`,
+      items,
+      borderClass: 'border-l-4 border-amber-500 bg-amber-50 text-amber-800',
+      icon: 'i-lucide-package-plus',
+      iconClass: 'text-amber-500'
+    }
+  }
+
+  return {
+    type: 'normal' as const,
+    title: 'Budget Available',
+    message: `There is still a remaining budget of ${currency(budget)}, but current inventory levels are sufficient. No additional purchases are recommended at this time.`,
+    items: [] as Array<{ name: string; canAfford: boolean }>,
+    borderClass: 'border-l-4 border-emerald-500 bg-emerald-50 text-emerald-800',
+    icon: 'i-lucide-check-circle-2',
+    iconClass: 'text-emerald-500'
+  }
+})
+
 const categoryTypes = computed(() => {
   const byCategory = planning.value?.inventory_summary?.by_category_type ?? {}
   return Object.entries(byCategory).map(([type, data]: [string, any]) => ({
@@ -261,6 +311,27 @@ const columns = computed(() => {
           <div>
             <p class="text-sm text-slate-500">Low Stock</p>
             <p class="text-xl font-bold text-warning">{{ lowStockCount }}</p>
+          </div>
+        </div>
+      </UCard>
+
+      <!-- Inventory Recommendation -->
+      <UCard :class="inventoryRecommendation.borderClass">
+        <template #header>
+          <div class="flex items-center gap-2">
+            <i :class="[inventoryRecommendation.icon, inventoryRecommendation.iconClass, 'text-xl']"></i>
+            <span class="font-semibold">{{ inventoryRecommendation.title }}</span>
+          </div>
+        </template>
+        <div class="space-y-3">
+          <p class="text-sm">{{ inventoryRecommendation.message }}</p>
+          <div v-if="inventoryRecommendation.type === 'understocked' && inventoryRecommendation.items.length" class="space-y-2">
+            <div v-for="item in inventoryRecommendation.items" :key="item.name" class="flex items-center justify-between py-2 px-3 bg-white/50 rounded-lg">
+              <span class="text-sm font-medium">{{ item.name }}</span>
+              <UBadge :class="item.canAfford ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'" variant="solid">
+                {{ item.canAfford ? 'Affordable' : 'Exceeds Budget' }}
+              </UBadge>
+            </div>
           </div>
         </div>
       </UCard>

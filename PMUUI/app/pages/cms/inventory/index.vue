@@ -206,6 +206,7 @@ function openView(row: any) {
         ></UButton>
         <UButton
           size="xs"
+          v-if="can('view inventory')"
           @click.stop="openPriceModal(row)"
           icon="i-lucide-dollar-sign"
         ></UButton>
