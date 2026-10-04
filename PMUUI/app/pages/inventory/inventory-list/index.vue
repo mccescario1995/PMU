@@ -96,19 +96,19 @@ const columns: TableColumn<Inventory>[] = [
     header: "Quantity",
     cell: ({ row }) => {
       const qty = row.getValue("quantity") as number;
-      return h("div", { class: "flex items-center gap-1" }, [
-        h("span", { class: "w-12 text-right" }, qty),
+      return h("div", { class: "flex items-center gap-1 " }, [
         h(UButton, {
           size: "xs",
           variant: "ghost",
-          class: "p-0 w-6 h-6",
+          class: "p-0 w-6 h-6 flex items-center justify-center",
           disabled: qty <= 0,
           onClick: () => adjustQuantity(row.original, -1),
         }, () => h("span", { class: "text-lg leading-none" }, "−")),
+        h("span", { class: "w-12 text-center" }, qty),
         h(UButton, {
           size: "xs",
           variant: "ghost",
-          class: "p-0 w-6 h-6",
+          class: "p-0 w-6 h-6 flex items-center justify-center",
           onClick: () => adjustQuantity(row.original, 1),
         }, () => h("span", { class: "text-lg leading-none" }, "+")),
       ]);
