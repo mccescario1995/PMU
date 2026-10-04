@@ -220,10 +220,12 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
 
-        Route::get('weather/forecast', [WeatherController::class, 'forecast'])->middleware('can:view weather');
-        Route::get('weather', [WeatherController::class, 'index'])->middleware('can:view weather');
+        // Read-only weather lookups back the forecast form, so they are available to any
+        // authenticated user. Write operations stay permission-gated.
+        Route::get('weather/forecast', [WeatherController::class, 'forecast']);
+        Route::get('weather', [WeatherController::class, 'index']);
+        Route::get('weather/{weather}', [WeatherController::class, 'show']);
         Route::post('weather', [WeatherController::class, 'store'])->middleware('can:create weather');
-        Route::get('weather/{weather}', [WeatherController::class, 'show'])->middleware('can:view weather');
         Route::put('weather/{weather}', [WeatherController::class, 'update'])->middleware('can:edit weather');
         Route::delete('weather/{weather}', [WeatherController::class, 'destroy'])->middleware('can:delete weather');
 

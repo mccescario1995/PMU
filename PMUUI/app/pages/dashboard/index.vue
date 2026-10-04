@@ -174,7 +174,7 @@ const isToday = (date: string) => {
           <div
             class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative overflow-x-auto min-w-[600px]">
             <div v-for="(item, i) in selectedMonthForecasts" :key="i"
-              class="flex-shrink-0 flex flex-col items-center w-10">
+              class="flex-shrink-0 flex flex-col items-center w-11">
               <div class="bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
                 :title="`${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
