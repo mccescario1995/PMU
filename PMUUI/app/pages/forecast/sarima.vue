@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { useForecast } from '~/composables/useForecast'
-import { computed, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
 
@@ -42,119 +42,63 @@ const modelLabel = 'SARIMA'
 const selectedYear = ref(new Date().getFullYear())
 const selectedMonth = ref(null) // null = all months, 0-11 = specific month
 
+const monthNames = ["All Months", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+// Forecasts for this model only
+const filteredForecasts = computed(() =>
+  forecasts.value.filter((f: any) => {
+    const mv = (f.model_version || '').toLowerCase()
+    const slug = model.replace(/_/g, '-')
+    return mv.includes(slug) || mv.includes(model)
+  })
+)
+
 // Available years from forecast data
-const availableYears = computed(() => {
-  const years = new Set<number>();
-  if (forecasts.value && Array.isArray(forecasts.value)) {
-    forecasts.value.forEach(f => {
-      if (f && f.forecast_date) {
-        const date = new Date(f.forecast_date);
-        if (!isNaN(date.getTime())) {
-          years.add(date.getFullYear());
-        }
-      }
-    });
-  }
-  return Array.from(years).sort();
-});
+const availableYears = computed(() =>
+  [...new Set(filteredForecasts.value
+    .map((f: any) => new Date(f.forecast_date))
+    .filter((d) => !isNaN(d.getTime()))
+    .map((d) => d.getFullYear())
+  )].sort()
+)
 
-// Month names for display
-const monthNames = ["All Months", "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-// Note: index 0 = "All Months", indices 1-12 = Jan-Dec (so month value + 1 for array index)
+// Forecasts for the selected year (and optionally month)
+const selectedForecasts = computed(() =>
+  filteredForecasts.value.filter((f: any) => {
+    const d = new Date(f.forecast_date)
+    if (isNaN(d.getTime())) return false
+    if (d.getFullYear() !== selectedYear.value) return false
+    return selectedMonth.value === null || d.getMonth() === selectedMonth.value
+  })
+)
 
-// Filtered forecasts based on model type
-const filteredForecasts = computed(() => {
-  if (!forecasts.value || !Array.isArray(forecasts.value)) {
-    return [];
-  }
-  return forecasts.value.filter((f: any) => {
-    if (!f || !f.model_version) return false;
-    const mv = f.model_version.toLowerCase();
-    const slug = model.replace(/_/g, '-');
-    return mv.includes(slug) || mv.includes(model);
-  });
-});
-
-// Forecasts for selected year (and optionally month)
-const selectedForecasts = computed(() => {
-  const year = selectedYear.value;
-  const month = selectedMonth.value; // null = all months, 0-11 = Jan-Dec
-
-  // Filter by year first
-  let yearFiltered = [];
-  if (filteredForecasts.value && Array.isArray(filteredForecasts.value)) {
-    yearFiltered = filteredForecasts.value.filter((f: any) => {
-      if (!f || !f.forecast_date) return false;
-      const forecastDate = new Date(f.forecast_date);
-      if (isNaN(forecastDate.getTime())) return false;
-      return forecastDate.getFullYear() === year;
-    });
-  }
-  
-  // If specific month selected, filter by month too
-  if (month !== null) {
-    yearFiltered = yearFiltered.filter((f: any) => {
-      if (!f || !f.forecast_date) return false;
-      const forecastDate = new Date(f.forecast_date);
-      if (isNaN(forecastDate.getTime())) return false;
-      return forecastDate.getMonth() === month;
-    });
-  }
-  
-  return yearFiltered;
-});
-
-// Group forecasts by month when showing all months
+// Group by month when showing all months
 const monthlyAggregates = computed(() => {
-    if (selectedMonth.value !== null) {
-        // Showing specific month, no need for monthly aggregates
-        return []
-    }
-    
-    const year = selectedYear.value
-    const monthlyData = Array(12).fill(null).map((_, monthIndex) => ({
-        month: monthIndex,
-        totalRevenue: 0,
-        count: 0,
-        latestModel: "-"
-    }))
-    
-    if (selectedForecasts.value && Array.isArray(selectedForecasts.value)) {
-      selectedForecasts.value.forEach(f => {
-        if (!f || !f.forecast_date) return;
-        const forecastDate = new Date(f.forecast_date)
-        if (isNaN(forecastDate.getTime())) return;
-        if (forecastDate.getFullYear() === year) {
-            const monthIndex = forecastDate.getMonth()
-            const revenue = Number(f.predicted_revenue ?? 0)
-            monthlyData[monthIndex].totalRevenue += revenue
-            monthlyData[monthIndex].count += 1
-            // Keep the latest model version (simply take the last one encountered)
-            monthlyData[monthIndex].latestModel = f.model_version ?? "-"
-        }
-      })
-    }
-    
-    return monthlyData.map((data, index) => ({
-        month: index,
-        monthName: monthNames[index + 1], // +1 because index 0 is "All Months"
-        totalRevenue: data.totalRevenue,
-        count: data.count,
-        latestModel: data.latestModel
-    })).filter(data => data.count > 0) // Only include months with data
+  if (selectedMonth.value !== null) return []
+
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    month: i,
+    monthName: monthNames[i + 1], // +1 because index 0 is "All Months"
+    totalRevenue: 0,
+    count: 0,
+    latestModel: '-'
+  }))
+
+  for (const f of selectedForecasts.value) {
+    const m = months[new Date(f.forecast_date).getMonth()]! // getMonth() is 0-11
+    m.totalRevenue += Number(f.predicted_revenue ?? 0)
+    m.count += 1
+    m.latestModel = f.model_version ?? '-'
+  }
+
+  return months.filter((m) => m.count > 0) // Only include months with data
 })
 
-// Determine what to display in table
-const displayData = computed(() => {
-    if (selectedMonth.value === null) {
-        // Showing all months - return monthly aggregates
-        return monthlyAggregates.value || []
-    } else {
-        // Showing specific month - return daily forecasts
-        return selectedForecasts.value || []
-    }
-})
+// What to show in the table
+const displayData = computed(() =>
+  selectedMonth.value === null ? monthlyAggregates.value : selectedForecasts.value
+)
 
 const isDecemberForecast = computed(() => {
     const now = new Date()
@@ -163,86 +107,29 @@ const isDecemberForecast = computed(() => {
     return nextMonth === 11
 })
 
-// Statistics based on what's being displayed
-const totalRevenue = computed(() => {
-    if (selectedMonth.value === null) {
-        // Showing all months - yearly total
-        if (!monthlyAggregates.value || !Array.isArray(monthlyAggregates.value)) {
-          return 0
-        }
-        return monthlyAggregates.value.reduce((sum, m) => sum + m.totalRevenue, 0)
-    } else {
-        // Showing specific month - monthly total
-        if (!selectedForecasts.value || !Array.isArray(selectedForecasts.value)) {
-          return 0
-        }
-        return selectedForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
-    }
-})
+// Both views cover the same rows, so the total is identical either way
+const totalRevenue = computed(() =>
+  selectedForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
+)
 
-const periods = computed(() => {
-    if (selectedMonth.value === null) {
-        // Showing all months - number of months with data
-        if (!monthlyAggregates.value || !Array.isArray(monthlyAggregates.value)) {
-          return 0
-        }
-        return monthlyAggregates.value.length
-    } else {
-        // Showing specific month - number of days
-        if (!selectedForecasts.value || !Array.isArray(selectedForecasts.value)) {
-          return 0
-        }
-        return selectedForecasts.value.length
-    }
-})
-
-const latestModel = computed(() => {
-    if (selectedMonth.value === null) {
-        // Showing all months - show latest model from yearly data
-        if (!selectedForecasts.value || !Array.isArray(selectedForecasts.value) || selectedForecasts.value.length === 0) {
-          return "-"
-        }
-        return selectedForecasts.value[0]?.model_version ?? "-"
-    } else {
-        // Showing specific month - show latest model from monthly data
-        if (!selectedForecasts.value || !Array.isArray(selectedForecasts.value) || selectedForecasts.value.length === 0) {
-          return "-"
-        }
-        return selectedForecasts.value[0]?.model_version ?? "-"
-    }
-})
+const periods = computed(() => displayData.value.length)
+const latestModel = computed(() => selectedForecasts.value[0]?.model_version ?? '-')
 
 // Table columns based on what's being displayed
-const getTableColumns = computed(() => {
-    if (selectedMonth.value === null) {
-        // Showing monthly aggregates
-        return [
-            {
-                header: 'Month',
-                accessorKey: 'monthName'
-            },
-            {
-                header: 'Total Revenue',
-                accessorKey: 'totalRevenue'
-            },
-            {
-                header: 'Days with Data',
-                accessorKey: 'count'
-            },
-            {
-                header: 'Latest Model',
-                accessorKey: 'latestModel'
-            }
-        ]
-    } else {
-        // Showing daily forecasts - use original columns
-        return columns
-    }
-})
-
-const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => 
-    selectedMonth.value === null ? 0 : (selectedForecasts.value || []).length
+const getTableColumns = computed(() =>
+  selectedMonth.value === null
+    ? [
+        { header: 'Month', accessorKey: 'monthName' },
+        { header: 'Total Revenue', accessorKey: 'totalRevenue' },
+        { header: 'Days with Data', accessorKey: 'count' },
+        { header: 'Latest Model', accessorKey: 'latestModel' }
+      ]
+    : columns
 )
+
+const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => displayData.value.length)
+
+const paginationOptions = { getPaginationRowModel: getPaginationRowModel() }
 
 const UBadge = resolveComponent('UBadge')
 </script>
@@ -363,7 +250,7 @@ const UBadge = resolveComponent('UBadge')
          <p class="text-2xl font-bold text-primary">{{ currency(totalRevenue) }}</p>
        </UCard>
        <UCard>
-         <template #header> {{ selectedMonth.value === null ? 'Months with Data' : 'Forecast Periods' }} </template>
+          <template #header> {{ selectedMonth === null ? 'Months with Data' : 'Forecast Periods' }} </template>
          <p class="text-2xl font-bold text-primary">{{ periods }}</p>
        </UCard>
        <UCard>
@@ -372,7 +259,7 @@ const UBadge = resolveComponent('UBadge')
        </UCard>
      </div>
 
-     <UTable :data="displayData" :columns="getTableColumns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
+     <UTable :data="displayData" :columns="getTableColumns" :pagination-options="paginationOptions" v-model:pagination="tablePagination">
        <template #action-cell="{ row }">
          <UButton
            v-if="can('view forecasts')"
@@ -418,7 +305,7 @@ const UBadge = resolveComponent('UBadge')
          />
          <UButton size="sm" @click="handleGoToPage">Go</UButton>
        </div>
-        <UPagination v-if="selectedMonth.value !== null" :total="(selectedForecasts.value || []).length" v-model:page="page" :items-per-page="pageSizeNumber" />
+        <UPagination v-if="selectedMonth !== null" :total="displayData.length" v-model:page="page" :items-per-page="pageSizeNumber" />
      </div>
   </div>
 </template>
