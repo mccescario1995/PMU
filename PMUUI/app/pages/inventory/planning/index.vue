@@ -151,11 +151,15 @@ const inventoryRecommendation = computed(() => {
     return {
       type: 'overstocked' as const,
       title: 'Budget Exceeded',
-      message: 'The planned inventory purchases exceed the available budget. Consider reducing the quantity of selected items to avoid overspending and overstocking.',
+      message: 'Planned purchases exceed available budget. Reduce quantities to avoid overspending.',
       items: [] as Array<{ name: string; canAfford: boolean }>,
-      borderClass: 'border-l-4 border-red-500 bg-red-50 text-red-800',
+      bgClass: 'bg-red-50',
+      borderClass: 'border-red-200',
+      borderLeftClass: 'border-l-red-500',
       icon: 'i-lucide-alert-triangle',
-      iconClass: 'text-red-500'
+      iconClass: 'text-red-500',
+      titleClass: 'text-red-600',
+      textClass: 'text-red-700'
     }
   }
 
@@ -167,22 +171,30 @@ const inventoryRecommendation = computed(() => {
     return {
       type: 'understocked' as const,
       title: 'Understocked Items',
-      message: `You still have an available budget of ${currency(budget)}. Consider adding more units of the following items to maintain sufficient inventory.`,
+      message: `${lowStockItems.length} item(s) below minimum. Budget: ${currency(budget)} available.`,
       items,
-      borderClass: 'border-l-4 border-amber-500 bg-amber-50 text-amber-800',
+      bgClass: 'bg-amber-50',
+      borderClass: 'border-amber-200',
+      borderLeftClass: 'border-l-amber-500',
       icon: 'i-lucide-package-plus',
-      iconClass: 'text-amber-500'
+      iconClass: 'text-amber-500',
+      titleClass: 'text-amber-600',
+      textClass: 'text-amber-700'
     }
   }
 
   return {
     type: 'normal' as const,
-    title: 'Budget Available',
-    message: `There is still a remaining budget of ${currency(budget)}, but current inventory levels are sufficient. No additional purchases are recommended at this time.`,
+    title: 'Stock Levels Healthy',
+    message: `Budget: ${currency(budget)} available. No purchases needed.`,
     items: [] as Array<{ name: string; canAfford: boolean }>,
-    borderClass: 'border-l-4 border-emerald-500 bg-emerald-50 text-emerald-800',
+    bgClass: 'bg-emerald-50',
+    borderClass: 'border-emerald-200',
+    borderLeftClass: 'border-l-emerald-500',
     icon: 'i-lucide-check-circle-2',
-    iconClass: 'text-emerald-500'
+    iconClass: 'text-emerald-500',
+    titleClass: 'text-emerald-600',
+    textClass: 'text-emerald-700'
   }
 })
 
@@ -316,21 +328,21 @@ const columns = computed(() => {
       </UCard>
 
       <!-- Inventory Recommendation -->
-      <UCard :class="inventoryRecommendation.borderClass">
-        <template #header>
-          <div class="flex items-center gap-2">
-            <i :class="[inventoryRecommendation.icon, inventoryRecommendation.iconClass, 'text-xl']"></i>
-            <span class="font-semibold">{{ inventoryRecommendation.title }}</span>
+      <UCard :class="[inventoryRecommendation.bgClass, inventoryRecommendation.borderClass, inventoryRecommendation.borderLeftClass, 'border-l-4']">
+        <div class="flex items-start gap-3 p-4">
+          <div class="flex-shrink-0 w-10 h-10 rounded-full bg-white/60 flex items-center justify-center">
+            <i :class="[inventoryRecommendation.icon, inventoryRecommendation.iconClass, 'text-2xl']"></i>
           </div>
-        </template>
-        <div class="space-y-3">
-          <p class="text-sm">{{ inventoryRecommendation.message }}</p>
-          <div v-if="inventoryRecommendation.type === 'understocked' && inventoryRecommendation.items.length" class="space-y-2">
-            <div v-for="item in inventoryRecommendation.items" :key="item.name" class="flex items-center justify-between py-2 px-3 bg-white/50 rounded-lg">
-              <span class="text-sm font-medium">{{ item.name }}</span>
-              <UBadge :class="item.canAfford ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'" variant="solid">
-                {{ item.canAfford ? 'Affordable' : 'Exceeds Budget' }}
-              </UBadge>
+          <div class="flex-1 min-w-0">
+            <h3 class="font-semibold" :class="inventoryRecommendation.titleClass">{{ inventoryRecommendation.title }}</h3>
+            <p class="text-sm mt-1" :class="inventoryRecommendation.textClass">{{ inventoryRecommendation.message }}</p>
+            <div v-if="inventoryRecommendation.type === 'understocked' && inventoryRecommendation.items.length" class="mt-3 flex flex-wrap gap-1.5">
+              <span v-for="item in inventoryRecommendation.items" :key="item.name"
+                class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full"
+                :class="item.canAfford ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'">
+                {{ item.name }}
+                <span class="w-1.5 h-1.5 rounded-full" :class="item.canAfford ? 'bg-emerald-500' : 'bg-red-500'"></span>
+              </span>
             </div>
           </div>
         </div>
