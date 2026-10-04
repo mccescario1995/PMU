@@ -16,7 +16,7 @@ const UBadge = resolveComponent("UBadge");
 
 const statusColor = {
   available: "success" as const,
-  low_stock: "warning" as const,
+  low_stock: "error" as const,
   damaged: "error" as const,
   inactive: "neutral" as const,
 };

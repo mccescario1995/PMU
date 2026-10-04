@@ -108,6 +108,34 @@ const totalItems = computed(() => planning.value?.inventory_summary?.total_items
 const lowStockCount = computed(() => planning.value?.inventory_summary?.low_stock_items ?? 0)
 const totalQuantity = computed(() => planning.value?.inventory_summary?.total_quantity ?? 0)
 
+const projectedRevenue = computed(() => {
+  const forecasts = planning.value?.forecasts ?? []
+  if (!forecasts.length) return 0
+  const now = new Date()
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  return forecasts
+    .filter((f: any) => {
+      const date = new Date(f.forecast_date)
+      return date >= currentMonthStart && date <= currentMonthEnd
+    })
+    .reduce((sum: number, f: any) => sum + Number(f.predicted_revenue ?? 0), 0)
+})
+
+const neededBudget = computed(() => {
+  const items = lowStockItemsArray.value
+  if (!items.length) return 0
+  return items.reduce((sum: number, item: any) => {
+    const qty = Number(item.minimum_stock ?? item.recommended_min ?? 0) - Number(item.current_quantity ?? item.quantity ?? 0)
+    const price = Number(item.price ?? item.unit_price ?? 0)
+    return sum + Math.max(0, qty) * price
+  }, 0)
+})
+
+const remainingBudget = computed(() => {
+  return Number(projectedRevenue.value) - Number(neededBudget.value)
+})
+
 const categoryTypes = computed(() => {
   const byCategory = planning.value?.inventory_summary?.by_category_type ?? {}
   return Object.entries(byCategory).map(([type, data]: [string, any]) => ({
@@ -120,7 +148,7 @@ const categoryTypes = computed(() => {
 
 const statusColor: Record<string, string> = {
   available: 'success',
-  low_stock: 'warning',
+  low_stock: 'error',
   damaged: 'error',
   inactive: 'neutral',
 }
@@ -221,7 +249,7 @@ const columns = computed(() => {
       <!-- Inventory Summary -->
       <UCard>
         <template #header>Inventory Summary</template>
-        <div class="grid gap-4 sm:grid-cols-4">
+        <div class="grid gap-4 sm:grid-cols-3">
           <div>
             <p class="text-sm text-slate-500">Total Items</p>
             <p class="text-xl font-bold">{{ totalItems }}</p>
@@ -233,6 +261,25 @@ const columns = computed(() => {
           <div>
             <p class="text-sm text-slate-500">Low Stock</p>
             <p class="text-xl font-bold text-warning">{{ lowStockCount }}</p>
+          </div>
+        </div>
+      </UCard>
+
+      <!-- Budget Overview -->
+      <UCard>
+        <template #header>Budget Overview</template>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <div>
+            <p class="text-sm text-slate-500">Projected Revenue</p>
+            <p class="text-xl font-bold text-primary">{{ currency(projectedRevenue) }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-slate-500">Needed Budget</p>
+            <p class="text-xl font-bold text-warning">{{ currency(neededBudget) }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-slate-500">Remaining Budget</p>
+            <p class="text-xl font-bold" :class="remainingBudget >= 0 ? 'text-success' : 'text-error'">{{ currency(remainingBudget) }}</p>
           </div>
         </div>
       </UCard>

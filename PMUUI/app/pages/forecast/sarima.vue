@@ -119,9 +119,16 @@ const getTableColumns = computed(() =>
   selectedMonth.value === null
     ? [
         { header: 'Month', accessorKey: 'monthName' },
-        { header: 'Total Revenue', accessorKey: 'totalRevenue' },
+        {
+          header: 'Total Revenue',
+          accessorKey: 'totalRevenue',
+          cell: ({ row }) => {
+            const value = row.getValue('totalRevenue') as number
+            return `₱${value.toFixed(2)}`
+          }
+        },
         { header: 'Days with Data', accessorKey: 'count' },
-        { header: 'Latest Model', accessorKey: 'latestModel' }
+        // { header: 'Latest Model', accessorKey: 'latestModel' }
       ]
     : columns
 )

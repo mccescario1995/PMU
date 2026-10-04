@@ -15,6 +15,30 @@
   --color-brand-800: #112a44;
   --color-brand-900: #0b1c2d;
   --color-brand-950: #050e17;
+
+  --color-gray-50: #f0f1f3;
+  --color-gray-100: #d9dce0;
+  --color-gray-200: #bcc0c5;
+  --color-gray-300: #9aa0a6;
+  --color-gray-400: #787d85;
+  --color-gray-500: #5c6168;
+  --color-gray-600: #4a4e54;
+  --color-gray-700: #3d4045;
+  --color-gray-800: #323539;
+  --color-gray-900: #282a2e;
+  --color-gray-950: #1a1c1e;
+
+  --color-slate-50: #eff1f3;
+  --color-slate-100: #e0e3e7;
+  --color-slate-200: #c6ccd3;
+  --color-slate-300: #9caab8;
+  --color-slate-400: #768393;
+  --color-slate-500: #596777;
+  --color-slate-600: #485361;
+  --color-slate-700: #3d4652;
+  --color-slate-800: #343c46;
+  --color-slate-900: #2d333b;
+  --color-slate-950: #1a1e23;
 }
 
 /* Override the default sans font family */
