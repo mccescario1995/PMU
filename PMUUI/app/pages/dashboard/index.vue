@@ -28,10 +28,16 @@ const selectedMonth = ref(new Date().getMonth()); // 0-11 (Jan-Dec)
 // Available years from forecast data
 const availableYears = computed(() => {
   const years = new Set<number>();
-  forecastData.value.forEach(f => {
-    const date = new Date(f.forecast_date);
-    years.add(date.getFullYear());
-  });
+  if (forecastData.value && Array.isArray(forecastData.value)) {
+    forecastData.value.forEach(f => {
+      if (f && f.forecast_date) {
+        const date = new Date(f.forecast_date);
+        if (!isNaN(date.getTime())) {
+          years.add(date.getFullYear());
+        }
+      }
+    });
+  }
   return Array.from(years).sort();
 });
 
@@ -44,14 +50,23 @@ const selectedMonthForecasts = computed(() => {
   const periodEnd = new Date(year, month + 1, 0);
   periodEnd.setHours(23, 59, 59, 999);
 
+  if (!forecastData.value || !Array.isArray(forecastData.value)) {
+    return [];
+  }
+
   return forecastData.value.filter((f: any) => {
+    if (!f || !f.forecast_date) return false;
     const forecastDate = new Date(f.forecast_date);
+    if (isNaN(forecastDate.getTime())) return false;
     return forecastDate >= periodStart && forecastDate <= periodEnd;
   });
 });
 
 // Max forecast for selected month (for Y-axis scaling)
 const maxForecast = computed(() => {
+  if (!selectedMonthForecasts.value || !Array.isArray(selectedMonthForecasts.value)) {
+    return 1;
+  }
   const vals = selectedMonthForecasts.value.map((f) => Number(f.predicted_revenue) || 0);
   return Math.max(...vals, 1);
 });
@@ -61,7 +76,12 @@ const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Current month name for display
-const currentMonthName = computed(() => monthNames[selectedMonth.value]);
+const currentMonthName = computed(() => {
+  if (selectedMonth.value === null || selectedMonth.value === undefined) {
+    return '';
+  }
+  return monthNames[selectedMonth.value] || '';
+});
 
 onMounted(async () => {
   try {
@@ -162,7 +182,7 @@ const isToday = (date: string) => {
                 <span class="text-xs text-gray-500 mb-0">{{ new Date(item.forecast_date).toLocaleDateString('en-US', {
                   month:
                     'short'
-                }) }} &nbsp;</span>
+                }) }}&nbsp;</span>
                 <span class="text-xs text-gray-500 mb-0">{{ new Date(item.forecast_date).toLocaleDateString('en-US', {
                   day:
                     'numeric'
