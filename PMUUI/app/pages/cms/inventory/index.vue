@@ -250,7 +250,7 @@ function openView(row: any) {
   </div>
 
   <UModal v-model:open="priceModal" title="Update Price">
-    <template #default>
+    <template #body>
       <div class="space-y-4">
         <p class="text-sm text-slate-500">Item: <strong>{{ priceForm.item_name }}</strong></p>
         <UFormField label="Price">
@@ -271,7 +271,7 @@ function openView(row: any) {
   </UModal>
 
   <UModal v-model:open="viewModal" title="View Inventory Item">
-    <template #default>
+    <template #body>
       <div class="space-y-4" v-if="viewItem">
         <div class="grid grid-cols-2 gap-4">
           <UFormField label="Item Name">
