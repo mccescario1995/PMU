@@ -15,6 +15,7 @@ const { can } = usePermissions();
 const toast = useToast();
 
 const UBadge = resolveComponent("UBadge");
+const UButton = resolveComponent("UButton");
 
 const items = ref<any[]>([]);
 const searchName = ref("");
@@ -93,6 +94,25 @@ const columns: TableColumn<Inventory>[] = [
   {
     accessorKey: "quantity",
     header: "Quantity",
+    cell: ({ row }) => {
+      const qty = row.getValue("quantity") as number;
+      return h("div", { class: "flex items-center gap-1" }, [
+        h("span", { class: "w-12 text-right" }, qty),
+        h(UButton, {
+          size: "xs",
+          variant: "ghost",
+          class: "p-0 w-6 h-6",
+          disabled: qty <= 0,
+          onClick: () => adjustQuantity(row.original, -1),
+        }, () => h("span", { class: "text-lg leading-none" }, "−")),
+        h(UButton, {
+          size: "xs",
+          variant: "ghost",
+          class: "p-0 w-6 h-6",
+          onClick: () => adjustQuantity(row.original, 1),
+        }, () => h("span", { class: "text-lg leading-none" }, "+")),
+      ]);
+    },
   },
   {
     accessorKey: "unit",
@@ -270,6 +290,31 @@ async function remove(row: any) {
     showDeleteModal.value = false;
     deletingItem.value = null;
     deleting.value = false;
+  }
+}
+
+async function adjustQuantity(row: any, delta: number) {
+  const newQuantity = row.quantity + delta;
+  if (newQuantity < 0) return;
+
+  const endpoint = delta > 0 ? "add-stock" : "deduct-stock";
+  const quantity = Math.abs(delta);
+
+  try {
+    await apiFetch(`/v1/inventory/items/${row.id}/${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quantity }),
+      parseJson: true,
+    });
+    toast.add({ title: `Quantity ${delta > 0 ? "increased" : "decreased"}`, color: "success" });
+    refresh();
+  } catch (e: any) {
+    toast.add({
+      title: `Failed to ${delta > 0 ? "add" : "deduct"} stock`,
+      description: e.message ?? "Please try again.",
+      color: "error",
+    });
   }
 }
 </script>

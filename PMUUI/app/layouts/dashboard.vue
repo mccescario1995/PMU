@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AppBreadcrumb from '~/components/layouts/AppBreadcrumb.vue';
 import AppFooter from '~/components/layouts/AppFooter.vue';
 import AppHeader from '~/components/layouts/AppHeader.vue';
 import AppSidebar from '~/components/layouts/AppSidebar.vue';
@@ -18,8 +17,6 @@ import AppSidebar from '~/components/layouts/AppSidebar.vue';
       <main class="flex-1 overflow-y-auto">
 
         <div class="p-8">
-
-          <AppBreadcrumb />
 
           <div class="mt-6">
             <slot />

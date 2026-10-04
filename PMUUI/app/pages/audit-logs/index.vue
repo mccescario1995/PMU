@@ -76,11 +76,11 @@ function getActionLabel(action: string): string {
 }
 
 const columns: TableColumn<any>[] = [
-  {
-    accessorKey: "id",
-    header: "Log #",
-    cell: ({ row }) => `#${row.getValue("id")}`,
-  },
+  // {
+  //   accessorKey: "id",
+  //   header: "Log #",
+  //   cell: ({ row }) => `#${row.getValue("id")}`,
+  // },
   {
     accessorKey: "user",
     header: "Performed By",
@@ -100,75 +100,75 @@ const columns: TableColumn<any>[] = [
     header: "Affected Area",
     cell: ({ row }) => formatFieldName(row.getValue("table_name")),
   },
-  {
-    accessorKey: "record_id",
-    header: "Record #",
-    cell: ({ row }) => row.getValue("record_id") ?? "N/A",
-  },
-  {
-    accessorKey: "old_values",
-    header: "Previous Values",
-    cell: ({ row }) => {
-      const val = formatChanges(row.original.old_values);
-      if (val === "No changes recorded" || val.length <= 50) return val;
+  // {
+  //   accessorKey: "record_id",
+  //   header: "Record #",
+  //   cell: ({ row }) => row.getValue("record_id") ?? "N/A",
+  // },
+  // {
+  //   accessorKey: "old_values",
+  //   header: "Previous Values",
+  //   cell: ({ row }) => {
+  //     const val = formatChanges(row.original.old_values);
+  //     if (val === "No changes recorded" || val.length <= 50) return val;
 
-      return h(
-        UPopover,
-        {},
-        {
-          default: () =>
-            h(
-              "span",
-              {
-                class:
-                  "text-primary underline cursor-pointer hover:text-primary-600",
-              },
-              val.slice(0, 50) + "...",
-            ),
-          content: () =>
-            h(
-              "div",
-              {
-                class: "whitespace-pre-wrap max-w-md p-3 text-sm",
-              },
-              val,
-            ),
-        },
-      );
-    },
-  },
-  {
-    accessorKey: "new_values",
-    header: "New Values",
-    cell: ({ row }) => {
-      const val = formatChanges(row.original.new_values);
-      if (val === "No changes recorded" || val.length <= 50) return val;
+  //     return h(
+  //       UPopover,
+  //       {},
+  //       {
+  //         default: () =>
+  //           h(
+  //             "span",
+  //             {
+  //               class:
+  //                 "text-primary underline cursor-pointer hover:text-primary-600",
+  //             },
+  //             val.slice(0, 50) + "...",
+  //           ),
+  //         content: () =>
+  //           h(
+  //             "div",
+  //             {
+  //               class: "whitespace-pre-wrap max-w-md p-3 text-sm",
+  //             },
+  //             val,
+  //           ),
+  //       },
+  //     );
+  //   },
+  // },
+  // {
+  //   accessorKey: "new_values",
+  //   header: "New Values",
+  //   cell: ({ row }) => {
+  //     const val = formatChanges(row.original.new_values);
+  //     if (val === "No changes recorded" || val.length <= 50) return val;
 
-      return h(
-        UPopover,
-        {},
-        {
-          default: () =>
-            h(
-              "span",
-              {
-                class:
-                  "text-primary underline cursor-pointer hover:text-primary-600",
-              },
-              val.slice(0, 50) + "...",
-            ),
-          content: () =>
-            h(
-              "div",
-              {
-                class: "whitespace-pre-wrap max-w-md p-3 text-sm",
-              },
-              val,
-            ),
-        },
-      );
-    },
-  },
+  //     return h(
+  //       UPopover,
+  //       {},
+  //       {
+  //         default: () =>
+  //           h(
+  //             "span",
+  //             {
+  //               class:
+  //                 "text-primary underline cursor-pointer hover:text-primary-600",
+  //             },
+  //             val.slice(0, 50) + "...",
+  //           ),
+  //         content: () =>
+  //           h(
+  //             "div",
+  //             {
+  //               class: "whitespace-pre-wrap max-w-md p-3 text-sm",
+  //             },
+  //             val,
+  //           ),
+  //       },
+  //     );
+  //   },
+  // },
   {
     accessorKey: "created_at",
     header: "Date & Time",

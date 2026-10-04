@@ -288,7 +288,7 @@ const UBadge = resolveComponent('UBadge')
      <div class="flex items-center justify-between mt-4">
        <div class="flex items-center gap-2">
          <span class="text-sm text-slate-500">Rows per page:</span>
-         <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+         <USelect :v-model="20" :items="[5, 10, 20, 30, 50]" class="w-20" />
        </div>
        <div class="flex items-center gap-2">
          <span class="text-sm text-slate-500">Go to page:</span>

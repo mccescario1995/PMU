@@ -92,14 +92,14 @@ const handleSubmit = async () => {
           </template>
         </UInput>
       </UFormField>
-      <div class="my-3">
+      <div class="flex items-center justify-between my-3">
         <UCheckbox label="Remember me" />
-      </div>
-      <div class="my-3 text-right">
-        <UButton variant="link" color="primary" size="sm" to="/forgot-password">
+
+        <UButton size="sm" to="/forgot-password" variant="outline" color="neutral" class="text-sm">
           Forgot password?
         </UButton>
       </div>
+      
       <UButton type="submit" block size="xl" variant="outline" color="neutral"
         class="h-16 rounded-xl text-xl font-semibold mt-5" :loading="loading">
         Sign In
