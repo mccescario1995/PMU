@@ -10,97 +10,235 @@ definePageMeta({
 })
 
 const {
-  forecasts,
-  loading,
-  showForm,
-  modelLoading,
-  modelError,
-  showProgressModal,
-  progressSteps,
-  progressError,
-  form,
-  modalMode,
-  saving,
-  viewing,
-  reset,
-  submit,
-  runSarimaDirect,
-  remove,
-  openCreate,
-  openView,
-  openEdit,
-  weatherLabel,
-  currency,
-  columns,
-  can,
-  load,
+    forecasts,
+    loading,
+    showForm,
+    modelLoading,
+    modelError,
+    showProgressModal,
+    progressSteps,
+    progressError,
+    form,
+    modalMode,
+    saving,
+    viewing,
+    reset,
+    submit,
+    runSarimaDirect,
+    remove,
+    openCreate,
+    openView,
+    openEdit,
+    weatherLabel,
+    currency,
+    columns,
+    can,
+    load,
 } = useForecast('/v1/forecasts/model/sarima', '/v1/forecasts/train/sarima', 'sarima')
 
 const model = 'sarima'
 const modelLabel = 'SARIMA'
 
+// Year and month selection controls
+const selectedYear = ref(new Date().getFullYear())
+const selectedMonth = ref(null) // null = all months, 0-11 = specific month
+
+// Available years from forecast data
+const availableYears = computed(() => {
+    const years = new Set<number>()
+    forecasts.value.forEach(f => {
+        const date = new Date(f.forecast_date)
+        years.add(date.getFullYear())
+    })
+    return Array.from(years).sort()
+})
+
+// Month names for display
+const monthNames = ["All Months", "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+// Note: index 0 = "All Months", indices 1-12 = Jan-Dec (so month value + 1 for array index)
+
+// Filtered forecasts based on model type
 const filteredForecasts = computed(() =>
-  forecasts.value.filter((f: any) => {
-    const mv = (f.model_version || '').toLowerCase()
-    const slug = model.replace(/_/g, '-')
-    return mv.includes(slug) || mv.includes(model)
-  })
+    forecasts.value.filter((f: any) => {
+        const mv = (f.model_version || '').toLowerCase()
+        const slug = model.replace(/_/g, '-')
+        return mv.includes(slug) || mv.includes(model)
+    })
 )
 
-const currentYearForecasts = computed(() => {
-  const now = new Date()
-  let nextMonth = now.getMonth() + 1
-  let nextYear = now.getFullYear()
-  if (nextMonth > 11) {
-    nextMonth = 0
-    nextYear++
-  }
-  const periodStart = new Date(nextYear, nextMonth, 1)
-  const periodEnd = new Date(nextYear, nextMonth + 1, 0)
-  periodEnd.setHours(23, 59, 59, 999)
+// Forecasts for selected year (and optionally month)
+const selectedForecasts = computed(() => {
+    const year = selectedYear.value
+    const month = selectedMonth.value // null = all months, 0-11 = Jan-Dec
+    
+    // Filter by year first
+    let yearFiltered = filteredForecasts.value.filter((f: any) => {
+        const forecastDate = new Date(f.forecast_date)
+        return forecastDate.getFullYear() === year
+    })
+    
+    // If specific month selected, filter by month too
+    if (month !== null) {
+        yearFiltered = yearFiltered.filter((f: any) => {
+            const forecastDate = new Date(f.forecast_date)
+            return forecastDate.getMonth() === month
+        })
+    }
+    
+    return yearFiltered
+})
 
-  return filteredForecasts.value.filter((f: any) => {
-    const forecastDate = new Date(f.forecast_date)
-    return forecastDate >= periodStart && forecastDate <= periodEnd
-  })
+// Group forecasts by month when showing all months
+const monthlyAggregates = computed(() => {
+    if (selectedMonth.value !== null) {
+        // Showing specific month, no need for monthly aggregates
+        return []
+    }
+    
+    const year = selectedYear.value
+    const monthlyData = Array(12).fill(null).map((_, monthIndex) => ({
+        month: monthIndex,
+        totalRevenue: 0,
+        count: 0,
+        latestModel: "-"
+    }))
+    
+    selectedForecasts.value.forEach(f => {
+        const forecastDate = new Date(f.forecast_date)
+        if (forecastDate.getFullYear() === year) {
+            const monthIndex = forecastDate.getMonth()
+            const revenue = Number(f.predicted_revenue ?? 0)
+            monthlyData[monthIndex].totalRevenue += revenue
+            monthlyData[monthIndex].count += 1
+            // Keep the latest model version (simply take the last one encountered)
+            monthlyData[monthIndex].latestModel = f.model_version ?? "-"
+        }
+    })
+    
+    return monthlyData.map((data, index) => ({
+        month: index,
+        monthName: monthNames[index + 1], // +1 because index 0 is "All Months"
+        totalRevenue: data.totalRevenue,
+        count: data.count,
+        latestModel: data.latestModel
+    })).filter(data => data.count > 0) // Only include months with data
+})
+
+// Determine what to display in table
+const displayData = computed(() => {
+    if (selectedMonth.value === null) {
+        // Showing all months - return monthly aggregates
+        return monthlyAggregates.value
+    } else {
+        // Showing specific month - return daily forecasts
+        return selectedForecasts.value
+    }
 })
 
 const isDecemberForecast = computed(() => {
-  const now = new Date()
-  let nextMonth = now.getMonth() + 1
-  if (nextMonth > 11) nextMonth = 0
-  return nextMonth === 11
+    const now = new Date()
+    let nextMonth = now.getMonth() + 1
+    if (nextMonth > 11) nextMonth = 0
+    return nextMonth === 11
 })
 
-const { page, pageSize, pageSizeNumber, goToPageInput, tablePagination, totalPages, handleGoToPage } = useTablePagination(() => currentYearForecasts.value.length)
+// Statistics based on what's being displayed
+const totalRevenue = computed(() => {
+    if (selectedMonth.value === null) {
+        // Showing all months - yearly total
+        return monthlyAggregates.value.reduce((sum, m) => sum + m.totalRevenue, 0)
+    } else {
+        // Showing specific month - monthly total
+        return selectedForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
+    }
+})
 
-const totalRevenue = computed(() =>
-  currentYearForecasts.value.reduce((sum, f) => sum + Number(f.predicted_revenue ?? 0), 0)
-)
+const periods = computed(() => {
+    if (selectedMonth.value === null) {
+        // Showing all months - number of months with data
+        return monthlyAggregates.value.length
+    } else {
+        // Showing specific month - number of days
+        return selectedForecasts.value.length
+    }
+})
 
-const periods = computed(() => currentYearForecasts.value.length)
-const latestModel = computed(() => currentYearForecasts.value[0]?.model_version ?? "-")
+const latestModel = computed(() => {
+    if (selectedMonth.value === null) {
+        // Showing all months - show latest model from yearly data
+        const yearlyForecasts = selectedForecasts.value
+        return yearlyForecasts.length > 0 ? yearlyForecasts[0]?.model_version ?? "-" : "-"
+    } else {
+        // Showing specific month - show latest model from monthly data
+        return selectedForecasts.value.length > 0 ? selectedForecasts.value[0]?.model_version ?? "-" : "-"
+    }
+})
 
-const UBadge = resolveComponent('UBadge')
+// Table columns based on what's being displayed
+const getTableColumns = computed(() => {
+    if (selectedMonth.value === null) {
+        // Showing monthly aggregates
+        return [
+            {
+                header: 'Month',
+                accessorKey: 'monthName'
+            },
+            {
+                header: 'Total Revenue',
+                accessorKey: 'totalRevenue'
+            },
+            {
+                header: 'Days with Data',
+                accessorKey: 'count'
+            },
+            {
+                header: 'Latest Model',
+                accessorKey: 'latestModel'
+            }
+        ]
+     } else {
+         // Showing daily forecasts - use original columns
+         return columns
+     }
+ })
+ 
+ const UBadge = resolveComponent('UBadge')
 </script>
 
 <template>
   <div class="p-6 space-y-6">
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold">{{ modelLabel }}</h1>
-        <p class="text-slate-500">Revenue projection using SARIMA model.</p>
-      </div>
-      <!-- <div class="flex gap-2">
-        <UButton
-          icon="i-lucide-brain"
-          :loading="modelLoading"
-          @click="runSarimaDirect"
-        >
-          Run {{ modelLabel }}
-        </UButton>
-      </div> -->
-    </div>
+     <div class="flex items-center justify-between">
+       <div>
+         <h1 class="text-2xl font-bold">{{ modelLabel }}</h1>
+         <p class="text-slate-500">Revenue projection using SARIMA model.</p>
+       </div>
+       <div class="flex items-center space-x-4">
+         <label class="text-xs text-gray-500">Year:</label>
+         <select v-model="selectedYear" class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
+           <option v-for="year in availableYears" :key="year" :value="year">
+             {{ year }}
+           </option>
+         </select>
+         <div class="flex items-center space-x-2">
+           <label class="text-xs text-gray-500">Month:</label>
+           <select v-model="selectedMonth" class="border border-gray-300 rounded px-2 py-1 text-sm w-28">
+             <option v-for="(month, index) in monthNames" :key="index" :value="index === 0 ? null : index - 1">
+               {{ month }}
+             </option>
+           </select>
+         </div>
+       </div>
+       <div class="flex gap-2">
+         <UButton
+           icon="i-lucide-brain"
+           :loading="modelLoading"
+           @click="runSarimaDirect"
+         >
+           Run {{ modelLabel }}
+         </UButton>
+       </div>
+     </div>
 
     <UAlert v-if="modelError" type="error" :title="modelError" class="mb-4" />
 
@@ -181,68 +319,68 @@ const UBadge = resolveComponent('UBadge')
       </template>
     </UModal>
 
-    <div class="grid gap-6 sm:grid-cols-3">
-      <UCard>
-        <template #header> Projected Revenue </template>
-        <p class="text-2xl font-bold text-primary">{{ currency(totalRevenue) }}</p>
-      </UCard>
-      <UCard>
-        <template #header> Forecast Periods </template>
-        <p class="text-2xl font-bold text-primary">{{ periods }}</p>
-      </UCard>
-      <UCard>
-        <template #header> Latest Model </template>
-        <p class="text-2xl font-bold text-primary">{{ latestModel }}</p>
-      </UCard>
-    </div>
+     <div class="grid gap-6 sm:grid-cols-3">
+       <UCard>
+         <template #header> Projected Revenue </template>
+         <p class="text-2xl font-bold text-primary">{{ currency(totalRevenue) }}</p>
+       </UCard>
+       <UCard>
+         <template #header> {{ selectedMonth.value === null ? 'Months with Data' : 'Forecast Periods' } }</template>
+         <p class="text-2xl font-bold text-primary">{{ periods }}</p>
+       </UCard>
+       <UCard>
+         <template #header> Latest Model </template>
+         <p class="text-2xl font-bold text-primary">{{ latestModel }}</p>
+       </UCard>
+     </div>
 
-    <UTable :data="currentYearForecasts" :columns="columns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
-      <template #action-cell="{ row }">
-        <UButton
-          v-if="can('view forecasts')"
-          size="xs"
-          color="info"
-          variant="ghost"
-          @click="openView(row.original)"
-          icon="i-lucide-eye"
-          class="me-2"
-        ></UButton>
-        <UButton
-          v-if="can('edit forecasts')"
-          size="xs"
-          @click="openEdit(row.original)"
-          icon="i-lucide-edit"
-          class="me-2"
-        ></UButton>
-        <UButton
-          v-if="can('delete forecasts')"
-          size="xs"
-          color="error"
-          variant="ghost"
-          @click="remove(row.original)"
-          icon="i-lucide-trash"
-        ></UButton>
-      </template>
-    </UTable>
+     <UTable :data="displayData" :columns="getTableColumns" :pagination-options="{ getPaginationRowModel: getPaginationRowModel() }" v-model:pagination="tablePagination">
+       <template #action-cell="{ row }">
+         <UButton
+           v-if="can('view forecasts')"
+           size="xs"
+           color="info"
+           variant="ghost"
+           @click="openView(row.original)"
+           icon="i-lucide-eye"
+           class="me-2"
+         ></UButton>
+         <UButton
+           v-if="can('edit forecasts')"
+           size="xs"
+           @click="openEdit(row.original)"
+           icon="i-lucide-edit"
+           class="me-2"
+         ></UButton>
+         <UButton
+           v-if="can('delete forecasts')"
+           size="xs"
+           color="error"
+           variant="ghost"
+           @click="remove(row.original)"
+           icon="i-lucide-trash"
+         ></UButton>
+       </template>
+     </UTable>
 
-    <div class="flex items-center justify-between mt-4">
-      <div class="flex items-center gap-2">
-        <span class="text-sm text-slate-500">Rows per page:</span>
-        <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
-      </div>
-      <div class="flex items-center gap-2">
-        <span class="text-sm text-slate-500">Go to page:</span>
-        <UInput
-          v-model="goToPageInput"
-          type="number"
-          :min="1"
-          :max="totalPages"
-          class="w-16"
-          @keyup.enter="handleGoToPage"
-        />
-        <UButton size="sm" @click="handleGoToPage">Go</UButton>
-      </div>
-      <UPagination :total="currentYearForecasts.length" v-model:page="page" :items-per-page="pageSizeNumber" />
-    </div>
+     <div class="flex items-center justify-between mt-4">
+       <div class="flex items-center gap-2">
+         <span class="text-sm text-slate-500">Rows per page:</span>
+         <USelect v-model="pageSize" :items="[5, 10, 20, 30, 50]" class="w-20" />
+       </div>
+       <div class="flex items-center gap-2">
+         <span class="text-sm text-slate-500">Go to page:</span>
+         <UInput
+           v-model="goToPageInput"
+           type="number"
+           :min="1"
+           :max="totalPages"
+           class="w-16"
+           @keyup.enter="handleGoToPage"
+         />
+         <UButton size="sm" @click="handleGoToPage">Go</UButton>
+       </div>
+       <UPagination v-if="selectedMonth.value !== null" :total="selectedForecasts.value.length" v-model:page="page" :items-per-page="pageSizeNumber" />
+     </div>
   </div>
 </template>

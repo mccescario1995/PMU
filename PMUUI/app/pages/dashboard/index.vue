@@ -63,24 +63,6 @@ const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
 // Current month name for display
 const currentMonthName = computed(() => monthNames[selectedMonth.value]);
 
-function prevMonth() {
-  if (selectedMonth.value === 0) {
-    selectedMonth.value = 11; // December
-    selectedYear.value = selectedYear.value - 1;
-  } else {
-    selectedMonth.value = selectedMonth.value - 1;
-  }
-}
-
-function nextMonth() {
-  if (selectedMonth.value === 11) {
-    selectedMonth.value = 0; // January
-    selectedYear.value = selectedYear.value + 1;
-  } else {
-    selectedMonth.value = selectedMonth.value + 1;
-  }
-}
-
 onMounted(async () => {
   try {
     stats.value = (await apiFetch("/v1/dashboard", { parseJson: true })) as any;
@@ -123,28 +105,41 @@ const isToday = (date: string) => {
     <div class="grid gap-6 xl:grid-cols-3">
       <UCard class="xl:col-span-2">
         <template #header>
-          <div class="flex items-center space-x-4">
-            <label class="text-xs text-gray-500">Year:</label>
-            <select v-model="selectedYear" class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
-              <option v-for="year in availableYears" :key="year" :value="year">
-                {{ year }}
-              </option>
-            </select>
-            <div class="flex items-center space-x-2">
-              <label class="text-xs text-gray-500">Month:</label>
-              <select v-model="selectedMonth" class="border border-gray-300 rounded px-2 py-1 text-sm w-28">
-                <option v-for="(month, index) in monthNames" :key="index" :value="index">
-                  {{ month }}
-                </option>
-              </select>
-              <div class="flex items-center space-x-1">
-                <button @click="prevMonth" class="btn btn-xs btn-outline btn-secondary">
-                  <i class="i-chevron-left-xs"></i>
-                </button>
-                <button @click="nextMonth" class="btn btn-xs btn-outline btn-secondary">
-                  <i class="i-chevron-right-xs"></i>
-                </button>
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+            <!-- Title -->
+            <div class="flex items-center gap-2">
+              <span class="font-semibold">Revenue Forecast</span>
+              <span class="text-xs text-gray-500">
+                ({{ currentMonthName }})
+              </span>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-wrap items-center gap-3">
+
+              <!-- Year -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-500">Year:</label>
+
+                <select v-model="selectedYear" class="w-24 rounded border border-gray-300 px-2 py-1 text-sm">
+                  <option v-for="year in availableYears" :key="year" :value="year">
+                    {{ year }}
+                  </option>
+                </select>
               </div>
+
+              <!-- Month -->
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-500">Month:</label>
+
+                <select v-model="selectedMonth" class="w-28 rounded border border-gray-300 px-2 py-1 text-sm">
+                  <option v-for="(month, index) in monthNames" :key="index" :value="index">
+                    {{ month }}
+                  </option>
+                </select>
+              </div>
+
             </div>
           </div>
         </template>
@@ -159,17 +154,19 @@ const isToday = (date: string) => {
           <div
             class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative overflow-x-auto min-w-[600px]">
             <div v-for="(item, i) in selectedMonthForecasts" :key="i"
-              class="flex-shrink-0 flex flex-col items-center w-12">
+              class="flex-shrink-0 flex flex-col items-center w-10">
               <div class="bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
                 :title="`${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
               <div class="flex-col items-center text-center space-y-1 mt-1">
                 <span class="text-xs text-gray-500 mb-0">{{ new Date(item.forecast_date).toLocaleDateString('en-US', {
                   month:
-                  'short' }) }} </span>
+                    'short'
+                }) }} &nbsp;</span>
                 <span class="text-xs text-gray-500 mb-0">{{ new Date(item.forecast_date).toLocaleDateString('en-US', {
                   day:
-                  'numeric' }) }}, </span>
+                    'numeric'
+                }) }}</span>
               </div>
             </div>
           </div>
