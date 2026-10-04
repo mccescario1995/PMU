@@ -21,55 +21,63 @@ const { daily: weatherDaily, loading: weatherLoading, error: weatherError } = us
 
 const forecastData = ref<any[]>([]);
 
-const nextMonthForecasts = computed(() => {
-  const now = new Date()
-  let nextMonth = now.getMonth() + 1
-  let nextYear = now.getFullYear()
-  if (nextMonth > 11) {
-    nextMonth = 0
-    nextYear++
-  }
-  const periodStart = new Date(nextYear, nextMonth, 1)
-  const periodEnd = new Date(nextYear, nextMonth + 1, 0)
-  periodEnd.setHours(23, 59, 59, 999)
+// Year and month selection
+const selectedYear = ref(new Date().getFullYear());
+const selectedMonth = ref(new Date().getMonth()); // 0-11 (Jan-Dec)
 
-  const filtered = forecastData.value.filter((f: any) => {
-    const forecastDate = new Date(f.forecast_date)
-    return forecastDate >= periodStart && forecastDate <= periodEnd
-  })
+// Available years from forecast data
+const availableYears = computed(() => {
+  const years = new Set<number>();
+  forecastData.value.forEach(f => {
+    const date = new Date(f.forecast_date);
+    years.add(date.getFullYear());
+  });
+  return Array.from(years).sort();
+});
 
-  return filtered
-})
+// Forecasts for selected year and month
+const selectedMonthForecasts = computed(() => {
+  const year = selectedYear.value;
+  const month = selectedMonth.value; // 0-11
 
+  const periodStart = new Date(year, month, 1);
+  const periodEnd = new Date(year, month + 1, 0);
+  periodEnd.setHours(23, 59, 59, 999);
+
+  return forecastData.value.filter((f: any) => {
+    const forecastDate = new Date(f.forecast_date);
+    return forecastDate >= periodStart && forecastDate <= periodEnd;
+  });
+});
+
+// Max forecast for selected month (for Y-axis scaling)
 const maxForecast = computed(() => {
-  const vals = nextMonthForecasts.value.map((f) => Number(f.predicted_revenue) || 0)
-  const max = Math.max(...vals, 1)
+  const vals = selectedMonthForecasts.value.map((f) => Number(f.predicted_revenue) || 0);
+  return Math.max(...vals, 1);
+});
 
-  return max
-})
+// Month names for display
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const generating = ref(false);
-const generateError = ref("");
-const generateSuccess = ref("");
+// Current month name for display
+const currentMonthName = computed(() => monthNames[selectedMonth.value]);
 
-async function generateForecast(model: string, days: number) {
-  generating.value = true;
-  generateError.value = "";
-  generateSuccess.value = "";
-  try {
-    const res = await apiFetch(`/v1/forecasts/run-model`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ model, days }),
-      parseJson: true,
-      throwOnError: true,
-    }) as any;
-    generateSuccess.value = `${model} forecast generated (${res.saved_forecasts?.length || 0} records)`;
-    forecastData.value = (await apiFetch("/v1/forecasts/chart", { parseJson: true })) as any[];
-  } catch (e: any) {
-    generateError.value = e?.body?.message ?? e.message ?? "Failed to generate forecast";
-  } finally {
-    generating.value = false;
+function prevMonth() {
+  if (selectedMonth.value === 0) {
+    selectedMonth.value = 11; // December
+    selectedYear.value = selectedYear.value - 1;
+  } else {
+    selectedMonth.value = selectedMonth.value - 1;
+  }
+}
+
+function nextMonth() {
+  if (selectedMonth.value === 11) {
+    selectedMonth.value = 0; // January
+    selectedYear.value = selectedYear.value + 1;
+  } else {
+    selectedMonth.value = selectedMonth.value + 1;
   }
 }
 
@@ -91,15 +99,6 @@ const isToday = (date: string) => {
   return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
 };
 
-const formatForecastDate = (dateStr) => {
-  if (!dateStr) return ''
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    timeZone: 'UTC' // Keeps it aligned with the ISO string's UTC offset
-  }).format(new Date(dateStr))
-}
 </script>
 
 <template>
@@ -123,7 +122,32 @@ const formatForecastDate = (dateStr) => {
     <!-- Revenue Forecast + Weather -->
     <div class="grid gap-6 xl:grid-cols-3">
       <UCard class="xl:col-span-2">
-        <template #header>Revenue Forecast</template>
+        <template #header>
+          <div class="flex items-center space-x-4">
+            <label class="text-xs text-gray-500">Year:</label>
+            <select v-model="selectedYear" class="border border-gray-300 rounded px-2 py-1 text-sm w-24">
+              <option v-for="year in availableYears" :key="year" :value="year">
+                {{ year }}
+              </option>
+            </select>
+            <div class="flex items-center space-x-2">
+              <label class="text-xs text-gray-500">Month:</label>
+              <select v-model="selectedMonth" class="border border-gray-300 rounded px-2 py-1 text-sm w-28">
+                <option v-for="(month, index) in monthNames" :key="index" :value="index">
+                  {{ month }}
+                </option>
+              </select>
+              <div class="flex items-center space-x-1">
+                <button @click="prevMonth" class="btn btn-xs btn-outline btn-secondary">
+                  <i class="i-chevron-left-xs"></i>
+                </button>
+                <button @click="nextMonth" class="btn btn-xs btn-outline btn-secondary">
+                  <i class="i-chevron-right-xs"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
         <div class="flex gap-2">
           <!-- Y-axis labels -->
           <div class="flex flex-col justify-between h-40 w-20 pr-2 border-r border-gray-300">
@@ -134,16 +158,19 @@ const formatForecastDate = (dateStr) => {
           <!-- Chart bars -->
           <div
             class="flex-1 flex items-end gap-1 h-40 border-b border-gray-300 pb-1 relative overflow-x-auto min-w-[600px]">
-            <div v-for="(item, i) in nextMonthForecasts" :key="i" class="flex-shrink-0 flex flex-col items-center w-12">
+            <div v-for="(item, i) in selectedMonthForecasts" :key="i"
+              class="flex-shrink-0 flex flex-col items-center w-12">
               <div class="bg-success/70 hover:bg-success rounded-t w-full cursor-pointer"
                 :style="{ height: `${Math.max((Number(item.predicted_revenue) || 0) / maxForecast * 160, 2)}px` }"
                 :title="`${new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}\nForecasted Revenue: ₱${Number(item.predicted_revenue).toLocaleString()}`" />
-               <div class="flex-col items-center text-center space-y-1 mt-1">
-                 <span class="text-xs text-gray-500">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { month: 'short' }) }}</span>
-                 <span class="text-xs text-gray-500">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { day: 'numeric' }) }}</span>
-                 <span class="text-xs text-gray-500">{{ new Date(item.forecast_date).toLocaleDateString('en-US', { year: '2-digit' }) }}</span>
-               </div>
-              
+              <div class="flex-col items-center text-center space-y-1 mt-1">
+                <span class="text-xs text-gray-500 mb-0">{{ new Date(item.forecast_date).toLocaleDateString('en-US', {
+                  month:
+                  'short' }) }} </span>
+                <span class="text-xs text-gray-500 mb-0">{{ new Date(item.forecast_date).toLocaleDateString('en-US', {
+                  day:
+                  'numeric' }) }}, </span>
+              </div>
             </div>
           </div>
         </div>
