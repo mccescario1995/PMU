@@ -29,7 +29,6 @@ const {
     openCreate,
     openView,
     openEdit,
-    weatherLabel,
     currency,
     columns,
     can,
@@ -346,9 +345,6 @@ const UBadge = resolveComponent('UBadge')
             </UFormField>
             <UFormField label="Model Version">
               <UInput v-model="form.model_version" placeholder="e.g. v1.0" :disabled="viewing" />
-            </UFormField>
-            <UFormField label="Weather on Date">
-              <p class="text-sm text-gray-500 py-2">{{ weatherLabel(form.weather) }}</p>
             </UFormField>
           </div>
         </div>
