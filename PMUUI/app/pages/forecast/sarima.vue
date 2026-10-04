@@ -24,7 +24,6 @@ const {
     viewing,
     reset,
     submit,
-    runSarimaDirect,
     remove,
     openCreate,
     openView,
@@ -38,9 +37,9 @@ const {
 const model = 'sarima'
 const modelLabel = 'SARIMA'
 
-// Year and month selection controls
+// Year and month selection controls, defaulting to the current month
 const selectedYear = ref(new Date().getFullYear())
-const selectedMonth = ref(null) // null = all months, 0-11 = specific month
+const selectedMonth = ref(new Date().getMonth()) // null = all months, 0-11 = specific month
 
 const monthNames = ["All Months", "Jan", "Feb", "Mar", "Apr", "May", "Jun",
                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
@@ -156,19 +155,10 @@ const UBadge = resolveComponent('UBadge')
              </option>
            </select>
          </div>
-       </div>
-       <div class="flex gap-2">
-         <UButton
-           icon="i-lucide-brain"
-           :loading="modelLoading"
-           @click="runSarimaDirect"
-         >
-           Run {{ modelLabel }}
-         </UButton>
-       </div>
-     </div>
+        </div>
+      </div>
 
-    <UAlert v-if="modelError" type="error" :title="modelError" class="mb-4" />
+     <UAlert v-if="modelError" type="error" :title="modelError" class="mb-4" />
 
     <UAlert v-if="isDecemberForecast" type="info" class="mb-4">
       <template #icon>
