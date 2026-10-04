@@ -197,11 +197,11 @@ const getTableColumns = computed(() => {
                 accessorKey: 'latestModel'
             }
         ]
-     } else {
-         // Showing daily forecasts - use original columns
-         return columns
-     }
- })
+    } else {
+        // Showing daily forecasts - use original columns
+        return columns
+    }
+})
  
  const UBadge = resolveComponent('UBadge')
 </script>
@@ -325,7 +325,7 @@ const getTableColumns = computed(() => {
          <p class="text-2xl font-bold text-primary">{{ currency(totalRevenue) }}</p>
        </UCard>
        <UCard>
-         <template #header> {{ selectedMonth.value === null ? 'Months with Data' : 'Forecast Periods' } }</template>
+         <template #header> {{ selectedMonth.value === null ? 'Months with Data' : 'Forecast Periods' }} </template>
          <p class="text-2xl font-bold text-primary">{{ periods }}</p>
        </UCard>
        <UCard>
