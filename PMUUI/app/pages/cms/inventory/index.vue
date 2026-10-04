@@ -24,6 +24,8 @@ const statusColor = {
 const items = ref<any[]>([]);
 const priceModal = ref(false);
 const priceForm = ref({ id: 0, item_name: '', price: 0 });
+const viewModal = ref(false);
+const viewItem = ref<any>(null);
 const {
   page,
   pageSize,
@@ -165,6 +167,11 @@ async function savePrice() {
   const result = await apiFetch(`/v1/inventory/items?page=${page.value}&per_page=${pageSizeNumber.value}`, { parseJson: true });
   data.value = result.data;
 }
+
+function openView(row: any) {
+  viewItem.value = row.original;
+  viewModal.value = true;
+}
 </script>
 
 <template>
@@ -188,7 +195,7 @@ async function savePrice() {
       <template #action-cell="{ row }">
         <UButton
           size="xs"
-          :to="`/inventory/inventory-list/${row.original.id}`"
+          @click.stop="openView(row)"
           icon="i-lucide-eye"
         ></UButton>
         <UButton
@@ -199,7 +206,7 @@ async function savePrice() {
         ></UButton>
         <UButton
           size="xs"
-          @click="openPriceModal(row)"
+          @click.stop="openPriceModal(row)"
           icon="i-lucide-dollar-sign"
         ></UButton>
         <UButton
@@ -260,6 +267,54 @@ async function savePrice() {
     <template #footer>
       <UButton variant="ghost" @click="priceModal = false">Cancel</UButton>
       <UButton @click="savePrice">Save Price</UButton>
+    </template>
+  </UModal>
+
+  <UModal v-model="viewModal" title="View Inventory Item">
+    <template #default>
+      <div class="space-y-4" v-if="viewItem">
+        <div class="grid grid-cols-2 gap-4">
+          <UFormField label="Item Name">
+            <UInput :value="viewItem.item_name" disabled />
+          </UFormField>
+          <UFormField label="Category Type">
+            <UInput :value="viewItem.category_type" disabled />
+          </UFormField>
+          <UFormField label="Category">
+            <UInput :value="viewItem.category" disabled />
+          </UFormField>
+          <UFormField label="Quantity">
+            <UInput type="number" :value="viewItem.quantity" disabled />
+          </UFormField>
+          <UFormField label="Unit">
+            <UInput :value="viewItem.unit" disabled />
+          </UFormField>
+          <UFormField label="Minimum Stock">
+            <UInput type="number" :value="viewItem.minimum_stock" disabled />
+          </UFormField>
+          <UFormField label="Restock Qty">
+            <UInput type="number" :value="viewItem.reorder_quantity" disabled />
+          </UFormField>
+          <UFormField label="Avg Daily Usage">
+            <UInput type="number" step="0.01" :value="viewItem.average_daily_usage" disabled />
+          </UFormField>
+          <UFormField label="Price">
+            <UInput :value="viewItem.price !== null && viewItem.price !== undefined ? `₱${viewItem.price.toFixed(2)}` : '₱0.00'" disabled />
+          </UFormField>
+          <UFormField label="Status">
+            <UInput :value="viewItem.status" disabled />
+          </UFormField>
+          <UFormField label="Stock Status">
+            <UInput :value="viewItem.stock_status?.replace(/_/g, ' ')" disabled />
+          </UFormField>
+          <UFormField label="Days Remaining">
+            <UInput :value="viewItem.days_remaining !== null && viewItem.days_remaining !== undefined ? viewItem.days_remaining.toFixed(1) : 'N/A'" disabled />
+          </UFormField>
+        </div>
+      </div>
+    </template>
+    <template #footer>
+      <UButton variant="ghost" @click="viewModal = false">Close</UButton>
     </template>
   </UModal>
 </template>
