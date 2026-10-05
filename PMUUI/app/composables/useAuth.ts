@@ -4,7 +4,7 @@ import { useRouter } from "vue-router";
 
 const getStoredToken = (): string | null => {
   if (typeof localStorage !== "undefined") {
-    return localStorage.getItem("access_token");
+    return localStorage.getItem("access_token") ?? sessionStorage.getItem("access_token");
   }
   return null;
 };
@@ -15,7 +15,7 @@ export const user = ref<any>(null);
 export function useAuth() {
   const router = useRouter();
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string, rememberMe = false) {
     const response = (await apiFetch("/v1/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
@@ -26,7 +26,12 @@ export function useAuth() {
 
     accessToken.value = response.token;
     user.value = response.user;
-    localStorage.setItem("access_token", response.token);
+
+    if (rememberMe) {
+      localStorage.setItem("access_token", response.token);
+    } else {
+      sessionStorage.setItem("access_token", response.token);
+    }
 
     return { status: "SUCCESS" };
   }
@@ -45,6 +50,7 @@ export function useAuth() {
     accessToken.value = null;
     user.value = null;
     localStorage.removeItem("access_token");
+    sessionStorage.removeItem("access_token");
 
     if (hadToken) {
       try {

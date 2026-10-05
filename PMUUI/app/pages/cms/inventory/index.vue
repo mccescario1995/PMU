@@ -5,12 +5,14 @@ import { onMounted, computed, watch, h } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { ref } from "vue";
 import { useTablePagination } from "~/composables/useTablePagination";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const { can } = usePermissions();
+const { registerRefresh } = useRouteRefresh()
 
 const UBadge = resolveComponent("UBadge");
 
@@ -36,11 +38,16 @@ const {
   data,
   totalItems,
   loading,
+  refresh,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
     const result = await apiFetch(`/v1/inventory/items?page=${page}&per_page=${pageSize}`, { parseJson: true })
     return { data: result.data, total: result.meta.total }
   },
+})
+
+onMounted(() => {
+  registerRefresh(refresh)
 })
 
 type Inventory = {
@@ -198,17 +205,17 @@ function openView(row: any) {
           @click.stop="openView(row)"
           icon="i-lucide-eye"
         ></UButton>
-        <UButton
+        <!-- <UButton
           v-if="can('edit inventory')"
           size="xs"
           :to="`/inventory/inventory-list/edit/${row.original.id}`"
           icon="i-lucide-edit"
-        ></UButton>
+        ></UButton> -->
         <UButton
           size="xs"
           v-if="can('view inventory')"
           @click.stop="openPriceModal(row)"
-          icon="i-lucide-dollar-sign"
+          icon="i-lucide-philippine-peso"
         ></UButton>
         <UButton
           v-if="can('delete inventory')"

@@ -5,20 +5,26 @@ import { onMounted, h, computed, watch } from 'vue'
 import { ref } from 'vue'
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from '~/composables/useTablePagination'
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const { can } = usePermissions();
+const { registerRefresh } = useRouteRefresh()
 
 const UBadge = resolveComponent('UBadge')
 
-const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading } = useTablePagination(null, 10, {
+const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading, refresh } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
     const result = await apiFetch(`/v1/statuses?page=${page}&per_page=${pageSize}`, { parseJson: true })
     return { data: result.data, total: result.meta.total }
   },
+})
+
+onMounted(() => {
+  registerRefresh(refresh)
 })
 
 function openCreate() {

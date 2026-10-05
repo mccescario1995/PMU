@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { apiFetch } from '~/composables/useApiFetch'
-import { ref, computed, watch } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useTablePagination } from '~/composables/useTablePagination'
+import { useRouteRefresh } from '~/composables/useRouteRefresh'
 
 definePageMeta({
   layout: "dashboard",
 });
 
+const { registerRefresh } = useRouteRefresh()
+
 const entityType = ref('revenue_histories')
 const file = ref<File | null>(null)
-const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading } = useTablePagination(null, 10, {
+const { page, pageSize, pageSizeNumber, goToPageInput, totalPages, handleGoToPage, data, totalItems, loading, refresh } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
     const result = await apiFetch(`/v1/imports?page=${page}&per_page=${pageSize}`, { parseJson: true })
     return { data: result.data, total: result.meta.total }
@@ -55,6 +58,10 @@ async function load() {
   data.value = result.data
   totalItems.value = result.total
 }
+
+onMounted(() => {
+  registerRefresh(load)
+})
 </script>
 
 <template>

@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted, computed, watch } from 'vue'
-import { ref } from 'vue'
+import { onMounted, computed, watch, ref } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
+import { useRouteRefresh } from '~/composables/useRouteRefresh'
 
 definePageMeta({
   layout: "dashboard",
 });
+
+const { registerRefresh } = useRouteRefresh()
 
 const currency = (value: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(value)
@@ -27,7 +29,7 @@ function formatFeeTypes(items: any[]): string {
   return items.map((i: any) => i.fee_type?.fee_name).filter(Boolean).join(", ");
 }
 
-onMounted(async () => {
+async function loadReport() {
   loading.value = true
   const report = (await apiFetch('/v1/reports/daily?date=' + today, { parseJson: true })) as any
   total.value = Number(report.total ?? 0)
@@ -40,6 +42,11 @@ onMounted(async () => {
     time: (t.transaction_date ?? "").toString().slice(11, 16) || "-",
   }))
   loading.value = false
+}
+
+onMounted(async () => {
+  await loadReport()
+  registerRefresh(loadReport)
 })
 
 function exportCsv() {

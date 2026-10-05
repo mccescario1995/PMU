@@ -7,6 +7,7 @@ import { usePermissions } from "~/composables/usePermissions";
 import { getPaginationRowModel } from "@tanstack/vue-table";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
@@ -14,6 +15,7 @@ definePageMeta({
 
 const { can } = usePermissions();
 const toast = useToast();
+const { registerRefresh } = useRouteRefresh()
 
 const types = ref<any[]>([]);
 const {
@@ -36,13 +38,18 @@ const form = reactive({
   description: "",
 });
 
-onMounted(async () => {
+async function loadTypes() {
   loading.value = true;
   types.value = (
     (await apiFetch("/v1/stakeholder-types", { parseJson: true })) as any
   ).data;
   loading.value = false;
-});
+}
+
+onMounted(async () => {
+  await loadTypes()
+  registerRefresh(loadTypes)
+})
 
 function openCreate() {
   editing.value = null;

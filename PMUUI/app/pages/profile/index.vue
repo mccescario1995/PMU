@@ -1,10 +1,17 @@
 <script setup lang="ts">
+import { apiFetch } from '~/composables/useApiFetch'
+import { useAuth } from '~/composables/useAuth'
+import { useRouteRefresh } from '~/composables/useRouteRefresh'
+import { useToast } from '#imports'
+import { definePageMeta, ref, reactive, computed, onMounted } from 'vue'
+
 definePageMeta({
     layout: "dashboard",
 });
 
 const { user } = useAuth();
 const toast = useToast();
+const { registerRefresh } = useRouteRefresh()
 
 const isEditing = ref(false);
 const loading = ref(false);
@@ -39,7 +46,7 @@ const profilePictureUrl = computed(() => {
     return user.value?.profile_picture || undefined;
 });
 
-onMounted(async () => {
+async function loadProfile() {
     try {
         const response = await apiFetch("/v1/auth/me", {
             parseJson: true,
@@ -69,7 +76,12 @@ onMounted(async () => {
     } finally {
         fetching.value = false;
     }
-});
+}
+
+onMounted(async () => {
+    await loadProfile()
+    registerRefresh(loadProfile)
+})
 
 function startEdit() {
     isEditing.value = true;

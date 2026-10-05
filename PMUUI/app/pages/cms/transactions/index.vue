@@ -4,12 +4,14 @@ import { apiFetch } from '~/composables/useApiFetch'
 import { onMounted, h, ref, computed, watch } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const { can } = usePermissions();
+const { registerRefresh } = useRouteRefresh()
 
 const transactions = ref<any[]>([])
 const loading = ref(true)
@@ -22,6 +24,7 @@ const {
   handleGoToPage,
   data,
   totalItems,
+  refresh,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
     loading.value = true;
@@ -32,6 +35,10 @@ const {
       loading.value = false;
     }
   }
+})
+
+onMounted(() => {
+  registerRefresh(refresh)
 })
 
 function formatFeeTypes(items: any[]): string {

@@ -21,7 +21,7 @@ class DashboardController extends Controller
             ->first(['weather_date', 'temperature', 'rainfall_mm', 'wind_speed']);
 
         return response()->json([
-            'today_revenue' => (float) TransactionRevenue::whereDate('report_date', today())->sum('revenue_target'),
+            'today_revenue' => (float) Transaction::whereDate('transaction_date', today())->sum('total_amount'),
             'monthly_revenue' => (float) TransactionRevenue::where('year_num', now()->subMonth()->year)
                 ->where('month_num', now()->subMonth()->month)->sum('revenue_target'),
             'yearly_revenue' => (float) TransactionRevenue::where('year_num', now()->subYear())->sum('revenue_target'),

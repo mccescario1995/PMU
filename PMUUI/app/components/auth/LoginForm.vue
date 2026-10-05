@@ -48,6 +48,7 @@ const text = computed(() => {
 });
 
 const role = ref("Port Manager");
+const rememberMe = ref(false);
 
 const handleSubmit = async () => {
   if (!username.value || !password.value) {
@@ -56,8 +57,8 @@ const handleSubmit = async () => {
   }
 
   loading.value = true;
-  try {
-    await auth.login(username.value, password.value);
+try {
+      await auth.login(username.value, password.value, rememberMe.value);
     toast.add({ title: "Welcome back", description: "Signed in successfully.", color: "success" });
     router.push("/dashboard");
   } catch (err: any) {
@@ -93,7 +94,14 @@ const handleSubmit = async () => {
         </UInput>
       </UFormField>
       <div class="flex items-center justify-between my-3">
-        <UCheckbox label="Remember me" />
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            v-model="rememberMe"
+            class="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 focus:ring-2 transition-colors"
+          />
+          <span class="text-sm text-gray-700">Remember me</span>
+        </label>
 
         <UButton size="sm" to="/forgot-password" variant="outline" color="neutral" class="text-sm">
           Forgot password?

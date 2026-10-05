@@ -7,6 +7,7 @@ import { ref } from "vue";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
 import * as XLSX from "xlsx";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
@@ -14,6 +15,7 @@ definePageMeta({
 
 const { can } = usePermissions();
 const toast = useToast();
+const { registerRefresh } = useRouteRefresh()
 
 const UBadge = resolveComponent("UBadge");
 
@@ -47,6 +49,10 @@ watch(searchQuery, () => {
   page.value = 1;
   refresh();
 });
+
+onMounted(() => {
+  registerRefresh(refresh)
+})
 
 type Stakeholder = {
   id: number;

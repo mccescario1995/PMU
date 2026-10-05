@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { apiFetch } from "~/composables/useApiFetch";
 import { useWeatherForecast } from "~/composables/useWeatherForecast";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 import { computed, onMounted, ref } from "vue";
 
 definePageMeta({
@@ -20,6 +21,8 @@ const stats = ref({
 const { daily: weatherDaily, loading: weatherLoading, error: weatherError } = useWeatherForecast();
 
 const forecastData = ref<any[]>([]);
+
+const { registerRefresh } = useRouteRefresh()
 
 // Year and month selection
 const selectedYear = ref(new Date().getFullYear());
@@ -83,14 +86,19 @@ const currentMonthName = computed(() => {
   return monthNames[selectedMonth.value] || '';
 });
 
-onMounted(async () => {
+async function loadDashboardData() {
   try {
     stats.value = (await apiFetch("/v1/dashboard", { parseJson: true })) as any;
     forecastData.value = (await apiFetch("/v1/forecasts/chart", { parseJson: true })) as any[];
   } catch {
     // silent
   }
-});
+}
+
+onMounted(async () => {
+  await loadDashboardData()
+  registerRefresh(loadDashboardData)
+})
 
 const currency = (v: number) =>
   new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(v);

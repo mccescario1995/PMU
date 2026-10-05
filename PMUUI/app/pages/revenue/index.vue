@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { apiFetch } from '~/composables/useApiFetch'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
+import { useRouteRefresh } from '~/composables/useRouteRefresh'
 
 definePageMeta({
   layout: "dashboard",
 });
 
 const UBadge = resolveComponent('UBadge')
+
+const { registerRefresh } = useRouteRefresh()
 
 const currency = (value: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "PHP" }).format(value)
@@ -36,6 +39,7 @@ const fetchRevenue = async (year: number | null) => {
 
 onMounted(() => {
   fetchRevenue(selectedYear.value)
+  registerRefresh(() => fetchRevenue(selectedYear.value))
 })
 
 watch(selectedYear, (year) => {

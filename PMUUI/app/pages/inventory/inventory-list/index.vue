@@ -6,6 +6,7 @@ import { onMounted, ref, computed, watch, h } from "vue";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
@@ -13,6 +14,7 @@ definePageMeta({
 
 const { can } = usePermissions();
 const toast = useToast();
+const { registerRefresh } = useRouteRefresh()
 
 const UBadge = resolveComponent("UBadge");
 const UButton = resolveComponent("UButton");
@@ -55,6 +57,10 @@ watch([searchName, searchStatus, searchCategory], () => {
   page.value = 1;
   refresh();
 });
+
+onMounted(() => {
+  registerRefresh(refresh)
+})
 
 type Inventory = {
   id: number;

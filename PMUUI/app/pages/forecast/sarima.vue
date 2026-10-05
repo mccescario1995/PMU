@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui'
 import { useForecast } from '~/composables/useForecast'
-import { computed, ref } from 'vue'
+import { useRouteRefresh } from '~/composables/useRouteRefresh'
+import { computed, onMounted, ref } from 'vue'
 import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
 
@@ -33,6 +34,12 @@ const {
     can,
     load,
 } = useForecast('/v1/forecasts/model/sarima', '/v1/forecasts/train/sarima', 'sarima')
+
+const { registerRefresh } = useRouteRefresh()
+
+onMounted(() => {
+  registerRefresh(load)
+})
 
 const model = 'sarima'
 const modelLabel = 'SARIMA'

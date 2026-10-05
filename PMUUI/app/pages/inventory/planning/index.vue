@@ -6,6 +6,7 @@ import { getPaginationRowModel } from '@tanstack/vue-table'
 import { useTablePagination } from '~/composables/useTablePagination'
 import { useToast } from '#imports'
 import { usePermissions } from '~/composables/usePermissions'
+import { useRouteRefresh } from '~/composables/useRouteRefresh'
 import Loading from '~/components/Loading.vue'
 
 definePageMeta({
@@ -14,6 +15,7 @@ definePageMeta({
 
 const { can } = usePermissions()
 const toast = useToast()
+const { registerRefresh } = useRouteRefresh()
 
 const planning = ref<any>(null)
 
@@ -88,7 +90,7 @@ async function saveEdit() {
   }
 }
 
-onMounted(async () => {
+async function loadPlanningData() {
   loading.value = true
   const [overview, view] = await Promise.all([
     apiFetch('/v1/inventory/planning', { parseJson: true }),
@@ -101,6 +103,11 @@ onMounted(async () => {
     forecasts: view.forecasts ?? [],
   } as any
   loading.value = false
+}
+
+onMounted(async () => {
+  await loadPlanningData()
+  registerRefresh(loadPlanningData)
 })
 
 const offPeakRevenue = computed(() => planning.value?.off_peak_season?.total_revenue ?? 0)

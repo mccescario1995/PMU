@@ -7,6 +7,7 @@ import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
 import type { SelectItem } from "@nuxt/ui";
 import * as XLSX from "xlsx";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
@@ -14,9 +15,11 @@ definePageMeta({
 
 const { can } = usePermissions();
 const toast = useToast();
+const { registerRefresh } = useRouteRefresh()
 
 onMounted(() => {
   loadTypes();
+  registerRefresh(refresh)
 });
 
 const stakeholders = ref<any[]>([]);

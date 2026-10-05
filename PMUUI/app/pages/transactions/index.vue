@@ -6,6 +6,7 @@ import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
 import type { SelectItem } from "@nuxt/ui";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
@@ -13,6 +14,7 @@ definePageMeta({
 
 const { can } = usePermissions();
 const toast = useToast();
+const { registerRefresh } = useRouteRefresh()
 
 const searchQuery = ref("");
 const dateFilter = ref("");
@@ -58,6 +60,10 @@ const stakeholders = ref<any[]>([]);
 const feeTypes = ref<any[]>([]);
 const stakeholdersLoaded = ref(false);
 const feeTypesLoaded = ref(false);
+
+onMounted(() => {
+  registerRefresh(refresh)
+})
 const transactionRevenue = ref<any[]>([]);
 const transactionRevenueFeatures = ref<any[]>([]);
 const revenueLoading = ref(false);

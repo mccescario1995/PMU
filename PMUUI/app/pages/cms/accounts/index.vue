@@ -7,6 +7,7 @@ import { getPaginationRowModel } from "@tanstack/vue-table";
 import { useTablePagination } from "~/composables/useTablePagination";
 import type { SelectItem } from "@nuxt/ui";
 import { useToast } from "#imports";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
@@ -14,6 +15,7 @@ definePageMeta({
 
 const { can } = usePermissions();
 const toast = useToast();
+const { registerRefresh } = useRouteRefresh()
 
 const tab = ref<"roles" | "users">("roles");
 
@@ -102,6 +104,7 @@ async function load() {
 onMounted(() => {
   loading.value = true;
   load();
+  registerRefresh(load)
 })
 
 function togglePerm(name: string, checked: boolean) {

@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import type { TableColumn } from "@nuxt/ui";
 import { apiFetch } from "~/composables/useApiFetch";
-import { h } from "vue";
+import { onMounted, h } from "vue";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { UPopover, UTooltip } from "#components";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
 });
+
+const { registerRefresh } = useRouteRefresh()
 
 const {
   page,
@@ -19,6 +22,7 @@ const {
   data,
   totalItems,
   loading,
+  refresh,
 } = useTablePagination(null, 10, {
   fetchData: async (page, pageSize) => {
     const result = await apiFetch(
@@ -36,6 +40,10 @@ const {
     return { data: items, total };
   },
 });
+
+onMounted(() => {
+  registerRefresh(refresh)
+})
 
 function formatChanges(value: any): string {
   if (!value) return "No changes recorded";

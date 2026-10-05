@@ -7,6 +7,7 @@ import type { SelectItem } from "@nuxt/ui";
 import { usePermissions } from "~/composables/usePermissions";
 import { useTablePagination } from "~/composables/useTablePagination";
 import { useToast } from "#imports";
+import { useRouteRefresh } from "~/composables/useRouteRefresh";
 
 definePageMeta({
   layout: "dashboard",
@@ -14,6 +15,7 @@ definePageMeta({
 
 const { can } = usePermissions();
 const toast = useToast();
+const { registerRefresh } = useRouteRefresh()
 
 const UBadge = resolveComponent("UBadge");
 const loading = ref(false);
@@ -37,6 +39,10 @@ const {
     return { data: result.data, total: result.meta.total };
   },
 });
+
+onMounted(() => {
+  registerRefresh(refresh)
+})
 
 const showForm = ref(false);
 const editing = ref<any>(null);
