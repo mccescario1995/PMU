@@ -1,0 +1,1 @@
+import{af as s,r as a}from"./BIMT8zx5.js";function u(n){const o=a(!1);function t(){o.value=!0}function e(i){s(()=>{o.value=!1,n?.(i)})}return{isComposing:o,handleCompositionStart:t,handleCompositionEnd:e}}export{u};
